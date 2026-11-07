@@ -2757,7 +2757,7 @@ export default function LearningRoom({
                         Daftar mini materi
                       </h3>
                       <p className="mt-1 text-[10px] text-slate-500">
-                        {activeContents.length} segmen · {activeLesson.title}
+                        {activeContents.length} segmen · {activeLesson?.title ?? "Materi"}
                       </p>
                     </div>
                     <button
