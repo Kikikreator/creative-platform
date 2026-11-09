@@ -33,6 +33,7 @@ export default function LoginPage() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -43,6 +44,7 @@ export default function LoginPage() {
     const requestedCourseId = params.get("course");
     const requestedMentorInvite = params.get("mentor_invite");
     const requestedNextPath = params.get("next") ?? params.get("redirect");
+
     const isSafeInternalPath = Boolean(
       requestedNextPath &&
       requestedNextPath.startsWith("/") &&
@@ -54,54 +56,77 @@ export default function LoginPage() {
 
     setCourseId(requestedCourseId);
     setMentorInvite(requestedMentorInvite);
-    if (isSafeInternalPath && requestedNextPath) setNextPath(requestedNextPath);
 
-    // Jika sesi masih aktif, jangan tampilkan formulir login lagi.
-    // Arahkan akun ke workspace sesuai role atau tujuan internal yang diminta.
+    if (isSafeInternalPath && requestedNextPath) {
+      setNextPath(requestedNextPath);
+    }
+
+    // Jika sesi masih aktif, arahkan akun sesuai role.
     void (async () => {
       try {
         const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
+
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
         if (!active || !user) return;
 
         const { data: roleRows, error: roleError } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id);
+
         if (!active) return;
+
         if (roleError) {
-          setError("Hak akses akun belum dapat diverifikasi. Silakan muat ulang atau hubungi Admin.");
+          setError(
+            "Hak akses akun belum dapat diverifikasi. Silakan muat ulang atau hubungi Admin."
+          );
           return;
         }
 
         const roles = normalizeRoles(roleRows);
         const primaryRole = getPrimaryRole(roles);
 
-        // Tautan undangan dapat dibuka setelah pengguna mengonfirmasi email.
-        // Admin tidak boleh mengambil undangan Mentor; akun Peserta boleh
-        // menerima undangan dan setelah itu diperlakukan sebagai Mentor.
-        if (requestedMentorInvite && primaryRole !== "admin" && primaryRole !== "instructor") {
+        // Proses undangan Mentor.
+        if (
+          requestedMentorInvite &&
+          primaryRole !== "admin" &&
+          primaryRole !== "instructor"
+        ) {
           const { error: inviteError } = await supabase.rpc(
             "accept_mentor_invitation",
             { p_token: requestedMentorInvite },
           );
+
           if (inviteError) {
             setError(inviteError.message);
             return;
           }
 
-          const { data: updatedRoleRows, error: updatedRoleError } = await supabase
+          const {
+            data: updatedRoleRows,
+            error: updatedRoleError,
+          } = await supabase
             .from("user_roles")
             .select("role")
             .eq("user_id", user.id);
 
           if (updatedRoleError) {
-            setError("Undangan diterima, tetapi hak akses Mentor belum dapat diverifikasi.");
+            setError(
+              "Undangan diterima, tetapi hak akses Mentor belum dapat diverifikasi."
+            );
             return;
           }
 
-          if (getPrimaryRole(normalizeRoles(updatedRoleRows)) !== "instructor") {
-            setError("Undangan belum memberikan akses Mentor. Hubungi Admin untuk pemeriksaan.");
+          if (
+            getPrimaryRole(normalizeRoles(updatedRoleRows)) !==
+            "instructor"
+          ) {
+            setError(
+              "Undangan belum memberikan akses Mentor. Hubungi Admin untuk pemeriksaan."
+            );
             return;
           }
 
@@ -115,36 +140,96 @@ export default function LoginPage() {
           router.refresh();
           return;
         }
+
         if (primaryRole === "instructor") {
           router.replace("/mentor");
           router.refresh();
           return;
         }
+
         if (primaryRole !== "member") {
-          setError("Akun ini belum memiliki hak akses. Hubungi Admin untuk pemeriksaan akun.");
+          setError(
+            "Akun ini belum memiliki hak akses. Hubungi Admin untuk pemeriksaan akun."
+          );
           return;
         }
 
         let destination = "/dashboard";
+
         if (isSafeInternalPath && requestedNextPath) {
           destination = requestedNextPath;
         } else if (requestedCourseId) {
-          destination = `/checkout?course=${encodeURIComponent(requestedCourseId)}`;
+          destination = `/checkout?course=${encodeURIComponent(
+            requestedCourseId
+          )}`;
         }
 
         router.replace(destination);
         router.refresh();
       } catch {
-        // Jika pemeriksaan sesi gagal sementara, biarkan formulir login tetap tersedia.
+        // Jika pemeriksaan sesi gagal sementara,
+        // formulir login tetap tersedia.
       }
     })();
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [router]);
 
   const registerHref = courseId
     ? `/register?course=${encodeURIComponent(courseId)}`
     : "/register";
+
+  // ==========================================
+  // LUPA PASSWORD
+  // ==========================================
+
+  async function handleForgotPassword() {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setError("Masukkan alamat email terlebih dahulu.");
+      setSuccess("");
+      return;
+    }
+
+    if (resetLoading || loading) return;
+
+    setResetLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const supabase = createClient();
+
+      const { error: resetError } =
+        await supabase.auth.resetPasswordForEmail(
+          normalizedEmail,
+          {
+            redirectTo: `${window.location.origin}/reset-password`,
+          },
+        );
+
+      if (resetError) throw resetError;
+
+      setSuccess(
+        "Jika alamat email terdaftar, tautan untuk mengatur ulang password akan dikirim. Periksa inbox atau folder spam."
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Gagal mengirim tautan reset password. Silakan coba kembali."
+      );
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
+  // ==========================================
+  // LOGIN
+  // ==========================================
 
   async function handleLogin(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -182,19 +267,26 @@ export default function LoginPage() {
       }
 
       if (mentorInvite) {
-        const { data: existingRoleRows, error: existingRoleError } = await supabase
+        const {
+          data: existingRoleRows,
+          error: existingRoleError,
+        } = await supabase
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id);
 
         if (existingRoleError) throw existingRoleError;
 
-        const existingPrimaryRole = getPrimaryRole(normalizeRoles(existingRoleRows));
+        const existingPrimaryRole = getPrimaryRole(
+          normalizeRoles(existingRoleRows)
+        );
+
         if (existingPrimaryRole === "admin") {
           router.replace("/admin");
           router.refresh();
           return;
         }
+
         if (existingPrimaryRole === "instructor") {
           router.replace("/mentor");
           router.refresh();
@@ -205,6 +297,7 @@ export default function LoginPage() {
           "accept_mentor_invitation",
           { p_token: mentorInvite },
         );
+
         if (inviteError) throw inviteError;
       }
 
@@ -218,18 +311,24 @@ export default function LoginPage() {
         throw roleError;
       }
 
-      // Satu akun dapat memiliki beberapa role. Role dengan hak tertinggi
-      // menentukan workspace; instructor selalu diprioritaskan atas member.
+      // Satu akun dapat memiliki beberapa role.
       const roles = normalizeRoles(roleRows);
+
       if (roles.length === 0) {
         await supabase.auth.signOut();
-        throw new Error("Akun belum memiliki role yang valid. Hubungi Admin.");
+
+        throw new Error(
+          "Akun belum memiliki role yang valid. Hubungi Admin."
+        );
       }
 
       const primaryRole = getPrimaryRole(roles);
 
       if (primaryRole === "admin") {
-        setSuccess("Login administrator berhasil! Mengarahkan ke Admin Workspace...");
+        setSuccess(
+          "Login administrator berhasil! Mengarahkan ke Admin Workspace..."
+        );
+
         router.replace("/admin");
         router.refresh();
         return;
@@ -239,8 +338,9 @@ export default function LoginPage() {
         setSuccess(
           mentorInvite
             ? "Undangan Mentor berhasil diterima! Mengarahkan ke Mentor Workspace..."
-            : "Login mentor berhasil! Mengarahkan ke Mentor Workspace...",
+            : "Login mentor berhasil! Mengarahkan ke Mentor Workspace..."
         );
+
         router.replace("/mentor");
         router.refresh();
         return;
@@ -248,12 +348,15 @@ export default function LoginPage() {
 
       if (primaryRole !== "member") {
         await supabase.auth.signOut();
-        throw new Error("Role akun tidak dikenali. Hubungi Admin.");
+
+        throw new Error(
+          "Role akun tidak dikenali. Hubungi Admin."
+        );
       }
 
-      // Sinkronkan metadata pendaftaran hanya untuk akun Peserta.
-      // Akun Mentor tidak menjalankan RPC khusus data pendaftaran Peserta.
+      // Sinkronkan metadata pendaftaran hanya untuk Peserta.
       const userMetadata = user.user_metadata ?? {};
+
       if (
         userMetadata.whatsapp_number ||
         userMetadata.acquisition_source ||
@@ -263,26 +366,45 @@ export default function LoginPage() {
           "save_member_registration_details",
           {
             p_full_name: String(userMetadata.full_name ?? ""),
-            p_whatsapp_number: String(userMetadata.whatsapp_number ?? userMetadata.phone ?? ""),
+            p_whatsapp_number: String(
+              userMetadata.whatsapp_number ??
+              userMetadata.phone ??
+              ""
+            ),
             p_address: String(userMetadata.address ?? "") || null,
-            p_acquisition_source: String(userMetadata.acquisition_source ?? "") || null,
-            p_registration_reason: String(userMetadata.registration_reason ?? "") || null,
+            p_acquisition_source:
+              String(userMetadata.acquisition_source ?? "") || null,
+            p_registration_reason:
+              String(userMetadata.registration_reason ?? "") || null,
           },
         );
+
         if (intakeSyncError) {
-          console.warn("Detail pendaftaran belum tersinkron:", intakeSyncError.message);
+          console.warn(
+            "Detail pendaftaran belum tersinkron:",
+            intakeSyncError.message
+          );
         }
       }
 
       let destination = "/dashboard";
+
       if (nextPath) {
         destination = nextPath;
-        setSuccess("Login berhasil! Mengarahkan ke halaman yang kamu tuju...");
+
+        setSuccess(
+          "Login berhasil! Mengarahkan ke halaman yang kamu tuju..."
+        );
       } else if (courseId) {
-        destination = `/checkout?course=${encodeURIComponent(courseId)}`;
+        destination = `/checkout?course=${encodeURIComponent(
+          courseId
+        )}`;
+
         setSuccess("Login berhasil! Mengarahkan ke checkout...");
       } else {
-        setSuccess("Login berhasil! Mengarahkan ke Dashboard Peserta...");
+        setSuccess(
+          "Login berhasil! Mengarahkan ke Dashboard Peserta..."
+        );
       }
 
       // 4. REDIRECT
@@ -542,6 +664,20 @@ export default function LoginPage() {
                 </button>
 
               </div>
+            </div>
+
+            {/* FORGOT PASSWORD */}
+            <div className="-mt-1 flex justify-end">
+              <button
+                type="button"
+                onClick={handleForgotPassword}
+                disabled={resetLoading || loading}
+                className="text-xs font-bold text-[#6D28D9] transition hover:text-[#260047] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {resetLoading
+                  ? "Mengirim tautan..."
+                  : "Lupa Password?"}
+              </button>
             </div>
 
             {/* ERROR */}
