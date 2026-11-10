@@ -274,6 +274,11 @@ export default function PenggunaManager({
   const [selectedCourseId, setSelectedCourseId] =
     useState("");
 
+  const [participantCourseId, setParticipantCourseId] =
+    useState(courses[0]?.id ?? "");
+
+  const [participantSearch, setParticipantSearch] = useState("");
+
   const [saving, setSaving] = useState(false);
 
   const [refreshing, setRefreshing] = useState(false);
@@ -614,6 +619,21 @@ export default function PenggunaManager({
     (course) => course.id === selectedCourseId
   );
 
+  const participantCourse = courses.find((course) => course.id === participantCourseId);
+  const participantRows = useMemo(() => {
+    const memberMap = new Map(members.map((member) => [member.id, member]));
+    const keyword = participantSearch.trim().toLowerCase();
+    return enrollments
+      .filter((item) => item.course_id === participantCourseId && item.status === "active")
+      .map((enrollment) => ({ enrollment, member: memberMap.get(enrollment.user_id) ?? null }))
+      .filter(({ enrollment, member }) => {
+        if (!keyword) return true;
+        return (member?.full_name ?? "Peserta").toLowerCase().includes(keyword)
+          || enrollment.user_id.toLowerCase().includes(keyword);
+      })
+      .sort((a, b) => new Date(b.enrollment.granted_at || b.enrollment.created_at).getTime() - new Date(a.enrollment.granted_at || a.enrollment.created_at).getTime());
+  }, [enrollments, members, participantCourseId, participantSearch]);
+
   // ----------------------------------------------------
   // STATISTICS
   // ----------------------------------------------------
@@ -741,6 +761,53 @@ export default function PenggunaManager({
             <span>{success}</span>
           </div>
         )}
+
+        <section className="overflow-hidden rounded-[22px] border border-[#EEEAF7] bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
+            <div>
+              <p className="text-[9px] font-extrabold uppercase tracking-[.18em] text-[#09483F]">Class participants</p>
+              <h3 className="mt-1 text-sm font-extrabold text-[#211A37]">Daftar Peserta per Kelas</h3>
+              <p className="mt-1 text-[10px] text-[#9D97B4]">Menampilkan akun yang memiliki enrollment aktif pada kelas terpilih.</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-[minmax(210px,1fr)_190px] sm:min-w-[440px]">
+              <select value={participantCourseId} onChange={(event) => setParticipantCourseId(event.target.value)} className="h-10 min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700 outline-none focus:border-[#260047]">
+                {courses.length === 0 && <option value="">Belum ada kelas</option>}
+                {courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
+              </select>
+              <input value={participantSearch} onChange={(event) => setParticipantSearch(event.target.value)} placeholder="Cari nama peserta..." className="h-10 min-w-0 rounded-xl border border-slate-200 px-3 text-[11px] outline-none focus:border-[#260047]" />
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-[#FBFAFD] px-5 py-3 sm:px-6">
+            <p className="text-[10px] text-slate-500">Kelas: <strong className="text-slate-700">{participantCourse?.title ?? "Belum dipilih"}</strong></p>
+            <p className="text-[10px] font-bold text-[#09483F]">{participantRows.length} peserta aktif</p>
+          </div>
+          {participantRows.length === 0 ? (
+            <div className="px-5 py-10 text-center">
+              <Users className="mx-auto text-slate-300" size={28} />
+              <p className="mt-2 text-xs font-bold text-slate-700">Belum ada peserta pada kelas ini</p>
+              <p className="mt-1 text-[10px] text-slate-400">Peserta akan muncul setelah akses kelas diberikan dan status enrollment aktif.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {participantRows.map(({ enrollment, member }) => (
+                <div key={enrollment.id} className="flex flex-col gap-2 px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {member ? <MemberAvatar member={member} size="sm" /> : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-500">P</div>}
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-[#211A37]">{member?.full_name || "Peserta"}</p>
+                      <p className="mt-0.5 truncate text-[9px] text-slate-400">{member?.phone || member?.whatsapp_number || enrollment.user_id}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 sm:justify-end">
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-700">Akses aktif</span>
+                    <span className="text-[9px] text-slate-400">Bergabung {formatDate(enrollment.granted_at || enrollment.created_at)}</span>
+                    {member && <button type="button" onClick={() => openAccess(member)} className="text-[9px] font-bold text-[#260047] hover:underline">Detail</button>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         {/* =================================================
             MEMBER MANAGEMENT PANEL

@@ -1,31 +1,64 @@
-# Kiki Creator Class — Audit 1 Follow-up
+# Kiki Creator Class — Revisi Website
 
-Paket ini berisi source proyek lengkap berdasarkan Revisi 12 + perbaikan pemisahan role Audit 1 + perbaikan navigasi katalog/checkout dari hasil pengujian browser.
+Project source hasil penggabungan `src(9).zip`, `public.zip`, dan file konfigurasi yang telah diberikan, beserta pembaruan untuk sembilan revisi Kiki Creator Class, penguatan rekonsiliasi ledger, dan laporan audit akhir.
 
-## Isi perubahan follow-up
+## Teknologi
 
-- Katalog `/kelas` tetap publik agar pengunjung dapat melihat kelas.
-- Katalog mengenali sesi aktif dan menampilkan tombol sesuai role: Workspace Admin, Workspace Mentor, atau Dashboard Peserta. Tombol Masuk/Daftar hanya ditampilkan untuk pengunjung anonim.
-- Detail kelas mengarahkan Admin/Mentor kembali ke workspace masing-masing, Peserta yang sudah login langsung ke `/checkout?course=<UUID>`, dan pengunjung anonim ke pendaftaran dengan ID kelas tetap dibawa.
-- Checkout tanpa parameter `course` tetap dikembalikan ke katalog karena belum ada kelas yang dipilih.
+- Next.js App Router 16
+- React 19 + TypeScript
+- Tailwind CSS 4
+- Supabase Auth + PostgreSQL + Storage
+- Lucide React
 
-## Cara memasang
+## Menjalankan secara lokal
 
-1. Backup folder proyek yang sedang digunakan.
-2. Ekstrak ZIP ini ke folder sementara.
-3. Salin folder `src/` dari hasil ekstrak ke proyek, lalu izinkan penggantian file.
-4. Pertahankan `.env.local` dan `node_modules` milik proyek lokal. Jangan mengunggah atau membagikan `.env.local`.
-5. Restart server: hentikan `npm run dev`, lalu jalankan kembali `npm run dev`.
-6. Jika browser masih menampilkan tampilan lama, lakukan hard refresh (`Ctrl + Shift + R`).
+1. Pertahankan `.env.local` milik project asli. File tersebut tidak disertakan dalam paket ini.
+2. Pastikan variabel berikut tersedia:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+3. Jalankan `npm ci`.
+4. Jalankan `npm run dev`.
+5. Buka `http://localhost:3000`.
 
-## Skenario uji follow-up
+Sebelum deployment, jalankan `npm run lint` dan `npm run build` pada komputer yang memiliki akses ke npm registry.
 
-1. Login sebagai Mentor, buka `/kelas`: katalog boleh tampil, header harus menampilkan `Workspace Mentor`, bukan Masuk/Daftar.
-2. Login sebagai Peserta, buka `/kelas`: header harus menampilkan `Dashboard Peserta`, bukan Masuk/Daftar.
-3. Login sebagai Peserta, buka detail kelas, klik `Lanjut ke Checkout`: URL harus memuat `?course=<UUID>` dan halaman checkout harus memuat kelas yang benar.
-4. Login sebagai Peserta, buka `/checkout` tanpa parameter: kembali ke katalog adalah perilaku yang diharapkan; header katalog harus tetap menampilkan `Dashboard Peserta`.
-5. Ulangi logout, Back browser, dan akses URL privat untuk memastikan halaman privat tidak dapat digunakan setelah logout.
+## Perubahan tambahan
 
-Lihat `AUDIT-1-ROLE-ACCESS-FIX.md` untuk matriks role, pemeriksaan teknis, batas audit, dan catatan keamanan database.
+Lihat `docs/REVISION-9-IMPLEMENTATION.md` untuk daftar sembilan revisi dan implementasinya, serta `docs/FINAL_AUDIT_20261109.md` untuk hasil pemeriksaan dan batas pengujian.
 
-**Catatan:** SQL/RLS/RPC/trigger/Storage belum termasuk dalam paket ini dan akan diperiksa pada audit database terpisah. Build dan lint penuh juga perlu dijalankan pada komputer proyek setelah dependensi terpasang.
+## Migrasi database
+
+Folder `supabase/` berisi migration, audit read-only, dan preflight. **Jangan jalankan seluruh file secara berurutan tanpa memeriksa database terlebih dahulu.** Database produksi tidak diakses atau diubah dari proses penyusunan paket ini.
+
+Urutan aman:
+
+1. Buat backup Supabase.
+2. Jalankan `supabase/audit/20261106_security_audit_read_only.sql` dan simpan hasilnya.
+3. Jalankan `supabase/audit/20261109_revenue_preflight.sql`. Jika kolom atau fungsi prasyarat tidak lengkap, hentikan dan sesuaikan migration sebelum dijalankan.
+4. `20261106_mentor_content_version_workflow.sql` berada di `supabase/previously-applied/` sebagai arsip. Pengguna telah menjalankannya; **jangan jalankan ulang**.
+5. Periksa apakah tabel/fungsi dari `20261106_mentor_chapter_submission_workflow.sql` sudah ada. Jika belum, jalankan file di `supabase/migrations/` satu kali. README v3 sebelumnya menyatakan migration ini belum dijalankan pada saat paket v3 disiapkan.
+6. Periksa apakah fungsi `get_public_course_curriculum` dan `get_public_course_review_summary` sudah ada. Jika belum, jalankan `20261106_public_course_landing_data.sql` satu kali.
+7. Setelah prasyarat database cocok, jalankan `20261109_mentor_revenue_and_withdrawals.sql` satu kali.
+8. Jalankan kembali audit read-only dan uji alur Admin → Mentor → Peserta sebelum deployment.
+
+### Aturan bagi hasil
+
+- Admin menetapkan kelas dan Mentor penerima bagi hasil melalui **Manajemen Mentor**.
+- Satu kelas hanya dapat memiliki satu Mentor penerima bagi hasil aktif.
+- Mentor yang disepakati menerima 80%; platform menerima 20%.
+- Pendapatan dicatat hanya saat pesanan berstatus `paid` dan enrollment peserta pada kelas tersebut berstatus `active`.
+- Dasar hitung memakai total invoice setelah diskon, dialokasikan proporsional ke item kelas. Biaya payment provider tidak dikurangi pada migration ini.
+- Mentor tidak dapat menulis ledger, mengubah saldo, atau mengubah status pengajuan penarikan langsung dari browser. Database menghitung saldo dan memvalidasi permintaan.
+
+### File database yang tidak disertakan
+
+Audit historis menyebut migration `20261106_kcc_platform_features.sql` dan optional hardening `20261106_kcc_lesson_progress_guard.sql`, tetapi file SQL tersebut tidak tersedia pada snapshot project dan file Library yang dapat diakses pada sesi ini. Keduanya tidak direka ulang atau diganti agar tidak berisiko menimpa fungsi/database produksi. Fitur yang membutuhkan definisi SQL lama harus diverifikasi melalui audit database.
+
+## Pengujian yang dilakukan pada paket
+
+- Pemeriksaan sintaks TypeScript/TSX dengan parser TypeScript.
+- Pemeriksaan import lokal.
+- Pemeriksaan keberadaan route `page.tsx` untuk navigasi utama.
+- Pemeriksaan struktur SQL secara statis dan preflight kolom.
+
+`npm ci` tidak dapat diselesaikan di lingkungan penyusunan karena akses ke npm registry mengalami timeout. Karena itu, `next build`, ESLint penuh, dan type-check penuh belum dapat dinyatakan lulus. Migration SQL juga belum dijalankan di Supabase.

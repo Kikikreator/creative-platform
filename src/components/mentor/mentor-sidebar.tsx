@@ -4,7 +4,7 @@ import Image from "next/image";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, Menu, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
+import { ChevronLeft, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import LogoutButton from "@/components/auth/logout-button";
 import { mentorNavigation } from "./mentor-config";
 
@@ -43,7 +43,7 @@ export default function MentorSidebar({ open, collapsed, onClose, onOpen, onTogg
           ) : (
             <>
               <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[15px] bg-white p-1.5 shadow-[0_8px_18px_rgba(8,13,34,.2)]"><Image src="/logo_brand.png" alt="Kiki Creator Class" width={40} height={40} priority className="h-full w-full object-contain" /></div>
-              <div className="min-w-0 flex-1"><p className="truncate text-[15px] font-extrabold tracking-tight text-white">Kiki Creator Class</p><p className="mt-1 text-[9px] font-bold uppercase tracking-[.17em] text-white/60">Mentor Workspace</p></div>
+              <div className="min-w-0 flex-1"><p className="truncate text-[14px] font-semibold tracking-tight text-white">Kiki Creator Class</p><p className="mt-1 text-[9px] font-medium uppercase tracking-[.15em] text-white/60">Mentor Workspace</p></div>
               <button type="button" onClick={onToggleCollapsed} aria-label="Ciutkan sidebar" title="Ciutkan sidebar" className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/80 transition hover:bg-white/20 lg:flex"><PanelLeftClose size={16} /></button>
             </>
           )}
@@ -53,22 +53,21 @@ export default function MentorSidebar({ open, collapsed, onClose, onOpen, onTogg
         <nav className="sidebar-scrollbar-hidden flex-1 overflow-y-auto overscroll-contain px-3 py-5">
           {mentorNavigation.map((section) => (
             <div key={section.label} className="mb-5 last:mb-0">
-              {!collapsed && <p className="mb-2.5 px-3 text-[9px] font-extrabold uppercase tracking-[.16em] text-white/45">{section.label}</p>}
+              {!collapsed && <p className="mb-2.5 px-3 text-[9px] font-medium uppercase tracking-[.14em] text-white/50">{section.label}</p>}
               <div className="space-y-1">
                 {section.items.map((item) => {
                   const active = isActivePath(pathname, item.href);
                   const Icon = item.icon;
-                  return <Link key={item.href} href={item.href} title={collapsed ? item.title : undefined} onClick={onClose} className={`group flex min-h-[43px] items-center gap-3 rounded-[14px] px-3 text-[12px] font-semibold transition-all duration-200 ${collapsed ? "justify-center px-2" : ""} ${active ? "bg-white/15 text-white shadow-[inset_3px_0_0_#09483F]" : "text-white/70 hover:bg-white/10 hover:text-white"}`}>
+                  return <Link key={item.href} href={item.href} title={collapsed ? item.title : undefined} onClick={onClose} className={`group flex min-h-[44px] items-center gap-3 rounded-[14px] px-3 text-[11px] font-medium leading-[1.35] transition-all duration-200 ${collapsed ? "justify-center px-2" : ""} ${active ? "bg-white/15 text-white shadow-[inset_3px_0_0_#09483F]" : "text-white/70 hover:bg-white/10 hover:text-white"}`}>
                     <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] transition ${active ? "bg-white/15 text-white" : "text-white/55 group-hover:bg-white/10 group-hover:text-white"}`}><Icon size={16} strokeWidth={1.9} /></span>
-                    {!collapsed && <span className="min-w-0 flex-1 truncate">{item.title}</span>}
+                    {!collapsed && <span className="kcc-sidebar-menu-label min-w-0 flex-1 whitespace-normal break-words leading-[1.35]">{item.title}</span>}
                   </Link>;
                 })}
               </div>
             </div>
           ))}
         </nav>
-        <div className="shrink-0 space-y-2 p-3 pt-2">
-          {!collapsed && <div className="rounded-[17px] bg-white/8 p-3 ring-1 ring-white/10"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/12 text-white"><Sparkles size={15} /></span><p className="text-[11px] font-extrabold text-white">Pengajar Workspace</p></div><p className="mt-2 text-[9px] leading-4 text-white/60">Kelola materi, tugas, agenda, dan kelas yang dipercayakan kepadamu.</p></div>}
+        <div className="shrink-0 p-3 pt-2">
           <LogoutButton dark iconOnly={collapsed} className={collapsed ? "h-10" : "h-11 justify-start px-3"} />
         </div>
       </aside>
@@ -78,9 +77,9 @@ export default function MentorSidebar({ open, collapsed, onClose, onOpen, onTogg
           const nav = mentorNavigation.flatMap((section) => section.items).find((entry) => entry.href === item.href)!;
           const Icon = nav.icon;
           const active = isActivePath(pathname, item.href);
-          return <Link key={item.href} href={item.href} onClick={onClose} className={`flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-bold ${active ? "text-[#260047]" : "text-[#77717D]"}`}><span className={`flex h-8 w-9 items-center justify-center rounded-xl ${active ? "bg-[#F2EFF5]" : ""}`}><Icon size={18} /></span>{item.title}</Link>;
+          return <Link key={item.href} href={item.href} onClick={onClose} className={`kcc-sidebar-mobile-link flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium ${active ? "text-[#260047]" : "text-[#77717D]"}`}><span className={`flex h-8 w-9 items-center justify-center rounded-xl ${active ? "bg-[#F2EFF5]" : ""}`}><Icon size={18} /></span>{item.title}</Link>;
         })}
-        <button type="button" onClick={onOpen} className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-bold text-[#77717D]" aria-label="Menu lainnya"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><Menu size={18} /></span>Menu</button>
+        <button type="button" onClick={onOpen} className="kcc-sidebar-mobile-action flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium text-[#77717D]" aria-label="Menu lainnya"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><Menu size={18} /></span>Menu</button>
       </nav>
     </>
   );

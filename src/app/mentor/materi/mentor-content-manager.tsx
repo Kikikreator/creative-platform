@@ -20,6 +20,7 @@ import {
   ClipboardCheck,
   File,
   FileText,
+  Eye,
   Image as ImageIcon,
   Layers3,
   Link2,
@@ -155,6 +156,32 @@ function contentIcon(type: ContentType) {
   return <Icon size={15} />;
 }
 
+function getPreviewEmbedUrl(value: string | null, provider: string) {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (provider === "youtube") {
+      const id = url.hostname.includes("youtu.be")
+        ? url.pathname.split("/").filter(Boolean)[0]
+        : url.searchParams.get("v") || url.pathname.match(/\/(?:embed|shorts)\/([^/?]+)/)?.[1];
+      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+    }
+    if (provider === "vimeo") {
+      const id = url.pathname.split("/").filter(Boolean).pop();
+      return id && /^\d+$/.test(id) ? `https://player.vimeo.com/video/${id}` : null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function getTikTokPreviewUrl(value: string | null) {
+  if (!value) return null;
+  const id = value.match(/\/video\/(\d+)/)?.[1];
+  return id ? `https://www.tiktok.com/embed/v2/${id}` : null;
+}
+
 function sortByPosition<T extends { position: number; created_at?: string; id: string }>(items: T[]) {
   return [...items].sort((a, b) =>
     a.position - b.position ||
@@ -185,6 +212,10 @@ export default function MentorContentManager({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(initialError ?? "");
   const [notice, setNotice] = useState("");
+  const [previewPayload, setPreviewPayload] = useState<ChapterPayload | null>(null);
+  const [previewLessonId, setPreviewLessonId] = useState("");
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const [sectionEditor, setSectionEditor] = useState(false);
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -381,6 +412,30 @@ export default function MentorContentManager({
       p_is_deleted: isDeleted,
     });
     if (saveError) throw saveError;
+  }
+
+  async function openParticipantPreview(section: Section) {
+    const draft = draftMap.get(section.id);
+    const payload = draft?.payload ?? makePayload(section);
+    setPreviewPayload(payload);
+    setPreviewLessonId(payload.lessons[0]?.id ?? "");
+    setPreviewUrls({});
+    const paths = Array.from(new Set(payload.lessons.flatMap((lesson) => lesson.contents
+      .map((content) => content.resource_path)
+      .filter((path): path is string => Boolean(path) && !/^https?:\/\//i.test(path!)))));
+    if (paths.length === 0) return;
+    setPreviewLoading(true);
+    try {
+      const signed = await Promise.all(paths.map(async (path) => {
+        const { data, error: signedError } = await supabase.storage
+          .from("learning-resources")
+          .createSignedUrl(path, 60 * 60);
+        return signedError || !data?.signedUrl ? null : [path, data.signedUrl] as const;
+      }));
+      setPreviewUrls(Object.fromEntries(signed.filter((item): item is readonly [string, string] => Boolean(item))));
+    } finally {
+      setPreviewLoading(false);
+    }
   }
 
   function openSection(section?: Section) {
@@ -778,7 +833,7 @@ export default function MentorContentManager({
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[24px] bg-gradient-to-br from-[#4C1D95] via-[#6D28D9] to-[#8B5CF6] p-5 text-white shadow-[0_14px_34px_rgba(76,29,149,0.12)] sm:p-7">
+      <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#4C1D95] via-[#6D28D9] to-[#8B5CF6] p-5 text-white shadow-[0_14px_34px_rgba(76,29,149,0.12)] sm:p-7">
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
             <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-violet-100">Curriculum studio</p>
@@ -820,7 +875,7 @@ export default function MentorContentManager({
         </section>
       )}
 
-      <section className="rounded-[22px] border border-[#EEEAF7] bg-white p-4 shadow-sm sm:p-5">
+      <section className="rounded-2xl border border-[#EEEAF7] bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1">
             <label htmlFor="mentor-course" className={labelClass}>Pilih kelas yang ditugaskan</label>
@@ -850,17 +905,17 @@ export default function MentorContentManager({
       </section>
 
       {!courseId ? (
-        <div className="rounded-[22px] border border-dashed border-slate-300 bg-white p-10 text-center">
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
           <BookOpen className="mx-auto text-slate-300" size={32} />
           <h3 className="mt-3 text-sm font-bold text-slate-800">Belum ada kelas yang ditugaskan</h3>
           <p className="mt-1 text-xs text-slate-500">Minta Admin menetapkan kelas melalui Manajemen Mentor.</p>
         </div>
       ) : loading ? (
-        <div className="rounded-[22px] border border-[#EEEAF7] bg-white p-10 text-center text-xs text-slate-500"><RefreshCw className="mx-auto mb-2 animate-spin text-violet-700" size={20} />Memuat struktur kurikulum...</div>
+        <div className="rounded-2xl border border-[#EEEAF7] bg-white p-10 text-center text-xs text-slate-500"><RefreshCw className="mx-auto mb-2 animate-spin text-violet-700" size={20} />Memuat struktur kurikulum...</div>
       ) : (
         <div className="space-y-4">
           {sections.length === 0 && (
-            <div className="rounded-[22px] border border-dashed border-slate-300 bg-white p-10 text-center">
+            <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
               <Layers3 className="mx-auto text-slate-300" size={32} />
               <h3 className="mt-3 text-sm font-bold text-slate-800">Kurikulum belum memiliki Bab</h3>
               <p className="mt-1 text-xs text-slate-500">Mulai dengan membuat Bab pertama untuk kelas {selectedCourse?.title ?? ""}.</p>
@@ -876,32 +931,40 @@ export default function MentorContentManager({
             const statusLabel = locked ? "Menunggu Admin" : draft?.status === "revision_requested" ? "Perlu revisi" : draft?.status === "approved" ? "Disetujui" : draft ? "Draft tersimpan" : "Materi resmi";
             const statusClass = locked ? "bg-amber-50 text-amber-700" : draft?.status === "revision_requested" ? "bg-rose-50 text-rose-700" : draft?.status === "approved" ? "bg-emerald-50 text-emerald-700" : draft ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700";
             return (
-              <section key={section.id} className={`overflow-hidden rounded-[22px] border bg-white shadow-sm ${markedDelete ? "border-rose-200" : "border-[#EEEAF7]"}`}>
-                <div className="flex flex-col gap-3 border-b border-slate-100 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+              <section key={section.id} className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${markedDelete ? "border-rose-200" : "border-[#EEEAF7]"}`}>
+                <div className="flex flex-col gap-4 border-b border-slate-100 bg-white p-4 sm:p-5">
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700"><Layers3 size={18} /></div>
-                    <div className="min-w-0">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                      <Layers3 size={18} />
+                    </div>
+                    <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-violet-700">Bab {sectionIndex + 1}</p>
-                        <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold ${statusClass}`}>{statusLabel}</span>
-                        {markedDelete && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[8px] font-bold text-rose-700">Ditandai untuk dihapus</span>}
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-violet-700">Bab {sectionIndex + 1}</p>
+                        <span className={`rounded-full px-2.5 py-1 text-[9px] font-medium ${statusClass}`}>{statusLabel}</span>
+                        {markedDelete && <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[9px] font-medium text-rose-700">Ditandai untuk dihapus</span>}
                       </div>
-                      <h3 className="mt-0.5 truncate text-sm font-extrabold text-slate-900">{section.title}</h3>
-                      {section.description && <p className="mt-1 text-[10px] leading-5 text-slate-500">{section.description}</p>}
-                      <p className="mt-1 text-[9px] text-slate-400">{sectionLessons.length} Materi Inti · {contents.filter((item) => sectionLessons.some((lesson) => lesson.id === item.lesson_id)).length} Mini Materi</p>
-                      {draft?.admin_note && draft.status === "revision_requested" && <p className="mt-2 rounded-lg bg-rose-50 px-2.5 py-2 text-[9px] leading-5 text-rose-700">Catatan Admin: {draft.admin_note}</p>}
+                      <h3 className="mt-1 text-base font-semibold leading-snug text-slate-900">{section.title}</h3>
+                      {section.description && <p className="mt-1.5 max-w-[78ch] text-xs leading-6 text-slate-500">{section.description}</p>}
+                      <p className="mt-1.5 text-[9px] font-medium text-slate-400">{sectionLessons.length} Materi Inti · {contents.filter((item) => sectionLessons.some((lesson) => lesson.id === item.lesson_id)).length} Mini Materi</p>
+                      {draft?.admin_note && draft.status === "revision_requested" && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700">Catatan Admin: {draft.admin_note}</p>}
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <button type="button" title="Pindah Bab ke atas" onClick={() => void moveSection(section, -1)} disabled={sectionIndex === 0 || saving || locked || markedDelete} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-white disabled:opacity-30"><ArrowUp size={14} /></button>
-                    <button type="button" title="Pindah Bab ke bawah" onClick={() => void moveSection(section, 1)} disabled={sectionIndex === sections.length - 1 || saving || locked || markedDelete} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-white disabled:opacity-30"><ArrowDown size={14} /></button>
-                    <button type="button" onClick={() => openSection(section)} disabled={locked || markedDelete || saving} className="flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 text-[9px] font-bold text-slate-600 hover:bg-white disabled:opacity-40"><Pencil size={12} /> Edit Bab</button>
-                    {markedDelete ? (
-                      <button type="button" onClick={() => void undoDeleteSection(section)} disabled={saving || locked} className="flex h-8 items-center gap-1.5 rounded-lg border border-emerald-200 px-2.5 text-[9px] font-bold text-emerald-700 disabled:opacity-40">Batalkan hapus</button>
-                    ) : (
-                      <button type="button" onClick={() => void deleteSection(section)} disabled={saving || locked} className="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-100 text-rose-600 hover:bg-rose-50 disabled:opacity-40"><Trash2 size={13} /></button>
-                    )}
-                    <button type="button" onClick={() => openLesson(section.id)} disabled={locked || markedDelete || saving} className="flex h-8 items-center gap-1.5 rounded-lg bg-violet-700 px-3 text-[9px] font-bold text-white hover:bg-violet-800 disabled:opacity-40"><Plus size={12} /> Materi</button>
+
+                  <div className="flex flex-col gap-3 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <button type="button" title="Pindah Bab ke atas" aria-label="Pindah Bab ke atas" onClick={() => void moveSection(section, -1)} disabled={sectionIndex === 0 || saving || locked || markedDelete} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ArrowUp size={15} /></button>
+                        <button type="button" title="Pindah Bab ke bawah" aria-label="Pindah Bab ke bawah" onClick={() => void moveSection(section, 1)} disabled={sectionIndex === sections.length - 1 || saving || locked || markedDelete} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ArrowDown size={15} /></button>
+                      </div>
+                      <button type="button" onClick={() => void openParticipantPreview(section)} disabled={markedDelete || previewLoading} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-40"><Eye size={14} /> Preview Peserta</button>
+                      <button type="button" onClick={() => openSection(section)} disabled={locked || markedDelete || saving} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"><Pencil size={14} /> Edit Bab</button>
+                      {markedDelete ? (
+                        <button type="button" onClick={() => void undoDeleteSection(section)} disabled={saving || locked} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3.5 text-xs font-medium text-emerald-700 disabled:opacity-40">Batalkan hapus</button>
+                      ) : (
+                        <button type="button" onClick={() => void deleteSection(section)} disabled={saving || locked} aria-label="Hapus Bab" title="Hapus Bab" className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 hover:bg-rose-50 disabled:opacity-40"><Trash2 size={14} /></button>
+                      )}
+                    </div>
+                    <button type="button" onClick={() => openLesson(section.id)} disabled={locked || markedDelete || saving} className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[#260047] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#09483F] disabled:opacity-40 sm:w-auto sm:min-w-[132px]"><Plus size={15} /> Tambah Materi</button>
                   </div>
                 </div>
 
@@ -943,10 +1006,10 @@ export default function MentorContentManager({
                               <p className="mt-1 text-[9px] text-slate-400">{lesson.duration_minutes ? `${lesson.duration_minutes} menit` : "Durasi fleksibel"} · {lessonContents.length} Mini Materi</p>
                             </div>
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            <button type="button" onClick={() => openLesson(section.id, lesson)} disabled={locked || markedDelete || saving} className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 px-2.5 text-[9px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40"><Pencil size={12} /> Edit</button>
-                            <button type="button" onClick={() => setActiveLessonId(activeLessonId === lesson.id ? "" : lesson.id)} className="inline-flex h-8 items-center gap-1 rounded-lg border border-violet-100 bg-violet-50 px-2.5 text-[9px] font-bold text-violet-800"><ChevronDown size={12} /> Mini Materi</button>
-                            <button type="button" onClick={() => void deleteLesson(lesson)} disabled={saving || locked || markedDelete} className="flex h-8 w-8 items-center justify-center rounded-lg border border-rose-100 text-rose-600 hover:bg-rose-50 disabled:opacity-40"><Trash2 size={12} /></button>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button type="button" onClick={() => openLesson(section.id, lesson)} disabled={locked || markedDelete || saving} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"><Pencil size={12} /> Edit</button>
+                            <button type="button" onClick={() => setActiveLessonId(activeLessonId === lesson.id ? "" : lesson.id)} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-violet-100 bg-violet-50 px-3 text-xs font-medium text-violet-800"><ChevronDown size={12} /> Mini Materi</button>
+                            <button type="button" onClick={() => void deleteLesson(lesson)} disabled={saving || locked || markedDelete} className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 hover:bg-rose-50 disabled:opacity-40"><Trash2 size={12} /></button>
                           </div>
                         </div>
 
@@ -993,9 +1056,71 @@ export default function MentorContentManager({
         </div>
       )}
 
+      {previewPayload && (() => {
+        const activeLesson = previewPayload.lessons.find((lesson) => lesson.id === previewLessonId) ?? previewPayload.lessons[0] ?? null;
+        return (
+          <div className="fixed inset-0 z-[95] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-2 backdrop-blur-sm sm:p-5">
+            <section className="my-2 flex max-h-[96vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl bg-[#F7F6FC] shadow-2xl sm:my-5 sm:max-h-[92vh]">
+              <header className="flex items-start justify-between gap-3 bg-[#260047] px-4 py-4 text-white sm:px-6">
+                <div className="min-w-0"><p className="text-[9px] font-extrabold uppercase tracking-[.18em] text-white/60">Student preview · Read only</p><h3 className="mt-1 truncate text-base font-extrabold sm:text-lg">{previewPayload.section.title}</h3><p className="mt-1 text-[10px] text-white/70">Tampilan simulasi ruang belajar peserta. Progres dan status selesai tidak akan disimpan.</p></div>
+                <button type="button" onClick={() => setPreviewPayload(null)} aria-label="Tutup pratinjau" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20"><X size={16} /></button>
+              </header>
+              <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[280px_minmax(0,1fr)]">
+                <aside className="border-b border-slate-200 bg-white p-4 lg:border-b-0 lg:border-r">
+                  <p className="text-[9px] font-extrabold uppercase tracking-[.16em] text-[#09483F]">Daftar Materi</p>
+                  <div className="mt-3 space-y-2">
+                    {previewPayload.lessons.map((lesson, index) => (
+                      <button key={lesson.id} type="button" onClick={() => setPreviewLessonId(lesson.id)} className={`w-full rounded-xl border p-3 text-left transition ${activeLesson?.id === lesson.id ? "border-[#260047] bg-[#F7F3FA]" : "border-slate-100 bg-white hover:bg-slate-50"}`}>
+                        <span className="text-[9px] font-bold text-slate-400">Materi {index + 1}</span><span className="mt-1 block text-[11px] font-bold text-slate-800">{lesson.title}</span><span className="mt-1 block text-[9px] text-slate-400">{lesson.contents.length} Mini Materi</span>
+                      </button>
+                    ))}
+                    {previewPayload.lessons.length === 0 && <p className="rounded-xl bg-slate-50 p-3 text-[10px] text-slate-400">Belum ada Materi Inti pada Bab ini.</p>}
+                  </div>
+                </aside>
+                <main className="min-w-0 p-4 sm:p-6">
+                  {previewLoading && <div className="mb-3 rounded-xl bg-amber-50 p-3 text-[10px] text-amber-800">Menyiapkan tautan file untuk pratinjau...</div>}
+                  {!activeLesson ? <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-xs text-slate-400">Pilih materi untuk melihat tampilannya.</div> : (
+                    <article className="mx-auto max-w-3xl space-y-4">
+                      <div className="rounded-[20px] bg-white p-4 shadow-sm sm:p-6"><p className="text-[9px] font-extrabold uppercase tracking-[.16em] text-[#09483F]">{previewPayload.section.title}</p><h4 className="mt-2 text-xl font-extrabold leading-tight text-slate-900">{activeLesson.title}</h4>{activeLesson.content && <p className="mt-3 whitespace-pre-wrap text-xs leading-7 text-slate-600">{activeLesson.content}</p>}{activeLesson.duration_minutes ? <p className="mt-3 text-[9px] text-slate-400">Durasi {activeLesson.duration_minutes} menit</p> : null}</div>
+                      {activeLesson.video_url && (
+                        <div className="overflow-hidden rounded-[20px] bg-black shadow-sm">
+                          {getPreviewEmbedUrl(activeLesson.video_url, activeLesson.video_provider ?? "youtube") ? <iframe src={getPreviewEmbedUrl(activeLesson.video_url, activeLesson.video_provider ?? "youtube") ?? undefined} title={activeLesson.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="aspect-video w-full" /> : <a href={activeLesson.video_url} target="_blank" rel="noreferrer" className="block p-5 text-center text-xs font-bold text-white">Buka video / media pembelajaran</a>}
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        {activeLesson.contents.map((content, index) => {
+                          const fileUrl = content.resource_path ? (previewUrls[content.resource_path] ?? (/^https?:\/\//i.test(content.resource_path) ? content.resource_path : null)) : content.media_url;
+                          const youtubeEmbed = content.content_type === "youtube" ? getPreviewEmbedUrl(content.media_url, "youtube") : null;
+                          const tiktokEmbed = content.content_type === "tiktok" ? getTikTokPreviewUrl(content.media_url) : null;
+                          return (
+                            <section key={content.id} className="overflow-hidden rounded-[18px] border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
+                              <p className="text-[9px] font-extrabold uppercase tracking-[.14em] text-[#09483F]">Mini Materi {index + 1}</p><h5 className="mt-1 text-sm font-extrabold text-slate-900">{content.title}</h5>
+                              {content.content_type === "text" && <p className="mt-3 whitespace-pre-wrap text-xs leading-7 text-slate-600">{content.body}</p>}
+                              {content.content_type === "callout" && <div className="mt-3 rounded-xl border-l-4 border-[#09483F] bg-emerald-50 p-4 text-xs leading-6 text-emerald-950">{content.body}</div>}
+                              {youtubeEmbed && <iframe src={youtubeEmbed} title={content.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="mt-3 aspect-video w-full rounded-xl" />}
+                              {tiktokEmbed && <iframe src={tiktokEmbed} title={content.title} allow="encrypted-media; fullscreen; picture-in-picture" className="mx-auto mt-3 aspect-[9/16] w-full max-w-[300px] rounded-xl" />}
+                              {content.content_type === "image" && (fileUrl ? <img src={fileUrl} alt={content.title} className="mt-3 max-h-[520px] w-full rounded-xl object-contain" /> : <p className="mt-3 text-[10px] text-amber-700">File gambar belum dapat dimuat untuk pratinjau.</p>)}
+                              {content.content_type === "pdf" && (fileUrl ? <iframe src={fileUrl} title={content.title} className="mt-3 h-[480px] w-full rounded-xl border border-slate-100" /> : <p className="mt-3 text-[10px] text-amber-700">File PDF belum dapat dimuat untuk pratinjau.</p>)}
+                              {content.content_type === "audio" && (fileUrl ? <audio controls src={fileUrl} className="mt-3 w-full" /> : <p className="mt-3 text-[10px] text-amber-700">File audio belum dapat dimuat untuk pratinjau.</p>)}
+                              {content.content_type === "link" && content.link_url && <a href={content.link_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-xs font-bold text-[#260047] underline">{content.link_label || "Buka tautan"}</a>}
+                              {(content.content_type === "youtube" && !youtubeEmbed || content.content_type === "tiktok" && !tiktokEmbed) && content.media_url && <a href={content.media_url} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-xs font-bold text-[#260047] underline">Buka video di tab baru</a>}
+                            </section>
+                          );
+                        })}
+                        {activeLesson.contents.length === 0 && <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-xs text-slate-400">Belum ada Mini Materi untuk materi ini.</div>}
+                      </div>
+                    </article>
+                  )}
+                </main>
+              </div>
+            </section>
+          </div>
+        );
+      })()}
+
       {sectionEditor && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <form onSubmit={saveSection} className="w-full max-w-lg rounded-[24px] bg-white p-5 shadow-2xl sm:p-6">
+          <form onSubmit={saveSection} className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div><p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-700">Chapter draft</p><h3 className="mt-1 text-lg font-extrabold text-slate-900">{editingSection ? "Edit Bab" : "Tambah Bab"}</h3></div>
               <button type="button" onClick={() => setSectionEditor(false)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button>
@@ -1010,7 +1135,7 @@ export default function MentorContentManager({
 
       {lessonEditor && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-sm">
-          <form onSubmit={saveLesson} className="my-5 w-full max-w-xl rounded-[24px] bg-white p-5 shadow-2xl sm:p-6">
+          <form onSubmit={saveLesson} className="my-5 w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div><p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-700">Chapter draft</p><h3 className="mt-1 text-lg font-extrabold text-slate-900">{editingLesson ? "Edit Materi Inti" : "Tambah Materi Inti"}</h3></div>
               <button type="button" onClick={() => setLessonEditor(false)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button>
@@ -1033,7 +1158,7 @@ export default function MentorContentManager({
 
       {contentEditor && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-sm">
-          <form onSubmit={saveContent} className="my-5 w-full max-w-xl rounded-[24px] bg-white p-5 shadow-2xl sm:p-6">
+          <form onSubmit={saveContent} className="my-5 w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div><p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-700">Chapter draft</p><h3 className="mt-1 text-lg font-extrabold text-slate-900">{editingContent ? "Edit Mini Materi" : "Tambah Mini Materi"}</h3></div>
               <button type="button" onClick={() => setContentEditor(false)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button>

@@ -30,7 +30,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-poppins);
   --font-mono: var(--font-geist-mono);
 }
 
@@ -40,7 +40,9 @@ body {
   min-height: 100vh;
   color: var(--foreground);
   background: #ffffff;
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-poppins), Arial, Helvetica, sans-serif;
+  font-weight: 500;
+  font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
@@ -337,3 +339,111 @@ button, a { overflow-wrap: anywhere; }
 :is([class~="border-[#DED0FF]"], [class~="border-[#D8C7FF]"], [class~="border-[#D0BCFF]"], [class~="border-[#C8B2FF]"]) {
   border-color: #EAE5ED !important;
 }
+
+/* ==========================================================
+   KCC REVISION 9 — TYPOGRAPHY & TOUCH TARGET NORMALIZATION
+   Keep the existing visual language while raising tiny legacy
+   labels to a consistent, readable scale across feature pages.
+========================================================== */
+:root {
+  --kcc-type-meta: 10px;
+  --kcc-type-label: 11px;
+  --kcc-type-body-sm: 12px;
+  --kcc-type-body: 13px;
+  --kcc-type-card-title: 15px;
+  --kcc-control-height: 40px;
+}
+
+:where([class~="text-[8px]"]) { font-size: 9px !important; }
+:where([class~="text-[9px]"]) { font-size: var(--kcc-type-meta) !important; }
+:where([class~="text-[10px]"]) { font-size: var(--kcc-type-label) !important; }
+:where([class~="text-[11px]"]) { font-size: var(--kcc-type-body-sm) !important; }
+:where([class~="text-[12px]"]) { font-size: var(--kcc-type-body) !important; }
+
+.app-page-title { font-size: clamp(24px, 2.6vw, 32px); line-height: 1.12; }
+.app-page-description { font-size: 13px; line-height: 1.65; }
+.app-eyebrow { font-size: 10px; letter-spacing: .17em; }
+.app-stat-card > p:first-child { font-size: 12px; }
+
+button:not([aria-hidden="true"]), a[role="button"] { min-height: var(--kcc-control-height); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline-color: rgba(38, 0, 71, .28);
+}
+
+@media (max-width: 767px) {
+  :root {
+    --kcc-type-meta: 10px;
+    --kcc-type-label: 11px;
+    --kcc-type-body-sm: 12px;
+    --kcc-type-body: 13px;
+    --kcc-control-height: 44px;
+  }
+  .app-page-title { font-size: 24px; }
+  .app-page-description { font-size: 12px; line-height: 1.65; }
+  .app-surface, .app-stat-card { border-radius: 19px; }
+  button:not([aria-hidden="true"]), a[role="button"] { min-height: 44px; }
+  .app-mobile-safe { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
+}
+
+/* ==========================================================
+   KCC TYPOGRAPHY — POPPINS / REGULAR 400 · MEDIUM 500 · SEMIBOLD 600
+   Applies consistently to Admin, Member, Mentor, and public pages.
+========================================================== */
+:root {
+  --kcc-font-regular: 400;
+  --kcc-font-medium: 500;
+  --kcc-font-semibold: 600;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-poppins), Arial, Helvetica, sans-serif;
+}
+
+body {
+  font-weight: var(--kcc-font-medium);
+  font-synthesis: none;
+}
+
+/* Main headings and subheadings use semibold, not extra-bold. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.app-page-title {
+  font-weight: var(--kcc-font-semibold) !important;
+}
+
+/* Normalize legacy bold utilities to the requested semibold weight. */
+[class~="font-black"],
+[class~="font-extrabold"],
+[class~="font-bold"] {
+  font-weight: var(--kcc-font-semibold) !important;
+}
+
+strong,
+b {
+  font-weight: var(--kcc-font-semibold);
+}
+
+/* Small metadata and supporting details default to regular.
+   Explicit font-medium/font-semibold utilities can still override this. */
+:where(
+  small,
+  time,
+  [class~="text-[8px]"],
+  [class~="text-[9px]"],
+  [class~="text-[10px]"]
+) {
+  font-weight: var(--kcc-font-regular);
+}
+
+.app-eyebrow {
+  font-weight: var(--kcc-font-medium);
+}
+

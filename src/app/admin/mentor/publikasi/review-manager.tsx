@@ -121,24 +121,62 @@ function ChapterPreview({
   urls: Record<string, string>;
   label: string;
 }) {
+  const [studentMode, setStudentMode] = useState(false);
+  const [selectedLessonIndex, setSelectedLessonIndex] = useState(0);
   if (!snapshot?.section) return <div className="mt-3 rounded-xl border border-dashed border-slate-200 p-4 text-[10px] text-slate-400">Snapshot Bab tidak tersedia.</div>;
   const section = snapshot.section;
   const lessons = Array.isArray(snapshot.lessons) ? snapshot.lessons : [];
+  const safeLessonIndex = Math.min(selectedLessonIndex, Math.max(0, lessons.length - 1));
+  const activeLesson = lessons[safeLessonIndex] ?? lessons[0] ?? null;
   const title = textValue(section, "title") || "Bab";
   const description = textValue(section, "description");
   const miniCount = lessons.reduce((sum, lesson) => sum + (Array.isArray(lesson.contents) ? lesson.contents.length : 0), 0);
 
   return (
     <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[9px] font-bold text-slate-700"><Layers3 size={11} />{label}</span>
-        <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[9px] font-bold text-violet-800">{lessons.length} Materi Inti · {miniCount} Mini Materi</span>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[9px] font-bold text-slate-700"><Layers3 size={11} />{label}</span>
+          <span className="rounded-full bg-violet-100 px-2.5 py-1 text-[9px] font-bold text-violet-800">{lessons.length} Materi Inti · {miniCount} Mini Materi</span>
+        </div>
+        <button type="button" onClick={() => setStudentMode((current) => !current)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-[9px] font-bold text-emerald-800 hover:bg-emerald-100">{studentMode ? "Kembali ke Review Admin" : "Lihat sebagai Peserta"}</button>
       </div>
       <h5 className="mt-3 text-sm font-extrabold text-slate-900">{title}</h5>
       <p className="mt-1 whitespace-pre-wrap text-[10px] leading-5 text-slate-600">{description || "Tidak ada deskripsi Bab."}</p>
 
       {lessons.length === 0 ? (
         <p className="mt-3 rounded-xl border border-dashed border-slate-200 bg-white p-4 text-center text-[10px] text-slate-400">Bab belum memiliki Materi Inti.</p>
+      ) : studentMode ? (
+        <div className="mt-4 grid gap-3 lg:grid-cols-[190px_minmax(0,1fr)]">
+          <aside className="space-y-2">
+            <div className="rounded-xl bg-[#260047] p-3 text-white"><p className="text-[9px] font-extrabold uppercase tracking-[.14em] text-white/60">Mode Peserta</p><p className="mt-1 text-[10px] font-bold">Pilih materi untuk dibaca</p></div>
+            {lessons.map((lesson, index) => (
+              <button key={textValue(lesson, "id") || index} type="button" onClick={() => setSelectedLessonIndex(index)} className={`w-full rounded-xl border p-3 text-left ${safeLessonIndex === index ? "border-[#260047] bg-white" : "border-slate-200 bg-white/70 hover:bg-white"}`}>
+                <span className="text-[9px] font-bold text-slate-400">Materi {index + 1}</span>
+                <span className="mt-1 block text-[10px] font-extrabold text-slate-800">{textValue(lesson, "title") || `Materi ${index + 1}`}</span>
+                <span className="mt-1 block text-[9px] text-slate-400">{Array.isArray(lesson.contents) ? lesson.contents.length : 0} Mini Materi</span>
+              </button>
+            ))}
+          </aside>
+          <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+            {activeLesson && <>
+              <p className="text-[9px] font-extrabold uppercase tracking-[.14em] text-emerald-700">{title} · Materi {safeLessonIndex + 1}</p>
+              <h6 className="mt-2 text-base font-extrabold text-slate-900">{textValue(activeLesson, "title") || "Materi Inti"}</h6>
+              <p className="mt-2 whitespace-pre-wrap text-[10px] leading-6 text-slate-600">{textValue(activeLesson, "content") || "Tidak ada ringkasan materi."}</p>
+              {textValue(activeLesson, "video_url") && <a href={textValue(activeLesson, "video_url")} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-bold text-violet-700 hover:underline"><PlayCircle size={12} />Buka video Materi Inti</a>}
+              {textValue(activeLesson, "resource_path") && <div className="mt-2"><ResourceLink path={textValue(activeLesson, "resource_path")} urls={urls} label="Buka file Materi Inti" /></div>}
+              <div className="mt-4 space-y-2">
+                {(Array.isArray(activeLesson.contents) ? activeLesson.contents : []).map((content, contentIndex) => <MiniContentPreview key={textValue(content, "id") || contentIndex} item={content} urls={urls} />)}
+                {(!Array.isArray(activeLesson.contents) || activeLesson.contents.length === 0) && <p className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-[10px] text-slate-400">Belum ada Mini Materi.</p>}
+              </div>
+              <div className="mt-4 flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                <button type="button" onClick={() => setSelectedLessonIndex((current) => Math.max(0, current - 1))} disabled={safeLessonIndex <= 0} className="h-9 rounded-lg border border-slate-200 px-3 text-[9px] font-bold text-slate-600 disabled:opacity-40">Sebelumnya</button>
+                <span className="text-[9px] text-slate-400">{safeLessonIndex + 1} dari {lessons.length}</span>
+                <button type="button" onClick={() => setSelectedLessonIndex((current) => Math.min(lessons.length - 1, current + 1))} disabled={safeLessonIndex >= lessons.length - 1} className="h-9 rounded-lg bg-[#260047] px-3 text-[9px] font-bold text-white disabled:opacity-40">Selanjutnya</button>
+              </div>
+            </>}
+          </div>
+        </div>
       ) : (
         <div className="mt-4 space-y-3">
           {lessons.map((lesson, index) => {

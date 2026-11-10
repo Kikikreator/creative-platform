@@ -161,6 +161,8 @@ export default function KelasManager({
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [removeCover, setRemoveCover] = useState(false);
+  const [originalPriceInput, setOriginalPriceInput] = useState("");
+  const [loadingOriginalPrice, setLoadingOriginalPrice] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -241,14 +243,18 @@ export default function KelasManager({
     setCoverFile(null);
     setCoverPreview(null);
     setRemoveCover(false);
+    setOriginalPriceInput("");
+    setLoadingOriginalPrice(false);
     setSlugManual(false);
     setError("");
     setSuccess("");
     setModalOpen(true);
   }
 
-  function openEdit(course: Course) {
+  async function openEdit(course: Course) {
     setEditingId(course.id);
+    setOriginalPriceInput("");
+    setLoadingOriginalPrice(true);
 
     setForm({
       title: course.title,
@@ -272,6 +278,27 @@ export default function KelasManager({
     setError("");
     setSuccess("");
     setModalOpen(true);
+
+    try {
+      const { data, error: priceError } = await supabase
+        .from("course_promotion_settings")
+        .select("original_price")
+        .eq("course_id", course.id)
+        .maybeSingle();
+
+      if (priceError) throw priceError;
+      setOriginalPriceInput(
+        data?.original_price != null ? String(data.original_price) : "",
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? `Harga coret belum dapat dimuat: ${error.message}`
+          : "Harga coret belum dapat dimuat.",
+      );
+    } finally {
+      setLoadingOriginalPrice(false);
+    }
   }
 
   function closeModal() {
@@ -283,6 +310,8 @@ export default function KelasManager({
     setCoverFile(null);
     setCoverPreview(null);
     setRemoveCover(false);
+    setOriginalPriceInput("");
+    setLoadingOriginalPrice(false);
     setError("");
   }
 
@@ -351,8 +380,21 @@ export default function KelasManager({
       return;
     }
 
+    const parsedOriginalPrice = originalPriceInput.trim()
+      ? Number(originalPriceInput)
+      : null;
+
+    if (
+      parsedOriginalPrice !== null &&
+      (!Number.isSafeInteger(parsedOriginalPrice) || parsedOriginalPrice <= price)
+    ) {
+      setError("Harga coret harus berupa angka bulat dan lebih besar daripada harga kelas.");
+      return;
+    }
+
     setSaving(true);
     let uploadedCoverPath: string | null = null;
+    let courseWasSaved = false;
 
     try {
       let coverImageUrl = removeCover
@@ -411,6 +453,8 @@ export default function KelasManager({
         updated_at: new Date().toISOString(),
       };
 
+      let savedCourseId = editingId;
+
       if (editingId) {
         const { data, error: dbError } = await supabase
           .from("courses")
@@ -426,8 +470,8 @@ export default function KelasManager({
             course.id === editingId ? (data as Course) : course
           )
         );
-
-        setSuccess("Kelas berhasil diperbarui.");
+        courseWasSaved = true;
+        uploadedCoverPath = null;
       } else {
         const { data, error: dbError } = await supabase
           .from("courses")
@@ -440,18 +484,54 @@ export default function KelasManager({
 
         if (dbError) throw dbError;
 
+        savedCourseId = data.id;
+        setEditingId(data.id);
         setCourses((previous) => [data as Course, ...previous]);
-        setSuccess("Kelas baru berhasil ditambahkan.");
+        courseWasSaved = true;
+        uploadedCoverPath = null;
       }
 
+      if (savedCourseId) {
+        const { data: existingPromotion, error: findPromotionError } = await supabase
+          .from("course_promotion_settings")
+          .select("course_id")
+          .eq("course_id", savedCourseId)
+          .maybeSingle();
+
+        if (findPromotionError) throw findPromotionError;
+
+        if (existingPromotion) {
+          const { error: savePriceError } = await supabase
+            .from("course_promotion_settings")
+            .update({
+              original_price: parsedOriginalPrice,
+              updated_by: userId,
+            })
+            .eq("course_id", savedCourseId);
+          if (savePriceError) throw savePriceError;
+        } else if (parsedOriginalPrice !== null) {
+          const { error: insertPriceError } = await supabase
+            .from("course_promotion_settings")
+            .insert({
+              course_id: savedCourseId,
+              original_price: parsedOriginalPrice,
+              created_by: userId,
+              updated_by: userId,
+            });
+          if (insertPriceError) throw insertPriceError;
+        }
+      }
+
+      setSuccess(editingId ? "Kelas berhasil diperbarui." : "Kelas baru berhasil ditambahkan.");
       setModalOpen(false);
       setEditingId(null);
       setForm(emptyForm);
       setCoverFile(null);
       setCoverPreview(null);
       setRemoveCover(false);
+      setOriginalPriceInput("");
     } catch (err) {
-      if (uploadedCoverPath) {
+      if (uploadedCoverPath && !courseWasSaved) {
         const { error: cleanupError } = await supabase.storage
           .from(COURSE_COVER_BUCKET)
           .remove([uploadedCoverPath]);
@@ -478,6 +558,8 @@ export default function KelasManager({
         message.includes("duplicate key")
       ) {
         setError("Slug sudah digunakan. Silakan gunakan slug lain.");
+      } else if (courseWasSaved) {
+        setError(`Data kelas sudah tersimpan, tetapi harga coret belum berhasil disimpan: ${message}`);
       } else {
         setError(message);
       }
@@ -863,45 +945,52 @@ export default function KelasManager({
                           "Belum ada deskripsi kelas."}
                       </p>
 
-                      {/* Price */}
+                      {/* Compact price and icon-only actions */}
 
-                      <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                      <div className="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
 
-                        <div className="min-w-0">
-
-                          <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            <CircleDollarSign size={12} />
-                            Harga Kelas
-                          </p>
-
-                          <p className="mt-1 text-lg font-extrabold text-violet-800">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                            <CircleDollarSign size={17} strokeWidth={1.8} />
+                          </span>
+                          <span className="min-w-0 truncate text-[15px] font-semibold text-[#260047]">
                             {formatPrice(course.price)}
-                          </p>
-
+                          </span>
                         </div>
 
-                        {/* Actions */}
+                        <div className="flex shrink-0 items-center gap-1.5" aria-label="Aksi kelas">
 
-                        <div className="flex shrink-0 gap-2">
+                          <Link
+                            href={`/admin/kelas/${course.id}/promosi`}
+                            aria-label="Atur promosi kelas"
+                            title="Atur promosi kelas"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-emerald-50 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500"
+                          >
+                            <Eye size={16} strokeWidth={1.9} />
+                          </Link>
 
                           <button
+                            type="button"
                             onClick={() => openEdit(course)}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-violet-100 bg-violet-50 px-3 py-2.5 text-xs font-bold text-violet-800 transition hover:border-violet-300 hover:bg-violet-100"
+                            aria-label="Edit kelas"
+                            title="Edit kelas"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-violet-100 bg-violet-50 text-violet-800 transition hover:border-violet-300 hover:bg-violet-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500"
                           >
-                            <Pencil size={14} />
-                            Edit
+                            <Pencil size={16} strokeWidth={1.9} />
                           </button>
 
                           <button
+                            type="button"
                             onClick={() => handleDelete(course)}
                             disabled={deletingId === course.id}
-                            className="inline-flex items-center justify-center rounded-xl border border-red-100 bg-red-50 p-2.5 text-red-600 transition hover:border-red-200 hover:bg-red-100 disabled:opacity-50"
+                            aria-label="Hapus kelas"
                             title="Hapus kelas"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-100 bg-red-50 text-red-600 transition hover:border-red-200 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
                           >
                             {deletingId === course.id ? (
-                              <RefreshCw size={15} className="animate-spin" />
+                              <RefreshCw size={16} className="animate-spin" />
                             ) : (
-                              <Trash2 size={15} />
+                              <Trash2 size={16} strokeWidth={1.9} />
                             )}
                           </button>
 
@@ -1013,7 +1102,7 @@ export default function KelasManager({
                 <button
                   type="button"
                   onClick={closeModal}
-                  disabled={saving}
+                  disabled={saving || loadingOriginalPrice}
                   className="shrink-0 rounded-2xl bg-white/10 p-3 text-white transition hover:rotate-90 hover:bg-white/20 disabled:opacity-50"
                   aria-label="Tutup modal"
                 >
@@ -1287,40 +1376,19 @@ export default function KelasManager({
                       </p>
                     </div>
 
-                    <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4 sm:p-5">
-                      <div className="mb-4">
-                        <h5 className="text-xs font-extrabold text-slate-800">
-                          Profil Mentor / Pengajar
-                        </h5>
-                        <p className="mt-1 text-[10px] text-slate-400">
-                          Opsional. Informasi ini dapat ditampilkan di halaman detail kelas.
-                        </p>
-                      </div>
-
-                      <div>
-                        <label className="mb-2 block text-xs font-bold text-slate-700">
-                          Nama Mentor
-                        </label>
-                        <input
-                          maxLength={120}
-                          value={form.mentor_name}
-                          onChange={(e) => updateForm("mentor_name", e.target.value)}
-                          placeholder="Nama pengajar atau mentor"
-                          className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10"
-                        />
-                      </div>
-
-                      <div className="mt-4">
-                        <label className="mb-2 block text-xs font-bold text-slate-700">
-                          Profil Singkat Mentor
-                        </label>
-                        <textarea
-                          rows={3}
-                          value={form.mentor_bio}
-                          onChange={(e) => updateForm("mentor_bio", e.target.value)}
-                          placeholder="Ceritakan pengalaman atau keahlian mentor secara singkat..."
-                          className="w-full resize-y rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10"
-                        />
+                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 sm:p-5">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700">
+                          <Eye size={17} />
+                        </div>
+                        <div>
+                          <h5 className="text-xs font-extrabold text-emerald-900">
+                            Informasi Mentor untuk Halaman Promosi
+                          </h5>
+                          <p className="mt-1 text-[10px] leading-5 text-emerald-800">
+                            Foto, nama tampilan, keahlian, dan deskripsi mentor diatur terpisah melalui tombol <strong>Promosi</strong> pada kartu kelas agar seluruh informasi publik berada di satu tempat.
+                          </p>
+                        </div>
                       </div>
                     </div>
 
@@ -1516,6 +1584,38 @@ export default function KelasManager({
 
                         </div>
 
+                        <div className="mt-3">
+                          <label className="mb-2 block text-xs font-bold text-slate-700">
+                            Harga Coret / Harga Normal (Opsional)
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xs font-extrabold text-violet-700">Rp</span>
+                            <input
+                              type="number"
+                              min={Number(form.price || 0) + 1}
+                              step="1"
+                              inputMode="numeric"
+                              value={originalPriceInput}
+                              disabled={loadingOriginalPrice}
+                              onChange={(event) => setOriginalPriceInput(event.target.value)}
+                              placeholder="Contoh: 250000"
+                              className="w-full rounded-2xl bg-[#F8F7FC] py-3.5 pl-11 pr-4 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-400 hover:bg-[#F6F2FC] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/20 disabled:opacity-60"
+                            />
+                          </div>
+                          <p className="mt-2 text-[10px] leading-5 text-slate-400">
+                            {loadingOriginalPrice
+                              ? "Memuat harga coret sebelumnya..."
+                              : "Kosongkan jika tidak ingin menampilkan harga coret. Nilainya harus lebih besar dari harga kelas."}
+                          </p>
+                          {originalPriceInput && Number(originalPriceInput) > Number(form.price || 0) && (
+                            <div className="mt-2 rounded-xl bg-violet-50 px-3 py-2.5">
+                              <p className="text-[9px] font-bold uppercase tracking-wide text-violet-700">Preview harga promosi</p>
+                              <p className="mt-1 text-[10px] font-semibold text-slate-400 line-through">{formatPrice(originalPriceInput)}</p>
+                              <p className="text-sm font-extrabold text-violet-800">{formatPrice(form.price || "0")}</p>
+                            </div>
+                          )}
+                        </div>
+
                       </div>
 
                       {/* Status */}
@@ -1657,19 +1757,18 @@ export default function KelasManager({
                             "Ringkasan kelas akan ditampilkan di sini."}
                         </p>
 
-                        {form.mentor_name && (
-                          <p className="mt-3 text-[11px] font-semibold text-slate-500">
-                            Mentor: <span className="text-slate-800">{form.mentor_name}</span>
-                          </p>
-                        )}
-
                         <div className="mt-4 border-t border-slate-100 pt-4">
 
                           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                             Harga Kelas
                           </p>
 
-                          <p className="mt-1 text-xl font-extrabold text-violet-700">
+                          {originalPriceInput && Number(originalPriceInput) > Number(form.price || 0) && (
+                            <p className="mt-1 text-xs font-semibold text-slate-400 line-through">
+                              {formatPrice(originalPriceInput)}
+                            </p>
+                          )}
+                          <p className="mt-0.5 text-xl font-extrabold text-violet-700">
                             {formatPrice(form.price || "0")}
                           </p>
 
@@ -1754,7 +1853,7 @@ export default function KelasManager({
                   <button
                     type="button"
                     onClick={closeModal}
-                    disabled={saving}
+                    disabled={saving || loadingOriginalPrice}
                     className="rounded-xl bg-slate-100 px-6 py-3.5 text-sm font-bold text-slate-600 transition hover:bg-slate-200 disabled:opacity-50"
                   >
                     Batal
@@ -1762,7 +1861,7 @@ export default function KelasManager({
 
                   <button
                     type="submit"
-                    disabled={saving}
+                    disabled={saving || loadingOriginalPrice}
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#5B21B6] via-[#6D28D9] to-[#8B5CF6] px-7 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-violet-700/25 transition duration-300 hover:-translate-y-0.5 hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-60"
                   >
 

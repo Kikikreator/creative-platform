@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   UserRound,
+  UserPlus,
   Users,
   Wallet,
 } from "lucide-react";
@@ -94,6 +95,11 @@ export const adminNavigation: AdminNavSection[] = [
         title: "Hak Akses Member",
         href: "/admin/akses",
         icon: ShieldCheck,
+      },
+      {
+        title: "Akses Alumni",
+        href: "/admin/alumni",
+        icon: UserPlus,
       },
     ],
   },
@@ -212,6 +218,13 @@ export function getAdminPageMeta(pathname: string) {
       title: "Manajemen Mentor",
       description:
         "Undang Mentor, aktifkan role, dan pantau penugasan kelas.",
+    };
+  }
+
+  if (pathname.startsWith("/admin/alumni")) {
+    return {
+      title: "Akses Alumni",
+      description: "Verifikasi peserta lama dan aktifkan akses kelas gratis.",
     };
   }
 

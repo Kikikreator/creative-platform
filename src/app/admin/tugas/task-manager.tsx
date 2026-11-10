@@ -172,10 +172,8 @@ export default function TaskManager({
   const [lessons, setLessons] = useState<LessonRow[]>([]);
   const [tasks, setTasks] = useState<CourseTask[]>([]);
   const [assignedMentorIds, setAssignedMentorIds] = useState<string[]>([]);
-  const [selectedMentorIds, setSelectedMentorIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [savingMentors, setSavingMentors] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState(initialError ?? "");
   const [success, setSuccess] = useState("");
@@ -197,7 +195,6 @@ export default function TaskManager({
       setLessons([]);
       setTasks([]);
       setAssignedMentorIds([]);
-      setSelectedMentorIds([]);
       setLoading(false);
       return;
     }
@@ -234,7 +231,6 @@ export default function TaskManager({
 
       const mentorIds = (mentorResult.data ?? []).map((row) => row.mentor_user_id as string);
       setAssignedMentorIds(mentorIds);
-      setSelectedMentorIds(mentorIds);
 
       if (loadedSections.length > 0) {
         const sectionIds = loadedSections.map((section) => section.id);
@@ -254,7 +250,6 @@ export default function TaskManager({
       setLessons([]);
       setTasks([]);
       setAssignedMentorIds([]);
-      setSelectedMentorIds([]);
     } finally {
       setLoading(false);
     }
@@ -427,66 +422,9 @@ export default function TaskManager({
     }
   }
 
-  function toggleMentor(mentorId: string) {
-    setSelectedMentorIds((current) => current.includes(mentorId)
-      ? current.filter((id) => id !== mentorId)
-      : [...current, mentorId]
-    );
-  }
-
-  async function saveMentors() {
-    if (!selectedCourseId) return;
-    setSavingMentors(true);
-    setError("");
-    setSuccess("");
-    try {
-      const toAdd = selectedMentorIds.filter((id) => !assignedMentorIds.includes(id));
-      const toRemove = assignedMentorIds.filter((id) => !selectedMentorIds.includes(id));
-
-      if (toRemove.length > 0) {
-        const { error: removeError } = await supabase
-          .from("course_task_mentors")
-          .delete()
-          .eq("course_id", selectedCourseId)
-          .in("mentor_user_id", toRemove);
-        if (removeError) throw removeError;
-      }
-
-      if (toAdd.length > 0) {
-        const { error: addError } = await supabase
-          .from("course_task_mentors")
-          .upsert(
-            toAdd.map((mentor_user_id) => ({
-              course_id: selectedCourseId,
-              mentor_user_id,
-              assigned_by: userId,
-            })),
-            { onConflict: "course_id,mentor_user_id" }
-          );
-        if (addError) throw addError;
-      }
-
-      setAssignedMentorIds(selectedMentorIds);
-      setSuccess("Penugasan mentor untuk kelas ini berhasil disimpan.");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal menyimpan mentor kelas.");
-      await loadData();
-    } finally {
-      setSavingMentors(false);
-    }
-  }
-
   const publishedCount = tasks.filter((task) => task.status === "published").length;
   const draftCount = tasks.length - publishedCount;
-  // Hanya akun dengan role instructor yang dapat ditugaskan sebagai Mentor.
-  const availableMentors = profiles.filter(
-    (profile) =>
-      profile.id !== userId &&
-      (
-        profile.roles.includes("instructor") ||
-        assignedMentorIds.includes(profile.id)
-      )
-  );
+  const assignedMentors = profiles.filter((profile) => assignedMentorIds.includes(profile.id));
 
   return (
     <div className="app-page space-y-6">
@@ -495,7 +433,7 @@ export default function TaskManager({
           <div>
             <p className="app-eyebrow">Learning management</p>
             
-            <p className="app-page-description">Buat tugas praktik, tentukan posisinya di dalam Bab dan materi, lalu tugaskan mentor untuk memeriksa karya peserta.</p>
+            <p className="app-page-description">Buat tugas praktik dan tentukan posisinya di dalam Bab serta materi. Penugasan mentor dikelola terpusat melalui Manajemen Mentor.</p>
           </div>
         </section>
 
@@ -703,20 +641,20 @@ export default function TaskManager({
 
           <aside className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div className="flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-700"><UserRoundCheck size={18} /></div><div><p className="text-[10px] font-bold uppercase tracking-wider text-violet-700">Mentor kelas</p><h2 className="text-sm font-bold text-slate-900">Penugasan mentor</h2></div></div>
-            <p className="mt-3 text-xs leading-5 text-slate-500">Pilih akun yang bertanggung jawab memeriksa karya dan memberikan masukan pada kelas ini. Akses mentor dibatasi ke kelas yang ditugaskan.</p>
-            {!selectedCourseId ? <p className="mt-4 text-xs text-slate-500">Pilih kelas terlebih dahulu.</p> : availableMentors.length === 0 ? <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">Belum ada akun lain yang dapat ditugaskan.</p> : (
-              <div className="mt-4 max-h-72 space-y-2 overflow-y-auto pr-1">
-                {availableMentors.map((profile) => (
-                  <label key={profile.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-100 p-3 transition hover:border-violet-200 hover:bg-violet-50/40">
-                    <input type="checkbox" checked={selectedMentorIds.includes(profile.id)} onChange={() => toggleMentor(profile.id)} className="h-4 w-4 accent-violet-700" />
-                    <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-slate-800">{profile.full_name?.trim() || "Pengguna tanpa nama"}</span><span className="mt-0.5 block truncate text-[9px] text-slate-400">{profile.id}</span></span>
-                    {selectedMentorIds.includes(profile.id) && <CheckCircle2 size={15} className="shrink-0 text-violet-700" />}
-                  </label>
+            <p className="mt-3 text-xs leading-5 text-slate-500">Daftar ini hanya untuk melihat mentor yang saat ini ditugaskan pada kelas. Perubahan penugasan dan kesepakatan bagi hasil dilakukan melalui Manajemen Mentor.</p>
+            {!selectedCourseId ? <p className="mt-4 text-xs text-slate-500">Pilih kelas terlebih dahulu.</p> : assignedMentors.length === 0 ? <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">Belum ada mentor yang ditugaskan.</p> : (
+              <div className="mt-4 space-y-2">
+                {assignedMentors.map((profile) => (
+                  <div key={profile.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-[10px] font-bold text-violet-800">{(profile.full_name || "M").slice(0, 1).toUpperCase()}</span>
+                    <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-slate-800">{profile.full_name?.trim() || "Pengguna tanpa nama"}</span><span className="mt-0.5 block truncate text-[9px] text-slate-400">Mentor ditugaskan</span></span>
+                    <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />
+                  </div>
                 ))}
               </div>
             )}
-            <button type="button" onClick={() => void saveMentors()} disabled={!selectedCourseId || savingMentors || loading} className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 text-xs font-bold text-white transition hover:bg-violet-800 disabled:opacity-50">{savingMentors ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />} Simpan Penugasan Mentor</button>
-            <div className="mt-3 rounded-xl bg-slate-50 p-3 text-[10px] leading-5 text-slate-500"><ShieldCheck size={13} className="mr-1 inline text-violet-700" />Mentor hanya dapat membaca dan menilai tugas dari kelas yang ditugaskan kepadanya. Pengaturan role global tetap mengikuti Fase 4.</div>
+            <Link href="/admin/mentor" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#260047] px-4 text-xs font-bold text-white transition hover:bg-[#09483F]">Buka Manajemen Mentor</Link>
+            <div className="mt-3 rounded-xl bg-slate-50 p-3 text-[10px] leading-5 text-slate-500"><ShieldCheck size={13} className="mr-1 inline text-violet-700" />Akses Mentor tetap dibatasi pada kelas yang ditugaskan.</div>
           </aside>
         </section>
       </div>

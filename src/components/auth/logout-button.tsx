@@ -52,7 +52,7 @@ export default function LogoutButton({
         disabled={loading}
         aria-label="Keluar dari akun"
         title="Keluar dari akun"
-        className={`inline-flex min-h-10 w-full min-w-0 items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold shadow-sm transition disabled:cursor-wait disabled:opacity-60 ${tone} ${className}`}
+        className={`inline-flex min-h-10 w-full min-w-0 items-center justify-center gap-2 rounded-xl px-3 text-[13px] font-semibold shadow-sm transition disabled:cursor-wait disabled:opacity-60 ${tone} ${className}`}
       >
         {loading ? <LoaderCircle size={15} className="shrink-0 animate-spin" /> : <LogOut size={15} className="shrink-0" />}
         {!iconOnly && <span className={compact ? "hidden sm:inline" : "truncate"}>{loading ? "Keluar..." : "Keluar"}</span>}

@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { CourseCaseStudies, CourseUsedApps, type CaseStudySlide, type UsedAppItem } from "./case-study-carousel";
 import { getPrimaryRole, normalizeRoles, type AppRole } from "@/lib/auth/roles";
 
 type PageProps = {
@@ -34,6 +35,7 @@ type PublicLesson = {
   id: string;
   title: string;
   duration_minutes: number | null;
+  updated_at: string | null;
   is_preview: boolean;
   mini_material_count: number;
   position: number;
@@ -61,8 +63,21 @@ type PublicReview = {
   id: string;
   rating: number;
   review_text: string;
-  submitted_at: string;
+  submitted_at: string | null;
   display_name: string;
+  source?: "manual" | "participant";
+  show_date?: boolean;
+};
+
+type PublicPromotionMentor = {
+  display_name: string | null;
+  headline: string | null;
+  bio: string | null;
+  expertise: string[] | null;
+  photo_url: string | null;
+  original_price: number | string | null;
+  case_study_images: CaseStudySlide[] | null;
+  used_apps: UsedAppItem[] | null;
 };
 
 type PublicReviewSummary = {
@@ -99,7 +114,20 @@ function formatDate(value: string) {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "Asia/Jakarta",
   }).format(date);
+}
+
+function formatDuration(totalMinutes: number) {
+  if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) {
+    return "Belum ditentukan";
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours === 0) return `${minutes} menit`;
+  if (minutes === 0) return `${hours} jam`;
+  return `${hours} jam ${minutes} menit`;
 }
 
 function StarRating({
@@ -168,11 +196,15 @@ export default async function DetailKelasPage({ params }: PageProps) {
   const [
     userResult,
     mentorResult,
+    promotionMentorResult,
     curriculumResult,
     reviewResult,
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.rpc("get_public_course_mentor_profiles", {
+      p_course_id: course.id,
+    }),
+    supabase.rpc("get_public_course_promotion_mentor", {
       p_course_id: course.id,
     }),
     supabase.rpc("get_public_course_curriculum", {
@@ -236,6 +268,40 @@ export default async function DetailKelasPage({ params }: PageProps) {
     : [];
 
   const mentors = (mentorResult.data ?? []) as PublicMentor[];
+  const promotionMentor = promotionMentorResult.data
+    ? (promotionMentorResult.data as unknown as PublicPromotionMentor)
+    : null;
+  const caseStudyImages = Array.isArray(promotionMentor?.case_study_images)
+    ? promotionMentor.case_study_images.filter(
+        (image): image is CaseStudySlide =>
+          Boolean(image && typeof image.url === "string" && image.url.trim()),
+      )
+    : [];
+  const usedApps = Array.isArray(promotionMentor?.used_apps)
+    ? promotionMentor.used_apps.filter(
+        (app): app is UsedAppItem =>
+          Boolean(
+            app &&
+              typeof app.name === "string" &&
+              app.name.trim() &&
+              typeof app.url === "string" &&
+              app.url.trim(),
+          ),
+      )
+    : [];
+  const hasToolsAndCaseStudies = usedApps.length > 0 || caseStudyImages.length > 0;
+  const originalPrice = Number(promotionMentor?.original_price ?? 0);
+  const currentCoursePrice = Number(course.price ?? 0);
+  const hasStrikethroughPrice =
+    originalPrice > 0 && originalPrice > currentCoursePrice;
+  const hasPromotionMentor = Boolean(
+    promotionMentor &&
+      (promotionMentor.display_name ||
+        promotionMentor.headline ||
+        promotionMentor.bio ||
+        promotionMentor.photo_url ||
+        promotionMentor.expertise?.length),
+  );
   const curriculum = Array.isArray(curriculumResult.data)
     ? (curriculumResult.data as unknown as PublicSection[])
     : [];
@@ -251,10 +317,21 @@ export default async function DetailKelasPage({ params }: PageProps) {
     ? reviewSummary.reviews
     : [];
 
-  const totalLessons = curriculum.reduce(
-    (total, section) => total + (section.lessons?.length ?? 0),
+  const allPublishedLessons = curriculum.flatMap((section) => section.lessons ?? []);
+  const totalLessons = allPublishedLessons.length;
+  const totalMiniMaterials = allPublishedLessons.reduce(
+    (total, lesson) => total + (Number(lesson.mini_material_count) || 0),
     0,
   );
+  const totalMaterials = totalLessons + totalMiniMaterials;
+  const totalDurationMinutes = allPublishedLessons.reduce(
+    (total, lesson) => total + (Number(lesson.duration_minutes) || 0),
+    0,
+  );
+  const lastUpdatedAt = allPublishedLessons
+    .map((lesson) => lesson.updated_at)
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null;
   const accessLabel =
     course.access_type === "permanent"
       ? "Akses permanen"
@@ -318,8 +395,8 @@ export default async function DetailKelasPage({ params }: PageProps) {
         </section>
 
         {/* Cover kelas dikelola dari Manajemen Kelas Admin. */}
-        <section className="mt-6 overflow-hidden rounded-[25px] border border-[#EAE5ED] bg-white p-2 shadow-[0_10px_28px_rgba(38,0,71,.055)]">
-          <div className="relative aspect-[16/8.5] overflow-hidden rounded-[19px] bg-[#F0EBF3]">
+        <section className="mt-6 overflow-hidden rounded-2xl border border-[#EAE5ED] bg-white p-2 shadow-[0_10px_28px_rgba(38,0,71,.055)]">
+          <div className="relative aspect-[16/8.5] overflow-hidden rounded-xl bg-[#F0EBF3]">
             {course.cover_image_url ? (
               <img
                 src={course.cover_image_url}
@@ -339,7 +416,7 @@ export default async function DetailKelasPage({ params }: PageProps) {
 
         {/* Deskripsi kelas dan harga. */}
         <section className="mt-7 grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-7">
-          <div className="rounded-[24px] border border-[#EAE5ED] bg-white p-5 shadow-[0_8px_24px_rgba(38,0,71,.035)] sm:p-7">
+          <div className="rounded-2xl border border-[#EAE5ED] bg-white p-5 shadow-[0_8px_24px_rgba(38,0,71,.035)] sm:p-7">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F1EDF4] text-[#260047]">
                 <BookOpen size={19} />
@@ -355,14 +432,14 @@ export default async function DetailKelasPage({ params }: PageProps) {
             </div>
 
             {course.short_description && (
-              <p className="mt-5 text-[13px] font-semibold leading-7 text-[#51465D]">
+              <p className="mt-5 max-w-[72ch] text-sm font-medium leading-7 text-[#51465D]">
                 {course.short_description}
               </p>
             )}
 
             {(course.description || !course.short_description) && (
               <div className="mt-3 border-t border-[#F0ECF2] pt-4">
-                <p className="whitespace-pre-line text-[12px] leading-7 text-[#746D7B]">
+                <p className="max-w-[72ch] whitespace-pre-line text-sm leading-7 text-[#746D7B]">
                   {course.description || "Informasi detail kelas belum tersedia."}
                 </p>
               </div>
@@ -408,7 +485,7 @@ export default async function DetailKelasPage({ params }: PageProps) {
           </div>
 
           <aside className="lg:sticky lg:top-[88px]">
-            <div className="overflow-hidden rounded-[24px] border border-[#EAE5ED] bg-white shadow-[0_10px_28px_rgba(38,0,71,.07)]">
+            <div className="overflow-hidden rounded-2xl border border-[#EAE5ED] bg-white shadow-[0_10px_28px_rgba(38,0,71,.07)]">
               <div className="bg-[#260047] px-5 py-6 text-white sm:px-6">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-[10px] font-bold text-white/75">
@@ -418,7 +495,17 @@ export default async function DetailKelasPage({ params }: PageProps) {
                     <BookOpen size={17} />
                   </span>
                 </div>
-                <p className="mt-4 break-words text-[clamp(1.6rem,3vw,2rem)] font-extrabold leading-tight tracking-tight tabular-nums">
+                {hasStrikethroughPrice && (
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-semibold text-white/60 line-through decoration-white/70">
+                      {formatPrice(originalPrice)}
+                    </span>
+                    <span className="rounded-md bg-white/15 px-2 py-1 text-[8px] font-extrabold uppercase tracking-wide text-white">
+                      Harga Promo
+                    </span>
+                  </div>
+                )}
+                <p className={`${hasStrikethroughPrice ? "mt-1" : "mt-4"} break-words text-[clamp(1.6rem,3vw,2rem)] font-extrabold leading-tight tracking-tight tabular-nums`}>
                   {formatPrice(course.price)}
                 </p>
                 <p className="mt-2 text-[10px] leading-5 text-white/70">
@@ -429,16 +516,16 @@ export default async function DetailKelasPage({ params }: PageProps) {
               <div className="space-y-4 p-5 sm:p-6">
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-3 text-[10px]">
-                    <span className="text-[#8C8293]">Jumlah Bab</span>
-                    <strong className="text-[#30243A]">{curriculum.length} Bab</strong>
+                    <span className="text-[#8C8293]">Semua Materi</span>
+                    <strong className="text-right text-[#30243A]">{totalMaterials} Materi</strong>
                   </div>
                   <div className="flex items-center justify-between gap-3 text-[10px]">
-                    <span className="text-[#8C8293]">Materi Inti</span>
-                    <strong className="text-[#30243A]">{totalLessons} Materi</strong>
+                    <span className="text-[#8C8293]">Durasi Keseluruhan</span>
+                    <strong className="text-right text-[#30243A]">{formatDuration(totalDurationMinutes)}</strong>
                   </div>
                   <div className="flex items-center justify-between gap-3 text-[10px]">
-                    <span className="text-[#8C8293]">Masa Akses</span>
-                    <strong className="text-[#30243A]">{accessLabel}</strong>
+                    <span className="text-[#8C8293]">Terakhir Update</span>
+                    <strong className="text-right text-[#30243A]">{lastUpdatedAt ? formatDate(lastUpdatedAt) : "Belum diperbarui"}</strong>
                   </div>
                 </div>
 
@@ -474,7 +561,7 @@ export default async function DetailKelasPage({ params }: PageProps) {
         </section>
 
         {/* Kurikulum selalu mengambil Bab dan Materi Inti yang sudah diterbitkan. */}
-        <section className="mt-8 rounded-[24px] border border-[#EAE5ED] bg-white p-5 shadow-[0_8px_24px_rgba(38,0,71,.035)] sm:p-7">
+        <section className="mt-8 rounded-2xl border border-[#EAE5ED] bg-white p-5 shadow-[0_8px_24px_rgba(38,0,71,.035)] sm:p-7">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#74627E]">
@@ -612,128 +699,202 @@ export default async function DetailKelasPage({ params }: PageProps) {
           </p>
         </section>
 
-        {/* Profil Mentor mengambil data dari penugasan dan profil yang telah disetujui. */}
-        <section className="mt-8 rounded-[24px] border border-[#EAE5ED] bg-white p-5 shadow-[0_8px_24px_rgba(38,0,71,.035)] sm:p-7">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EDF4F2] text-[#09483F]">
-              <GraduationCap size={19} />
+        {/* Informasi sertifikat ditempatkan setelah kurikulum sebagai hasil akhir pembelajaran. */}
+        <section
+          aria-labelledby="course-certificate-title"
+          className="mt-5 rounded-2xl border border-[#EAE5ED] bg-white p-4 shadow-[0_2px_10px_rgba(38,0,71,.025)] sm:p-5"
+        >
+          <div className="flex items-start gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#EDF4F2] text-[#09483F]">
+              <Award size={23} strokeWidth={1.8} />
             </div>
-            <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#74627E]">
-                INSTRUCTOR
+            <div className="min-w-0">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#09483F]">
+                Sertifikat kelulusan
               </p>
-              <h2 className="mt-0.5 text-base font-extrabold text-[#21182A]">
-                Kenali Mentor Kelas
+              <h2 id="course-certificate-title" className="mt-1 text-base font-semibold leading-snug text-[#21182A] sm:text-lg">
+                Selesaikan kelas dan dapatkan sertifikat
               </h2>
+              
             </div>
           </div>
-
-          {mentors.length > 0 ? (
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              {mentors.map((mentor) => (
-                <article
-                  key={mentor.user_id}
-                  className="rounded-2xl border border-[#EAE5ED] bg-[#FCFBFD] p-4 sm:p-5"
-                >
-                  <div className="flex items-center gap-3">
-                    {mentor.photo_url ? (
-                      <img
-                        src={mentor.photo_url}
-                        alt={`Foto ${mentor.full_name}`}
-                        className="h-16 w-16 shrink-0 rounded-2xl object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#F0EBF3] text-[#260047]">
-                        <UserRound size={28} />
-                      </div>
-                    )}
-                    <div className="min-w-0">
-                      <h3 className="truncate text-sm font-extrabold text-[#30243A]">
-                        {mentor.full_name}
-                      </h3>
-                      <p className="mt-1 text-[10px] leading-5 text-[#84798C]">
-                        {mentor.headline || "Mentor Kiki Creator Class"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {mentor.bio && (
-                    <p className="mt-4 whitespace-pre-line text-[10px] leading-6 text-[#746D7B]">
-                      {mentor.bio}
-                    </p>
-                  )}
-
-                  {mentor.expertise?.length ? (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {mentor.expertise.map((skill) => (
-                        <span
-                          key={skill}
-                          className="rounded-lg bg-[#F0EBF3] px-2.5 py-1.5 text-[8px] font-bold text-[#51405D]"
-                        >
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  {mentor.portfolio_url && (
-                    <a
-                      href={mentor.portfolio_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-4 inline-flex items-center gap-1.5 text-[9px] font-extrabold text-[#09483F] hover:underline"
-                    >
-                      Lihat portofolio
-                      <ArrowRight size={12} />
-                    </a>
-                  )}
-                </article>
-              ))}
-            </div>
-          ) : course.mentor_name ? (
-            <div className="mt-5 flex items-start gap-4 rounded-2xl border border-[#EAE5ED] bg-[#FCFBFD] p-4 sm:p-5">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#F0EBF3] text-[#260047]">
-                <UserRound size={25} />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-sm font-extrabold text-[#30243A]">
-                  {course.mentor_name}
-                </h3>
-                <p className="mt-1 text-[10px] font-semibold text-[#84798C]">
-                  Mentor Kiki Creator Class
-                </p>
-                {course.mentor_bio && (
-                  <p className="mt-3 whitespace-pre-line text-[10px] leading-6 text-[#746D7B]">
-                    {course.mentor_bio}
-                  </p>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="mt-5 rounded-2xl border border-dashed border-[#DED6E3] bg-[#FCFBFD] p-6 text-center">
-              <Users size={25} className="mx-auto text-[#B8AEBF]" />
-              <p className="mt-2 text-xs font-bold text-[#51465D]">
-                Informasi mentor sedang disiapkan
-              </p>
-              <p className="mt-1 text-[9px] leading-5 text-[#948B9B]">
-                Profil mentor akan tampil setelah mentor disetujui dan ditugaskan ke kelas ini.
-              </p>
-            </div>
-          )}
         </section>
 
+        {/* Profil Mentor mengambil data dari penugasan dan profil yang telah disetujui. */}
+        <section className={`mt-8 grid items-stretch gap-5 ${
+          hasToolsAndCaseStudies
+            ? "lg:grid-cols-[minmax(0,1.8fr)_minmax(260px,0.9fr)]"
+            : "grid-cols-1"
+        }`}>
+          <article className="min-w-0 rounded-2xl border border-[#EAE5ED] bg-white p-5 shadow-[0_8px_24px_rgba(38,0,71,.035)] sm:p-7">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EDF4F2] text-[#09483F]">
+                <GraduationCap size={19} />
+              </div>
+              <div>
+                <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#74627E]">
+                  INSTRUCTOR
+                </p>
+                <h2 className="mt-0.5 text-base font-extrabold text-[#21182A]">
+                  Kenali Mentor Kelas
+                </h2>
+              </div>
+            </div>
+
+            {hasPromotionMentor && promotionMentor ? (
+              <article className="mt-5 overflow-hidden rounded-2xl border border-[#EAE5ED] bg-[#FCFBFD] p-4 sm:p-5">
+                <div className="grid items-center gap-4 sm:grid-cols-[132px_minmax(0,1fr)]">
+                  <div className="overflow-hidden rounded-2xl bg-[#F0EBF3]">
+                    {promotionMentor.photo_url ? (
+                      <img
+                        src={promotionMentor.photo_url}
+                        alt={`Foto ${promotionMentor.display_name || "mentor kelas"}`}
+                        className="aspect-square w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex aspect-square items-center justify-center text-[#260047]">
+                        <UserRound size={42} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-base font-extrabold text-[#30243A]">
+                      {promotionMentor.display_name || "Mentor Kiki Creator Class"}
+                    </h3>
+                    {promotionMentor.headline && (
+                      <p className="mt-1 text-[11px] font-semibold text-[#84798C]">
+                        {promotionMentor.headline}
+                      </p>
+                    )}
+                    {promotionMentor.bio && (
+                      <p className="mt-3 whitespace-pre-line text-[11px] leading-6 text-[#746D7B]">
+                        {promotionMentor.bio}
+                      </p>
+                    )}
+                    {promotionMentor.expertise?.length ? (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {promotionMentor.expertise.map((skill) => (
+                          <span key={skill} className="rounded-lg bg-[#F0EBF3] px-2.5 py-1.5 text-[9px] font-bold text-[#51405D]">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </article>
+            ) : mentors.length > 0 ? (
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {mentors.map((mentor) => (
+                  <article
+                    key={mentor.user_id}
+                    className="rounded-2xl border border-[#EAE5ED] bg-[#FCFBFD] p-4 sm:p-5"
+                  >
+                    <div className="flex items-center gap-3">
+                      {mentor.photo_url ? (
+                        <img
+                          src={mentor.photo_url}
+                          alt={`Foto ${mentor.full_name}`}
+                          className="h-16 w-16 shrink-0 rounded-2xl object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#F0EBF3] text-[#260047]">
+                          <UserRound size={28} />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <h3 className="truncate text-sm font-extrabold text-[#30243A]">
+                          {mentor.full_name}
+                        </h3>
+                        <p className="mt-1 text-[10px] leading-5 text-[#84798C]">
+                          {mentor.headline || "Mentor Kiki Creator Class"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {mentor.bio && (
+                      <p className="mt-4 whitespace-pre-line text-[10px] leading-6 text-[#746D7B]">
+                        {mentor.bio}
+                      </p>
+                    )}
+
+                    {mentor.expertise?.length ? (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {mentor.expertise.map((skill) => (
+                          <span
+                            key={skill}
+                            className="rounded-lg bg-[#F0EBF3] px-2.5 py-1.5 text-[8px] font-bold text-[#51405D]"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {mentor.portfolio_url && (
+                      <a
+                        href={mentor.portfolio_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-4 inline-flex items-center gap-1.5 text-[9px] font-extrabold text-[#09483F] hover:underline"
+                      >
+                        Lihat portofolio
+                        <ArrowRight size={12} />
+                      </a>
+                    )}
+                  </article>
+                ))}
+              </div>
+            ) : course.mentor_name ? (
+              <div className="mt-5 flex items-start gap-4 rounded-2xl border border-[#EAE5ED] bg-[#FCFBFD] p-4 sm:p-5">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#F0EBF3] text-[#260047]">
+                  <UserRound size={25} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-extrabold text-[#30243A]">
+                    {course.mentor_name}
+                  </h3>
+                  <p className="mt-1 text-[10px] font-semibold text-[#84798C]">
+                    Mentor Kiki Creator Class
+                  </p>
+                  {course.mentor_bio && (
+                    <p className="mt-3 whitespace-pre-line text-[10px] leading-6 text-[#746D7B]">
+                      {course.mentor_bio}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-2xl border border-dashed border-[#DED6E3] bg-[#FCFBFD] p-6 text-center">
+                <Users size={25} className="mx-auto text-[#B8AEBF]" />
+                <p className="mt-2 text-xs font-bold text-[#51465D]">
+                  Informasi mentor sedang disiapkan
+                </p>
+                <p className="mt-1 text-[9px] leading-5 text-[#948B9B]">
+                  Profil mentor akan tampil setelah mentor disetujui dan ditugaskan ke kelas ini.
+                </p>
+              </div>
+            )}
+          </article>
+          {hasToolsAndCaseStudies && <CourseUsedApps apps={usedApps} />}
+        </section>
+
+        {hasToolsAndCaseStudies && (
+          <CourseCaseStudies images={caseStudyImages} courseTitle={course.title} />
+        )}
+
         {/* Rating dan ulasan dari peserta yang telah menyelesaikan kelas. */}
-        <section className="mt-8 rounded-[24px] border border-[#EAE5ED] bg-white p-5 shadow-[0_8px_24px_rgba(38,0,71,.035)] sm:p-7">
+        <section className="mt-8 rounded-2xl border border-[#EAE5ED] bg-white p-5 shadow-[0_8px_24px_rgba(38,0,71,.035)] sm:p-7">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF7E8] text-[#D58A12]">
               <Star size={19} />
             </div>
             <div>
               <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#8A6B3F]">
-                STUDENT RATINGS & REVIEWS
+                COURSE RATINGS & REVIEWS
               </p>
               <h2 className="mt-0.5 text-base font-extrabold text-[#21182A]">
-                Rating dan Ulasan Peserta
+                Rating dan Ulasan Kelas
               </h2>
             </div>
           </div>
@@ -796,15 +957,22 @@ export default async function DetailKelasPage({ params }: PageProps) {
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                         <div className="flex min-w-0 items-center gap-2.5 sm:w-48 sm:shrink-0">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F0EBF3] text-[10px] font-extrabold text-[#260047]">
-                            PT
+                            {review.source === "manual"
+                              ? (review.display_name || "Ulasan").split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()
+                              : "PT"}
                           </div>
                           <div className="min-w-0">
                             <p className="text-[10px] font-extrabold text-[#51465D]">
                               {review.display_name || "Peserta Terverifikasi"}
                             </p>
-                            <p className="mt-0.5 text-[8px] text-[#A49BAA]">
-                              {formatDate(review.submitted_at)}
-                            </p>
+                            {review.show_date !== false && review.source !== "manual" && review.submitted_at && (
+                              <p className="mt-0.5 text-[8px] text-[#A49BAA]">
+                                {formatDate(review.submitted_at)}
+                              </p>
+                            )}
+                            <span className={`mt-1 inline-flex rounded-full px-2 py-1 text-[8px] font-bold ${review.source === "manual" ? "bg-[#F0EBF3] text-[#5C3A70]" : "bg-emerald-50 text-emerald-700"}`}>
+                              {review.source === "manual" ? "Ulasan Kelas Sebelumnya" : "Peserta Terverifikasi"}
+                            </span>
                           </div>
                         </div>
                         <div className="min-w-0 flex-1">
@@ -824,7 +992,7 @@ export default async function DetailKelasPage({ params }: PageProps) {
                     Belum ada ulasan untuk kelas ini
                   </p>
                   <p className="mt-1 text-[9px] leading-5 text-[#948B9B]">
-                    Rating dan ulasan akan tampil setelah peserta menyelesaikan kelas dan mengirimkan penilaiannya.
+                    Rating peserta dan ulasan kelas sebelumnya akan ditampilkan di sini.
                   </p>
                 </div>
               )}
@@ -832,32 +1000,14 @@ export default async function DetailKelasPage({ params }: PageProps) {
           )}
         </section>
 
-        <section className="mt-7 rounded-[22px] border border-[#EAE5ED] bg-white p-5 sm:p-6">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F1EDF4] text-[#260047]">
-              <Award size={19} />
-            </div>
-            <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-[0.14em] text-[#260047]">
-                SERTIFIKAT KELULUSAN
-              </p>
-              <h2 className="mt-1 text-sm font-extrabold text-[#30243A]">
-                Selesaikan kelas untuk memperoleh sertifikat
-              </h2>
-              <p className="mt-2 text-[10px] leading-6 text-[#746D7B]">
-                Sertifikat diterbitkan setelah peserta menyelesaikan seluruh materi wajib dan tugas, memperoleh persetujuan kelulusan Mentor, serta mengisi rating dan ulasan kelas apabila sertifikat diaktifkan untuk kelas ini.
-              </p>
-            </div>
-          </div>
-        </section>
 
-        <section className="mt-7 overflow-hidden rounded-[24px] bg-[#260047] px-5 py-6 text-white sm:px-7 sm:py-7">
+        <section className="mt-7 overflow-hidden rounded-2xl bg-[#260047] px-5 py-6 text-white sm:px-7 sm:py-7">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <p className="text-base font-extrabold">
                 Siap Memulai Pembelajaran?
               </p>
-              <p className="mt-1.5 max-w-xl text-[10px] leading-5 text-white/70">
+              <p className="mt-1.5 max-w-xl text-xs leading-6 text-white/75">
                 {userRole === "admin" || userRole === "instructor"
                   ? "Lihat informasi kelas sebagai referensi. Pengelolaan tetap dilakukan melalui workspace sesuai peran akun."
                   : "Bergabunglah dan mulai perjalanan belajarmu bersama Kiki Creator Class."}
@@ -865,7 +1015,7 @@ export default async function DetailKelasPage({ params }: PageProps) {
             </div>
             <Link
               href={courseActionHref}
-              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-[10px] font-extrabold text-[#260047] transition hover:bg-[#EDF4F2] hover:text-[#09483F]"
+              className="inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-[#260047] transition hover:bg-[#EDF4F2] hover:text-[#09483F] sm:w-auto"
             >
               {courseActionLabel}
               <ArrowRight size={15} />

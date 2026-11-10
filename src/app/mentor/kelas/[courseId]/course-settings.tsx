@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   LockKeyhole,
   Save,
+  Users,
 } from "lucide-react";
 
 export type MentorCourseSettingsData = {
@@ -28,7 +29,19 @@ export type MentorCourseSettingsData = {
 const inputClass = "mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100";
 const labelClass = "block text-[11px] font-bold text-slate-700";
 
-export default function MentorCourseSettings({ course }: { course: MentorCourseSettingsData }) {
+type MentorCourseParticipant = { user_id: string; full_name: string; enrolled_at: string };
+
+export default function MentorCourseSettings({
+  course,
+  participants,
+  hasRevenueAgreement,
+  participantError,
+}: {
+  course: MentorCourseSettingsData;
+  participants: MentorCourseParticipant[];
+  hasRevenueAgreement: boolean;
+  participantError: string | null;
+}) {
   const [shortDescription, setShortDescription] = useState(course.short_description ?? "");
   const [description, setDescription] = useState(course.description ?? "");
   const [coverImageUrl, setCoverImageUrl] = useState(course.cover_image_url ?? "");
@@ -82,6 +95,17 @@ export default function MentorCourseSettings({ course }: { course: MentorCourseS
         <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">{course.title}</h2>
         <p className="mt-2 max-w-2xl text-xs leading-6 text-violet-50/90">Atur presentasi dan informasi pembelajaran kelas yang kamu dampingi. Pengaturan komersial dan status publikasi tetap dikelola Admin.</p>
       </section>
+
+      <section className="overflow-hidden rounded-[22px] border border-[#EEEAF7] bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex items-center gap-2"><Users size={18} className="text-[#09483F]" /><div><h3 className="text-sm font-extrabold text-slate-900">Peserta Kelas</h3><p className="mt-0.5 text-[10px] text-slate-500">Nama peserta dengan akses kelas yang masih aktif.</p></div></div>
+          <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-bold text-emerald-800">{participants.length} peserta aktif</span>
+        </div>
+        {participantError ? <p className="p-5 text-xs text-rose-700">Daftar peserta belum dapat dimuat: {participantError}</p> : participants.length === 0 ? <p className="px-5 py-9 text-center text-xs text-slate-400">Belum ada peserta aktif pada kelas ini.</p> : <div className="divide-y divide-slate-100">{participants.map((participant) => <div key={participant.user_id} className="flex items-center justify-between gap-3 px-5 py-3.5 sm:px-6"><div className="flex min-w-0 items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F1EDF7] text-xs font-extrabold text-[#260047]">{(participant.full_name || "P").slice(0, 1).toUpperCase()}</span><div className="min-w-0"><p className="truncate text-xs font-bold text-slate-800">{participant.full_name || "Peserta"}</p><p className="mt-0.5 text-[9px] text-slate-400">ID {participant.user_id.slice(0, 8)}</p></div></div><span className="shrink-0 text-[9px] text-slate-400">{new Intl.DateTimeFormat("id-ID", { dateStyle: "medium" }).format(new Date(participant.enrolled_at))}</span></div>)}</div>}
+      </section>
+
+      {!hasRevenueAgreement && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[10px] leading-5 text-amber-900">Belum ada kesepakatan bagi hasil. Silakan minta kesepakatan dengan Admin kelas.</div>}
+      {hasRevenueAgreement && <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-[10px] leading-5 text-emerald-900">Kesepakatan bagi hasil aktif: 80% untuk Mentor dan 20% untuk platform.</div>}
 
       {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700"><AlertCircle size={15} />{error}</div>}
       {notice && <div role="status" className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700"><CheckCircle2 size={15} />{notice}</div>}

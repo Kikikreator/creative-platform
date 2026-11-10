@@ -41,6 +41,8 @@ export default function RegisterPage() {
     null
   );
   const [mentorInvite, setMentorInvite] = useState<string | null>(null);
+  const [alumniFlow, setAlumniFlow] = useState(false);
+  const [alumniNextPath, setAlumniNextPath] = useState("/akses-alumni");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -70,9 +72,22 @@ export default function RegisterPage() {
 
       const selectedCourseId = params.get("course");
       const mentorInviteToken = params.get("mentor_invite");
+      const requestedNextPath = params.get("next") ?? params.get("redirect");
+      const isSafeNextPath = Boolean(
+        requestedNextPath &&
+        requestedNextPath.startsWith("/") &&
+        !requestedNextPath.startsWith("//") &&
+        !requestedNextPath.includes("\\") &&
+        !requestedNextPath.startsWith("/login") &&
+        !requestedNextPath.startsWith("/register")
+      );
+      const nextPath = isSafeNextPath && requestedNextPath ? requestedNextPath : "/akses-alumni";
+      const isAlumniFlow = params.get("flow") === "alumni" || (isSafeNextPath && nextPath === "/akses-alumni");
 
       setCourseId(selectedCourseId);
       setMentorInvite(mentorInviteToken);
+      setAlumniFlow(isAlumniFlow);
+      setAlumniNextPath(nextPath);
 
       try {
         const supabase = createClient();
@@ -147,9 +162,11 @@ export default function RegisterPage() {
           }
           if (primaryRole === "member") {
             router.replace(
-              selectedCourseId
-                ? `/checkout?course=${encodeURIComponent(selectedCourseId)}`
-                : "/dashboard",
+              isAlumniFlow
+                ? nextPath
+                : selectedCourseId
+                  ? `/checkout?course=${encodeURIComponent(selectedCourseId)}`
+                  : "/dashboard",
             );
             router.refresh();
             return;
@@ -178,9 +195,11 @@ export default function RegisterPage() {
     };
   }, [router]);
 
-  const loginHref = courseId
-    ? `/login?course=${encodeURIComponent(courseId)}`
-    : "/login";
+  const loginHref = alumniFlow
+    ? `/login?next=${encodeURIComponent(alumniNextPath)}`
+    : courseId
+      ? `/login?course=${encodeURIComponent(courseId)}`
+      : "/login";
 
   // ================================================
   // REGISTER
@@ -210,12 +229,12 @@ export default function RegisterPage() {
       return;
     }
 
-    if (!mentorInvite && !acquisitionSource) {
+    if (!mentorInvite && !alumniFlow && !acquisitionSource) {
       setError("Pilih dari mana kamu mengetahui Kiki Creator Class.");
       return;
     }
 
-    if (!mentorInvite && !registrationReason) {
+    if (!mentorInvite && !alumniFlow && !registrationReason) {
       setError("Pilih alasan kamu mengikuti kelas.");
       return;
     }
@@ -240,13 +259,16 @@ export default function RegisterPage() {
           email: normalizedEmail,
           password,
           options: {
+            emailRedirectTo: alumniFlow
+              ? `${window.location.origin}/login?next=${encodeURIComponent(alumniNextPath)}`
+              : undefined,
             data: {
               full_name: name,
               phone: normalizedWhatsapp,
               whatsapp_number: normalizedWhatsapp,
               address: address.trim(),
-              acquisition_source: mentorInvite ? null : acquisitionSource,
-              registration_reason: mentorInvite ? null : registrationReason,
+              acquisition_source: mentorInvite ? null : alumniFlow ? "Lainnya" : acquisitionSource,
+              registration_reason: mentorInvite ? null : alumniFlow ? "Lainnya" : registrationReason,
             },
           },
         });
@@ -269,8 +291,9 @@ export default function RegisterPage() {
         if (inviteError) throw inviteError;
       }
 
-      // Data pendaftaran peserta hanya disimpan untuk registrasi peserta biasa.
-      // Penerimaan undangan Mentor tidak menjalankan RPC profil Peserta.
+      // Simpan profil melalui mekanisme registrasi Peserta juga untuk alumni.
+      // Field sumber dan tujuan belajar tidak ditanyakan pada alur alumni,
+      // sehingga keduanya dicatat sebagai "Lainnya".
       if (data.session && !mentorInvite) {
         const { error: profileSaveError } = await supabase.rpc(
           "save_member_registration_details",
@@ -278,8 +301,8 @@ export default function RegisterPage() {
             p_full_name: name,
             p_whatsapp_number: normalizedWhatsapp,
             p_address: address.trim() || null,
-            p_acquisition_source: acquisitionSource,
-            p_registration_reason: registrationReason,
+            p_acquisition_source: alumniFlow ? "Lainnya" : acquisitionSource,
+            p_registration_reason: alumniFlow ? "Lainnya" : registrationReason,
           },
         );
         if (profileSaveError) {
@@ -290,12 +313,15 @@ export default function RegisterPage() {
       let nextHref = mentorInvite
         ? `/login?mentor_invite=${encodeURIComponent(mentorInvite)}`
         : loginHref;
-      let nextLabel = "Lanjut ke Login";
+      let nextLabel = alumniFlow ? "Login setelah verifikasi" : "Lanjut ke Login";
 
       if (data.session) {
         if (mentorInvite) {
           nextHref = "/mentor";
           nextLabel = "Masuk ke Mentor Workspace";
+        } else if (alumniFlow) {
+          nextHref = alumniNextPath;
+          nextLabel = "Lanjutkan aktivasi alumni";
         } else if (courseId) {
           nextHref =
             `/checkout?course=${encodeURIComponent(
@@ -317,9 +343,13 @@ export default function RegisterPage() {
           ? data.session
             ? "Akun berhasil dibuat dan undangan Mentor telah diterima. Kamu dapat masuk ke Mentor Workspace."
             : "Akun berhasil dibuat. Konfirmasi email terlebih dahulu, lalu login melalui tautan undangan untuk mengaktifkan role Mentor."
-          : data.session
-            ? "Akun berhasil dibuat dan sudah aktif. Kamu bisa melanjutkan ke pembayaran kelas."
-            : "Akun berhasil dibuat. Silakan periksa email untuk melakukan konfirmasi akun jika diminta. Setelah itu, kamu dapat masuk menggunakan akunmu."
+          : alumniFlow
+            ? data.session
+              ? "Akun alumni berhasil dibuat. Lanjutkan ke halaman Akses Alumni, lalu tekan Aktifkan Akses Gratis. Kamu tidak perlu checkout atau membeli kelas lagi."
+              : "Akun alumni berhasil dibuat. Buka email dan klik tautan verifikasi dari Kiki Creator Class. Setelah email terverifikasi, kembali ke halaman Akses Alumni dan login menggunakan email yang sama dengan pengajuan. Kemudian tekan Aktifkan Akses Gratis. Kamu tidak perlu checkout atau membeli kelas lagi."
+            : data.session
+              ? "Akun berhasil dibuat dan sudah aktif. Kamu bisa melanjutkan ke pembayaran kelas."
+              : "Akun berhasil dibuat. Silakan periksa email untuk melakukan konfirmasi akun jika diminta. Setelah itu, kamu dapat masuk menggunakan akunmu."
       );
 
       setFullName("");
@@ -422,17 +452,19 @@ export default function RegisterPage() {
           </div>
 
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#6D28D9]">
-            {mentorInvite ? "MENTOR INVITATION" : "MEMBER REGISTRATION"}
+            {mentorInvite ? "MENTOR INVITATION" : alumniFlow ? "ALUMNI ACCESS" : "MEMBER REGISTRATION"}
           </p>
 
           <h1 className="mt-2 text-[26px] font-extrabold tracking-tight text-[#211A37]">
-            {mentorInvite ? "Aktifkan akun Mentor" : "Buat akun baru"}
+            {mentorInvite ? "Aktifkan akun Mentor" : alumniFlow ? "Buat akun untuk akses alumni" : "Buat akun baru"}
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-slate-500">
             {mentorInvite
               ? "Lengkapi identitas dasar untuk mengaktifkan akses Mentor Workspace. Akun ini akan digunakan untuk mengelola kelas dan membimbing peserta."
-              : "Daftar dan mulai perjalanan belajarmu bersama Kiki Creator Class."}
+              : alumniFlow
+                ? "Gunakan email yang sama dengan pengajuan alumni. Setelah email diverifikasi, kamu bisa mengaktifkan kelas yang sudah disetujui Admin tanpa melakukan pembayaran ulang."
+                : "Daftar dan mulai perjalanan belajarmu bersama Kiki Creator Class."}
           </p>
         </div>
 
@@ -579,7 +611,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {!mentorInvite && (
+            {!mentorInvite && !alumniFlow && (
               <>
                 {/* ACQUISITION SOURCE - KHUSUS PESERTA */}
                 <div>
@@ -765,7 +797,7 @@ export default function RegisterPage() {
                 </>
               ) : (
                 <>
-                  {mentorInvite ? "Aktifkan Akun Mentor" : "Daftar Sekarang"}
+                  {mentorInvite ? "Aktifkan Akun Mentor" : alumniFlow ? "Buat Akun Alumni" : "Daftar Sekarang"}
                   <ArrowRight size={17} />
                 </>
               )}

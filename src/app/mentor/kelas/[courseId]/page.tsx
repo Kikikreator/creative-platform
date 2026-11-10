@@ -29,5 +29,22 @@ export default async function MentorCourseSettingsPage({
 
   if (error || !course) notFound();
 
-  return <MentorCourseSettings course={course as MentorCourseSettingsData} />;
+  const [participantsResult, agreementResult] = await Promise.all([
+    supabase.rpc("get_mentor_course_participants", { p_course_id: courseId }),
+    supabase
+      .from("course_mentor_revenue_agreements")
+      .select("id, is_active, mentor_share_percent, platform_percent")
+      .eq("course_id", courseId)
+      .eq("mentor_user_id", user.id)
+      .maybeSingle(),
+  ]);
+
+  return (
+    <MentorCourseSettings
+      course={course as MentorCourseSettingsData}
+      participants={(participantsResult.data ?? []) as Array<{ user_id: string; full_name: string; enrolled_at: string }>}
+      hasRevenueAgreement={Boolean(agreementResult.data?.is_active)}
+      participantError={participantsResult.error?.message ?? null}
+    />
+  );
 }

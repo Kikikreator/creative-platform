@@ -9,6 +9,7 @@ import {
   GraduationCap,
   LayoutDashboard,
   UserRound,
+  Wallet,
 } from "lucide-react";
 
 export type MentorNavItem = {
@@ -86,6 +87,12 @@ export const mentorNavigation: MentorNavSection[] = [
         description: "Catatan dan agenda pribadi",
       },
       {
+        title: "Pendapatan",
+        href: "/mentor/pendapatan",
+        icon: Wallet,
+        description: "Kesepakatan, saldo, dan penarikan",
+      },
+      {
         title: "Profil Pengajar",
         href: "/mentor/profil",
         icon: UserRound,
@@ -142,6 +149,12 @@ export function getMentorPageMeta(pathname: string) {
     return {
       title: "Ruang Pengajar",
       description: "Ruang pribadi untuk catatan, agenda, dan rencana mengajar.",
+    };
+  }
+  if (pathname.startsWith("/mentor/pendapatan")) {
+    return {
+      title: "Pendapatan Saya",
+      description: "Lihat pendapatan, kesepakatan bagi hasil, dan pengajuan penarikan.",
     };
   }
   if (pathname.startsWith("/mentor/profil")) {

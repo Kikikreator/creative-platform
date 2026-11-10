@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
 import { hasRole, normalizeRoles } from "@/lib/auth/roles";
-import MentorManager, { type MentorAccount } from "./mentor-manager";
+import MentorManager, { type MentorAccount, type MentorCourseOption } from "./mentor-manager";
 import MentorInvitePanel from "./mentor-invite-panel";
 
 export default async function AdminMentorPage() {
@@ -42,6 +42,7 @@ export default async function AdminMentorPage() {
     rolesResult,
     assignmentsResult,
     coursesResult,
+    agreementsResult,
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -64,6 +65,11 @@ export default async function AdminMentorPage() {
       .select("id, title, slug, status")
       .order("title", { ascending: true })
       .limit(1000),
+
+    supabase
+      .from("course_mentor_revenue_agreements")
+      .select("id, course_id, mentor_user_id, mentor_share_percent, platform_percent, is_active, agreed_at")
+      .limit(5000),
   ]);
 
   const errors = [
@@ -71,6 +77,7 @@ export default async function AdminMentorPage() {
     rolesResult.error?.message,
     assignmentsResult.error?.message,
     coursesResult.error?.message,
+    agreementsResult.error?.message,
   ].filter(Boolean);
 
   const roleMap = new Map<string, string[]>();
@@ -89,6 +96,7 @@ export default async function AdminMentorPage() {
   );
 
   const assignmentsMap = new Map<string, string[]>();
+  const assignmentIdsMap = new Map<string, string[]>();
 
   for (const row of assignmentsResult.data ?? []) {
     const courseTitle = courseMap.get(row.course_id);
@@ -97,6 +105,17 @@ export default async function AdminMentorPage() {
     const current = assignmentsMap.get(row.mentor_user_id) ?? [];
     if (!current.includes(courseTitle)) current.push(courseTitle);
     assignmentsMap.set(row.mentor_user_id, current);
+    const currentIds = assignmentIdsMap.get(row.mentor_user_id) ?? [];
+    if (!currentIds.includes(row.course_id)) currentIds.push(row.course_id);
+    assignmentIdsMap.set(row.mentor_user_id, currentIds);
+  }
+
+  const revenueAgreementMap = new Map<string, string[]>();
+  for (const row of agreementsResult.data ?? []) {
+    if (!row.is_active) continue;
+    const current = revenueAgreementMap.get(row.mentor_user_id) ?? [];
+    if (!current.includes(row.course_id)) current.push(row.course_id);
+    revenueAgreementMap.set(row.mentor_user_id, current);
   }
 
   const accounts: MentorAccount[] = (
@@ -105,6 +124,8 @@ export default async function AdminMentorPage() {
     ...profile,
     roles: roleMap.get(profile.id) ?? [],
     assignedCourses: assignmentsMap.get(profile.id) ?? [],
+    assignedCourseIds: assignmentIdsMap.get(profile.id) ?? [],
+    revenueAgreedCourseIds: revenueAgreementMap.get(profile.id) ?? [],
   }));
 
   return (
@@ -112,6 +133,7 @@ export default async function AdminMentorPage() {
       <MentorInvitePanel />
       <MentorManager
         initialAccounts={accounts}
+        courses={(coursesResult.data ?? []) as MentorCourseOption[]}
         initialError={errors.length ? errors.join(" | ") : null}
       />
     </div>
