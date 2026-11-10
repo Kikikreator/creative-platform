@@ -248,7 +248,7 @@ export default function AlumniRequestForm({
       localStorage.setItem(REQUEST_STORAGE_KEY, id);
       setRequestId(id);
       setRequestStatus(optimisticRequest);
-      setSignupPending(false);
+      
       setWhatsapp("");
       setProofNote("");
       setProofFile(null);
@@ -320,7 +320,7 @@ export default function AlumniRequestForm({
     setRequestId("");
     setRequestStatus(null);
     setStatusError("");
-    setSignupPending(false);
+    
     setClaimError("");
     setFeedback("");
   }
