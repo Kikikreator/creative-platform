@@ -15,10 +15,10 @@ export default function AdminHeader({ userName, userEmail, onOpenSidebar }: Prop
   const meta = getAdminPageMeta(usePathname());
   return (
     <header className="sticky top-0 z-30 border-b border-[#f0edf7]/80 bg-white/80 backdrop-blur-2xl">
-      <div className="mx-auto flex min-h-[78px] max-w-[1560px] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+      <div className="kcc-workspace-header-inner mx-auto flex min-h-[78px] max-w-[1560px] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-3">
-          <button type="button" onClick={onOpenSidebar} aria-label="Buka menu admin" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] bg-[#F2EFF5] text-[#260047] lg:hidden"><Menu size={19} /></button>
-          <div className="min-w-0"><p className="text-[9px] font-extrabold uppercase tracking-[.18em] text-[#260047]">Administrator workspace</p><h1 className="mt-1 truncate text-[18px] font-extrabold tracking-tight text-[#211a37] sm:text-[20px]">{meta.title}</h1></div>
+          <button type="button" onClick={onOpenSidebar} aria-label="Buka menu admin" className="kcc-workspace-menu-button flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] bg-[#F2EFF5] text-[#260047] lg:hidden"><Menu size={19} /></button>
+          <div className="min-w-0"><p className="kcc-workspace-header-kicker text-[9px] font-extrabold uppercase tracking-[.18em] text-[#260047]">Administrator workspace</p><h1 className="mt-1 truncate text-[18px] font-extrabold tracking-tight text-[#211a37] sm:text-[20px]">{meta.title}</h1></div>
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <span className="hidden items-center gap-1.5 rounded-full bg-[#efedf5] px-3 py-2 text-[10px] font-bold text-[#51436f] md:inline-flex"><ShieldCheck size={13} /> Administrator</span>

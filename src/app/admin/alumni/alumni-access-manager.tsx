@@ -20,6 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useConfirmDialog } from "@/components/ui/confirm-dialog-provider";
 
 export type AlumniAccessRequestRow = {
   id: string;
@@ -97,6 +98,7 @@ export default function AlumniAccessManager({
   initialError,
 }: Props) {
   const router = useRouter();
+  const confirm = useConfirmDialog();
   const [requests, setRequests] = useState(initialRequests);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterValue>("all");
@@ -172,7 +174,17 @@ export default function AlumniAccessManager({
 
   async function reviewRequest(row: AlumniAccessRequestRow, decision: "approved" | "rejected") {
     if (savingId) return;
-    if (decision === "rejected" && !window.confirm(`Tolak pengajuan akses alumni dari ${row.full_name}?`)) return;
+
+    if (decision === "rejected") {
+      const approved = await confirm({
+        title: "Tolak pengajuan akses alumni?",
+        message: `Pengajuan dari ${row.full_name} akan ditolak. Tindakan ini dapat diberitahukan kepada pemohon.`,
+        confirmLabel: "Tolak pengajuan",
+        cancelLabel: "Batal",
+        variant: "danger",
+      });
+      if (!approved) return;
+    }
 
     setSavingId(row.id);
     setActionError("");

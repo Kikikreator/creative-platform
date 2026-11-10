@@ -423,7 +423,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F8F7FC] px-4 py-6 sm:px-6">
+    <main className="kcc-login-main relative flex min-h-screen items-start justify-center overflow-hidden bg-[#F8F7FC] px-4 py-4 sm:items-center sm:px-6 sm:py-6">
 
       {/* BACKGROUND */}
       <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-violet-300/15 blur-3xl" />
@@ -431,7 +431,7 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-emerald-300/15 blur-3xl" />
 
       {/* MAIN CARD */}
-      <div className="relative grid w-full max-w-[920px] overflow-hidden rounded-[26px] border border-white bg-white shadow-[0_18px_55px_rgba(76,29,149,0.12)] sm:rounded-[28px] lg:min-h-[560px] lg:grid-cols-2">
+      <div className="kcc-login-card relative grid w-full max-w-[440px] overflow-hidden rounded-[26px] border border-white bg-white shadow-[0_18px_55px_rgba(76,29,149,0.12)] sm:rounded-[28px] lg:max-w-[920px] lg:min-h-[560px] lg:grid-cols-2">
 
         {/* LEFT PANEL */}
         <section className="relative hidden flex-col justify-between overflow-hidden bg-[#260047] p-8 text-white lg:flex xl:p-10">
@@ -530,12 +530,12 @@ export default function LoginPage() {
         </section>
 
         {/* RIGHT PANEL */}
-        <section className="flex min-w-0 flex-col justify-center px-6 py-8 sm:px-10 sm:py-10 lg:px-9 lg:py-9 xl:px-11">
+        <section className="kcc-login-panel flex min-w-0 flex-col justify-start px-5 py-6 sm:px-10 sm:py-10 lg:justify-center lg:px-9 lg:py-9 xl:px-11">
 
           {/* MOBILE BRAND */}
           <Link
             href="/"
-            className="mb-8 flex items-center gap-3 lg:hidden"
+            className="kcc-login-mobile-brand mb-5 flex items-center gap-3 lg:hidden"
           >
             <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#EEEAF7] bg-[#FBFAFF] p-1.5">
               <Image
@@ -559,22 +559,29 @@ export default function LoginPage() {
             </div>
           </Link>
 
+          {/* MOBILE LEARNING IDENTITY — kept directly below the brand */}
+          <div className="kcc-login-mobile-intro mb-6 lg:hidden">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#EEEAF7] bg-[#F8F6FA] px-3 py-1.5 text-[12px] font-medium text-[#51436F]">
+              <Sparkles size={14} />
+              Learning Workspace
+            </span>
+            <p className="mt-3 max-w-[28ch] text-[21px] font-semibold leading-[1.25] tracking-tight text-[#211A37]">
+              Belajar dan kembangkan kreativitas bersama.
+            </p>
+          </div>
+
           {/* HEADING */}
-          <div className="mb-7">
+          <div className="mb-6">
 
             <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#EEEAF7] bg-[#FBFAFF] text-[#260047] shadow-sm">
               <GraduationCap size={23} />
             </div>
 
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#260047]">
-              ACCOUNT ACCESS
-            </p>
-
             <h2 className="mt-2 text-[27px] font-extrabold tracking-tight text-[#211A37] sm:text-[30px]">
               Selamat datang!
             </h2>
 
-            <p className="mt-2 max-w-[340px] text-xs leading-6 text-slate-500">
+            <p className="mt-2 max-w-[340px] text-sm leading-6 text-slate-500">
               Masuk ke akunmu untuk melanjutkan perjalanan
               belajar bersama Kiki Creator Class.
             </p>
@@ -591,7 +598,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="email"
-                className="mb-2 block text-xs font-bold text-slate-700"
+                className="mb-2 block text-sm font-medium text-slate-700"
               >
                 Alamat Email
               </label>
@@ -621,7 +628,7 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="mb-2 block text-xs font-bold text-slate-700"
+                className="mb-2 block text-sm font-medium text-slate-700"
               >
                 Password
               </label>

@@ -1471,17 +1471,7 @@ export default function MateriManager({
     <div className="space-y-7 text-[#1B1730]">
       {/* PAGE HEADING */}
       <section className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#6D28D9]">
-            <span className="h-2 w-2 rounded-full bg-[#A78BFA]" />
-            Content Management
-          </div>
-
-          <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#817A97]">
-            Atur struktur bab, video, dan seluruh materi pembelajaran
-            untuk setiap kelas dalam satu tempat.
-          </p>
-        </div>
+        
       </section>
 
       {/* COURSE SELECTOR */}
@@ -1828,9 +1818,9 @@ export default function MateriManager({
 
                     {/* SECTION HEADER */}
 
-                    <div className="flex flex-col justify-between gap-4 bg-[#FAF9FF] p-5 sm:flex-row sm:items-center">
+                    <div className="flex flex-col justify-between gap-4 bg-[#FAF9FF] p-5 sm:flex-row sm:items-start">
 
-                      <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex min-w-0 flex-1 items-start gap-3">
 
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#6D28D9] text-white shadow-md shadow-violet-700/15">
                           <Layers3 size={21} />
@@ -1863,34 +1853,40 @@ export default function MateriManager({
 
                       </div>
 
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
 
                         <button
+                          type="button"
                           onClick={() => openCreateLesson(section.id)}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-[#6D28D9] px-4 py-2.5 text-xs font-bold text-white transition hover:shadow-md"
+                          aria-label="Tambah Materi"
+                          title="Tambah Materi"
+                          className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#260047] text-white transition hover:bg-[#09483F] sm:h-9 sm:w-9"
                         >
-                          <Plus size={15} />
-                          Tambah Materi
+                          <Plus size={14} />
                         </button>
 
                         <button
+                          type="button"
                           onClick={() => openEditSection(section)}
-                          className="rounded-xl border border-violet-100 bg-white p-2.5 text-violet-700 transition hover:bg-violet-50"
-                          title="Edit bab"
+                          aria-label="Edit Bab"
+                          className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 sm:h-9 sm:w-9"
+                          title="Edit Bab"
                         >
-                          <Pencil size={16} />
+                          <Pencil size={15} />
                         </button>
 
                         <button
+                          type="button"
                           onClick={() => handleDeleteSection(section)}
                           disabled={deletingId === section.id}
-                          className="rounded-xl border border-red-100 bg-white p-2.5 text-red-500 transition hover:bg-red-50 disabled:opacity-50"
-                          title="Hapus bab"
+                          aria-label="Hapus Bab"
+                          className="flex h-10 w-10 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 transition hover:bg-rose-50 disabled:opacity-50 sm:h-9 sm:w-9"
+                          title="Hapus Bab"
                         >
                           {deletingId === section.id ? (
-                            <RefreshCw size={16} className="animate-spin" />
+                            <RefreshCw size={15} className="animate-spin" />
                           ) : (
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           )}
                         </button>
 
@@ -2023,7 +2019,7 @@ export default function MateriManager({
                                   </span>
 
                                   <span className="text-[10px] text-slate-400">
-                                    Materi {index + 1}
+                                    Materi {index + 1} · {lessonContents.filter((item) => item.lesson_id === lesson.id).length} Mini Materi
                                   </span>
 
                                 </div>
@@ -2032,7 +2028,7 @@ export default function MateriManager({
 
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
 
                               <button
                                 type="button"
@@ -2042,7 +2038,8 @@ export default function MateriManager({
                                   Boolean(search.trim()) ||
                                   reorderingLessons
                                 }
-                                className="rounded-lg border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                                aria-label="Naikkan urutan materi"
+                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 sm:h-9 sm:w-9"
                                 title="Naikkan urutan materi"
                               >
                                 <ArrowUp size={15} />
@@ -2056,7 +2053,8 @@ export default function MateriManager({
                                   Boolean(search.trim()) ||
                                   reorderingLessons
                                 }
-                                className="rounded-lg border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                                aria-label="Turunkan urutan materi"
+                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30 sm:h-9 sm:w-9"
                                 title="Turunkan urutan materi"
                               >
                                 <ArrowDown size={15} />
@@ -2067,7 +2065,8 @@ export default function MateriManager({
                                   href={lesson.video_url}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="rounded-lg border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:text-violet-700"
+                                  aria-label="Buka video"
+                                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-violet-700 sm:h-9 sm:w-9"
                                   title="Buka video"
                                 >
                                   <ExternalLink size={15} />
@@ -2075,26 +2074,32 @@ export default function MateriManager({
                               )}
 
                               <button
+                                type="button"
                                 onClick={() => openContentManager(lesson)}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-100 bg-white px-3 py-2.5 text-xs font-semibold text-cyan-700 transition hover:bg-violet-50"
+                                aria-label={`Kelola Mini Materi (${lessonContents.filter((item) => item.lesson_id === lesson.id).length})`}
+                                title={`Kelola Mini Materi (${lessonContents.filter((item) => item.lesson_id === lesson.id).length})`}
+                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-violet-100 bg-white text-violet-700 transition hover:bg-violet-50 sm:h-9 sm:w-9"
                               >
-                                <ListPlus size={14} />
-                                Mini Materi ({lessonContents.filter((item) => item.lesson_id === lesson.id).length})
+                                <ListPlus size={16} />
                               </button>
 
                               <button
+                                type="button"
                                 onClick={() => openEditLesson(lesson)}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-violet-100 bg-white px-3 py-2.5 text-xs font-semibold text-violet-700 transition hover:bg-violet-50"
+                                aria-label="Edit Materi"
+                                title="Edit Materi"
+                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 sm:h-9 sm:w-9"
                               >
-                                <Pencil size={14} />
-                                Edit
+                                <Pencil size={15} />
                               </button>
 
                               <button
+                                type="button"
                                 onClick={() => handleDeleteLesson(lesson)}
                                 disabled={deletingId === lesson.id}
-                                className="rounded-lg border border-red-100 bg-white p-2.5 text-red-500 transition hover:bg-red-50 disabled:opacity-50"
-                                title="Hapus materi"
+                                aria-label="Hapus Materi"
+                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 transition hover:bg-rose-50 disabled:opacity-50 sm:h-9 sm:w-9"
+                                title="Hapus Materi"
                               >
                                 {deletingId === lesson.id ? (
                                   <RefreshCw size={15} className="animate-spin" />
@@ -2268,9 +2273,9 @@ export default function MateriManager({
 
         <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-md sm:p-6">
 
-          <div className="my-auto w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+          <div className="my-auto w-full max-w-[560px] overflow-hidden rounded-3xl bg-white shadow-2xl">
 
-            <div className="flex items-center justify-between bg-[#6D28D9] px-5 py-5 text-white sm:px-6">
+            <div className="flex items-center justify-between bg-[#6D28D9] px-5 py-4 text-white sm:px-6">
 
               <div>
                 <h3 className="text-lg font-bold">
@@ -2295,7 +2300,7 @@ export default function MateriManager({
 
             <form
               onSubmit={handleSaveLesson}
-              className="max-h-[calc(100vh-170px)] space-y-5 overflow-y-auto p-5 sm:p-7"
+              className="max-h-[calc(100dvh-8rem)] space-y-5 overflow-y-auto p-4 sm:p-6"
             >
 
               {error && (
@@ -2307,7 +2312,7 @@ export default function MateriManager({
               {/* Title */}
 
               <div>
-                <label className="mb-2 block text-xs font-bold text-slate-700">
+                <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                   Judul Materi *
                 </label>
 
@@ -2322,19 +2327,19 @@ export default function MateriManager({
                     })
                   }
                   placeholder="Contoh: Pengenalan Microsoft Excel"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none focus:border-violet-500 focus:bg-white focus:ring-4 focus:ring-violet-500/10"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/10"
                 />
               </div>
 
               {/* Content */}
 
               <div>
-                <label className="mb-2 block text-xs font-bold text-slate-700">
+                <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                   Isi Materi / Catatan Pembelajaran
                 </label>
 
                 <textarea
-                  rows={6}
+                  rows={5}
                   value={lessonForm.content}
                   onChange={(e) =>
                     setLessonForm({
@@ -2343,10 +2348,10 @@ export default function MateriManager({
                     })
                   }
                   placeholder="Tuliskan penjelasan, ringkasan, atau materi pembelajaran di sini..."
-                  className="w-full resize-y rounded-xl border-0 bg-[#F7F6FC] px-4 py-3.5 text-[13px] leading-6 text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                  className="min-h-[132px] w-full resize-y rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm font-normal leading-6 text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                 />
 
-                <p className="mt-1 text-[10px] text-slate-400">
+                <p className="mt-1 text-xs font-normal text-slate-400">
                   Materi disimpan sebagai teks pada database.
                 </p>
               </div>
@@ -2365,7 +2370,7 @@ export default function MateriManager({
                 <div className="grid gap-4 sm:grid-cols-2">
 
                   <div>
-                    <label className="mb-2 block text-xs font-bold text-slate-700">
+                    <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                       Penyedia Video
                     </label>
 
@@ -2377,7 +2382,7 @@ export default function MateriManager({
                           video_provider: e.target.value,
                         })
                       }
-                      className="w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-[13px] text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                      className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                     >
                       <option value="youtube">YouTube</option>
                       <option value="vimeo">Vimeo</option>
@@ -2386,7 +2391,7 @@ export default function MateriManager({
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs font-bold text-slate-700">
+                    <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                       Durasi (Menit)
                     </label>
 
@@ -2401,14 +2406,14 @@ export default function MateriManager({
                           duration_minutes: e.target.value,
                         })
                       }
-                      className="w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-[13px] text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                      className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                     />
                   </div>
 
                 </div>
 
                 <div className="mt-4">
-                  <label className="mb-2 block text-xs font-bold text-slate-700">
+                  <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                     URL Video
                   </label>
 
@@ -2422,7 +2427,7 @@ export default function MateriManager({
                       })
                     }
                     placeholder="https://www.youtube.com/watch?v=..."
-                    className="w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-[13px] text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                    className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                   />
                 </div>
 
@@ -2431,7 +2436,7 @@ export default function MateriManager({
               {/* Resource */}
 
               <div>
-                <label className="mb-2 block text-xs font-bold text-slate-700">
+                <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                   Link / Path Materi Tambahan
                 </label>
 
@@ -2444,10 +2449,10 @@ export default function MateriManager({
                     })
                   }
                   placeholder="URL file atau path Supabase Storage"
-                  className="w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-[13px] text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                  className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                 />
 
-                <p className="mt-1 text-[10px] text-slate-400">
+                <p className="mt-1 text-xs font-normal text-slate-400">
                   Isi dengan URL file atau path penyimpanan yang sudah tersedia.
                 </p>
               </div>
@@ -2457,7 +2462,7 @@ export default function MateriManager({
               <div className="grid gap-4 sm:grid-cols-2">
 
                 <div>
-                  <label className="mb-2 block text-xs font-bold text-slate-700">
+                  <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                     Status Materi
                   </label>
 
@@ -2469,7 +2474,7 @@ export default function MateriManager({
                         status: e.target.value as "draft" | "published",
                       })
                     }
-                    className="w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-[13px] text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                    className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                   >
                     <option value="draft">Draft</option>
                     <option value="published">Dipublikasikan</option>
@@ -2492,7 +2497,7 @@ export default function MateriManager({
                       className="h-4 w-4 accent-violet-700"
                     />
 
-                    <span className="flex items-center gap-2 text-xs font-bold text-violet-800">
+                    <span className="flex items-center gap-2 text-sm font-medium text-violet-800">
                       <Eye size={16} />
                       Materi Preview
                     </span>
@@ -2516,7 +2521,7 @@ export default function MateriManager({
                       Pengaturan Akses Materi
                     </p>
 
-                    <p className="mt-1 text-[11px] leading-5 text-violet-700">
+                    <p className="mt-1 text-xs font-normal leading-5 text-violet-700">
                       Materi Draft tidak ditampilkan kepada member.
                       Materi Preview yang dipublikasikan dapat diakses
                       sebagai materi contoh sesuai kebijakan akses kelas.
@@ -2535,7 +2540,7 @@ export default function MateriManager({
                   type="button"
                   onClick={closeLessonModal}
                   disabled={saving}
-                  className="rounded-xl border border-slate-200 px-6 py-3.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                  className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 sm:w-auto"
                 >
                   Batal
                 </button>
@@ -2543,7 +2548,7 @@ export default function MateriManager({
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-700/20 disabled:opacity-60"
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-5 text-sm font-semibold text-white shadow-lg shadow-violet-700/20 disabled:opacity-60 sm:w-auto"
                 >
 
                   {saving ? (
@@ -2576,8 +2581,8 @@ export default function MateriManager({
 
       {contentModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-md sm:p-6">
-          <div className="my-auto flex max-h-[calc(100vh-24px)] w-full max-w-4xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:max-h-[calc(100vh-48px)]">
-            <div className="flex items-center justify-between gap-4 bg-[#6D28D9] px-5 py-5 text-white sm:px-7">
+          <div className={`my-auto flex max-h-[calc(100dvh-24px)] w-full ${contentEditorOpen ? "max-w-[560px]" : "max-w-[800px]"} flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:max-h-[calc(100dvh-48px)]`}>
+            <div className="flex items-center justify-between gap-4 bg-[#6D28D9] px-5 py-4 text-white sm:px-6">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-violet-100">
                   <ListPlus size={15} />
@@ -2602,7 +2607,7 @@ export default function MateriManager({
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:p-7">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
               {contentError && (
                 <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-xs font-medium text-red-700">
                   {contentError}
@@ -2624,10 +2629,11 @@ export default function MateriManager({
                     <button
                       type="button"
                       onClick={openCreateContent}
-                      className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 py-3 text-xs font-bold text-white transition hover:bg-[#5B21B6]"
+                      aria-label="Tambah Mini Materi"
+                      title="Tambah Mini Materi"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#6D28D9] text-white transition hover:bg-[#5B21B6] sm:h-9 sm:w-9"
                     >
-                      <Plus size={16} />
-                      Tambah Mini Materi
+                      <Plus size={17} />
                     </button>
                   </div>
 
@@ -2645,7 +2651,7 @@ export default function MateriManager({
                       <button
                         type="button"
                         onClick={openCreateContent}
-                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#6D28D9] px-5 py-3 text-xs font-bold text-white"
+                        className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-5 text-sm font-semibold text-white"
                       >
                         <Plus size={16} />
                         Buat Mini Materi Pertama
@@ -2745,7 +2751,8 @@ export default function MateriManager({
                                   type="button"
                                   onClick={() => moveContentByOne(item, -1)}
                                   disabled={index === 0 || reorderingContent}
-                                  className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 disabled:opacity-30"
+                                  aria-label="Naikkan urutan Mini Materi"
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:opacity-30"
                                   title="Naikkan urutan"
                                 >
                                   <ArrowUp size={15} />
@@ -2755,7 +2762,8 @@ export default function MateriManager({
                                   type="button"
                                   onClick={() => moveContentByOne(item, 1)}
                                   disabled={index === activeLessonContents.length - 1 || reorderingContent}
-                                  className="rounded-lg border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-50 disabled:opacity-30"
+                                  aria-label="Turunkan urutan Mini Materi"
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 disabled:opacity-30"
                                   title="Turunkan urutan"
                                 >
                                   <ArrowDown size={15} />
@@ -2765,18 +2773,20 @@ export default function MateriManager({
                                   type="button"
                                   onClick={() => openEditContent(item)}
                                   disabled={contentSaving || reorderingContent}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-violet-100 px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-50 disabled:opacity-50"
+                                  aria-label={`Edit mini materi ${item.title}`}
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-violet-100 text-violet-700 transition hover:bg-violet-50 disabled:opacity-50"
+                                  title="Edit Mini Materi"
                                 >
-                                  <Pencil size={13} />
-                                  Edit
+                                  <Pencil size={14} />
                                 </button>
 
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteContent(item)}
                                   disabled={contentSaving || reorderingContent}
-                                  className="rounded-lg border border-red-100 p-2 text-red-500 transition hover:bg-red-50 disabled:opacity-50"
-                                  title="Hapus mini materi"
+                                  aria-label={`Hapus mini materi ${item.title}`}
+                                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-red-100 text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+                                  title="Hapus Mini Materi"
                                 >
                                   <Trash2 size={14} />
                                 </button>
@@ -2826,7 +2836,7 @@ export default function MateriManager({
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs font-bold text-slate-700">
+                    <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                       Judul Mini Materi *
                     </label>
                     <input
@@ -2840,12 +2850,12 @@ export default function MateriManager({
                         })
                       }
                       placeholder="Contoh: Mengenal Dasar-Dasar Desain"
-                      className="w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3.5 text-sm text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                      className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-xs font-bold text-slate-700">
+                    <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                       Jenis Konten *
                     </label>
                     <select
@@ -2861,7 +2871,7 @@ export default function MateriManager({
                         setExistingContentFileName("");
                         setContentError("");
                       }}
-                      className="w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3.5 text-sm text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                      className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                     >
                       <option value="text">Teks / Penjelasan</option>
                       <option value="tiktok">Video Pendek / TikTok</option>
@@ -2882,7 +2892,7 @@ export default function MateriManager({
                     contentForm.content_type === "pdf" ||
                     contentForm.content_type === "audio") && (
                     <div>
-                      <label className="mb-2 block text-xs font-bold text-slate-700">
+                      <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                         {contentForm.content_type === "text"
                           ? "Isi Teks *"
                           : contentForm.content_type === "callout"
@@ -2890,7 +2900,7 @@ export default function MateriManager({
                             : "Deskripsi / Keterangan"}
                       </label>
                       <textarea
-                        rows={contentForm.content_type === "text" ? 8 : 4}
+                        rows={contentForm.content_type === "text" ? 5 : 4}
                         value={contentForm.body}
                         onChange={(event) =>
                           setContentForm({
@@ -2903,14 +2913,14 @@ export default function MateriManager({
                             ? "Tuliskan poin penting yang perlu diperhatikan peserta..."
                             : "Tuliskan penjelasan atau keterangan segmen ini..."
                         }
-                        className="w-full resize-y rounded-xl border-0 bg-[#F7F6FC] px-4 py-3.5 text-sm leading-6 text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                        className="min-h-[132px] w-full resize-y rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm font-normal leading-6 text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                       />
                     </div>
                   )}
 
                   {["tiktok", "youtube"].includes(contentForm.content_type) && (
                     <div>
-                      <label className="mb-2 block text-xs font-bold text-slate-700">
+                      <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                         URL Video *
                       </label>
                       <input
@@ -2928,11 +2938,11 @@ export default function MateriManager({
                             ? "https://www.tiktok.com/@akun/video/..."
                             : "https://www.youtube.com/watch?v=..."
                         }
-                        className="w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                        className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                       />
 
                       {contentForm.content_type === "tiktok" && (
-                        <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                        <p className="mt-2 text-xs font-normal leading-5 text-slate-500">
                           Gunakan tautan video TikTok lengkap. Jika tautan yang disalin berupa vt.tiktok.com atau vm.tiktok.com, buka videonya dahulu lalu salin URL lengkap dari address bar.
                         </p>
                       )}
@@ -2942,7 +2952,7 @@ export default function MateriManager({
                   {isUploadableContentType(contentForm.content_type) && (
                     <div className="space-y-3 rounded-2xl border border-violet-100 bg-[#FAF9FF] p-4 sm:p-5">
                       <div>
-                        <label className="mb-2 block text-xs font-bold text-slate-700">
+                        <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                           Upload File Pembelajaran *
                         </label>
                         <input
@@ -2968,9 +2978,9 @@ export default function MateriManager({
                             setSelectedContentFile(file);
                             setContentError("");
                           }}
-                          className="block w-full cursor-pointer rounded-xl border border-slate-200 bg-white text-xs text-slate-600 file:mr-3 file:cursor-pointer file:border-0 file:bg-violet-700 file:px-4 file:py-3 file:text-xs file:font-bold file:text-white hover:file:bg-violet-800"
+                          className="block w-full cursor-pointer rounded-xl border border-slate-200 bg-white text-sm font-normal text-slate-600 file:mr-3 file:cursor-pointer file:border-0 file:bg-violet-700 file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:bg-violet-800"
                         />
-                        <p className="mt-2 text-[10px] leading-5 text-slate-500">
+                        <p className="mt-2 text-xs font-normal leading-5 text-slate-500">
                           Format: {CONTENT_FILE_RULES[contentForm.content_type].label}. Ukuran maksimal 20 MB.
                         </p>
                       </div>
@@ -3012,7 +3022,7 @@ export default function MateriManager({
                       )}
 
                       <div>
-                        <label className="mb-2 block text-xs font-bold text-slate-700">
+                        <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                           Atau gunakan URL file eksternal
                         </label>
                         <input
@@ -3033,7 +3043,7 @@ export default function MateriManager({
                             }
                           }}
                           placeholder="https://... (opsional)"
-                          className="w-full rounded-xl border-0 bg-white px-4 py-3 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
+                          className="h-12 w-full rounded-xl border-0 bg-white px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:ring-2 focus:ring-[#8B5CF6]/25"
                         />
                         <p className="mt-1 text-[10px] leading-5 text-slate-400">
                           Jika file diunggah dari perangkat, URL eksternal tidak perlu diisi.
@@ -3076,7 +3086,7 @@ export default function MateriManager({
                             <p className="text-xs font-semibold text-amber-900">
                               Tautan TikTok dikenali, tetapi belum bisa dipratinjau.
                             </p>
-                            <p className="mt-1 text-[11px] leading-5 text-amber-800">
+                            <p className="mt-1 text-xs font-normal leading-5 text-amber-800">
                               Gunakan URL lengkap dengan format /@namaakun/video/ID agar video dapat ditampilkan langsung di ruang belajar.
                             </p>
                             <a
@@ -3091,7 +3101,7 @@ export default function MateriManager({
                           </div>
                         )}
 
-                        <p className="mt-3 text-center text-[10px] leading-5 text-slate-400">
+                        <p className="mt-3 text-center text-xs font-normal leading-5 text-slate-400">
                           Pratinjau memerlukan koneksi internet dan izin embed dari TikTok.
                         </p>
                       </div>
@@ -3100,7 +3110,7 @@ export default function MateriManager({
                   {contentForm.content_type === "link" && (
                     <>
                       <div>
-                        <label className="mb-2 block text-xs font-bold text-slate-700">
+                        <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                           URL Tautan *
                         </label>
                         <input
@@ -3114,12 +3124,12 @@ export default function MateriManager({
                             })
                           }
                           placeholder="https://..."
-                          className="w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                          className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                         />
                       </div>
 
                       <div>
-                        <label className="mb-2 block text-xs font-bold text-slate-700">
+                        <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                           Label Tombol
                         </label>
                         <input
@@ -3131,12 +3141,12 @@ export default function MateriManager({
                             })
                           }
                           placeholder="Contoh: Buka Referensi"
-                          className="w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                          className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                         />
                       </div>
 
                       <div>
-                        <label className="mb-2 block text-xs font-bold text-slate-700">
+                        <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                           Keterangan Tautan
                         </label>
                         <textarea
@@ -3149,7 +3159,7 @@ export default function MateriManager({
                             })
                           }
                           placeholder="Jelaskan tujuan tautan ini..."
-                          className="w-full resize-y rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                          className="min-h-[96px] w-full resize-y rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm font-normal leading-6 text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                         />
                       </div>
                     </>
@@ -3163,7 +3173,7 @@ export default function MateriManager({
                     <section className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
                       <div>
                         <p className="text-xs font-bold text-slate-800">Pengaturan Tampilan</p>
-                        <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                        <p className="mt-1 text-xs font-normal leading-5 text-slate-500">
                           Atur bagaimana mini materi ini ditampilkan kepada peserta. Pengaturan tidak mengubah file atau isi materi.
                         </p>
                       </div>
@@ -3171,28 +3181,28 @@ export default function MateriManager({
                       {contentForm.content_type === "text" && (
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div>
-                            <label className="mb-2 block text-[11px] font-semibold text-slate-700">Perataan teks</label>
+                            <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">Perataan teks</label>
                             <select
                               value={contentForm.settings.text_align}
                               onChange={(event) => setContentForm({
                                 ...contentForm,
                                 settings: { ...contentForm.settings, text_align: event.target.value as ContentDisplaySettings["text_align"] },
                               })}
-                              className="w-full rounded-xl border-0 bg-white px-3 py-3 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
+                              className="h-12 w-full rounded-xl border-0 bg-white px-3.5 text-sm font-normal text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
                             >
                               <option value="left">Rata kiri</option>
                               <option value="center">Rata tengah</option>
                             </select>
                           </div>
                           <div>
-                            <label className="mb-2 block text-[11px] font-semibold text-slate-700">Ukuran teks</label>
+                            <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">Ukuran teks</label>
                             <select
                               value={contentForm.settings.text_size}
                               onChange={(event) => setContentForm({
                                 ...contentForm,
                                 settings: { ...contentForm.settings, text_size: event.target.value as ContentDisplaySettings["text_size"] },
                               })}
-                              className="w-full rounded-xl border-0 bg-white px-3 py-3 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
+                              className="h-12 w-full rounded-xl border-0 bg-white px-3.5 text-sm font-normal text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
                             >
                               <option value="normal">Normal</option>
                               <option value="large">Besar</option>
@@ -3205,21 +3215,21 @@ export default function MateriManager({
                         <div className="space-y-3">
                           <div className="grid gap-3 sm:grid-cols-2">
                             <div>
-                              <label className="mb-2 block text-[11px] font-semibold text-slate-700">Rasio video</label>
+                              <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">Rasio video</label>
                               <select
                                 value={contentForm.settings.youtube_ratio}
                                 onChange={(event) => setContentForm({
                                   ...contentForm,
                                   settings: { ...contentForm.settings, youtube_ratio: event.target.value as ContentDisplaySettings["youtube_ratio"] },
                                 })}
-                                className="w-full rounded-xl border-0 bg-white px-3 py-3 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
+                                className="h-12 w-full rounded-xl border-0 bg-white px-3.5 text-sm font-normal text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
                               >
                                 <option value="16:9">Landscape (16:9)</option>
                                 <option value="9:16">Vertikal / Shorts (9:16)</option>
                               </select>
                             </div>
                             <div className="flex items-end">
-                              <label className="flex w-full items-center gap-3 rounded-xl bg-white px-3 py-3 text-xs font-semibold text-slate-700">
+                              <label className="flex w-full items-center gap-3 rounded-xl bg-white px-3 py-3 text-sm font-medium text-slate-700">
                                 <input
                                   type="checkbox"
                                   checked={contentForm.settings.youtube_controls}
@@ -3240,28 +3250,28 @@ export default function MateriManager({
                       {contentForm.content_type === "image" && (
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div>
-                            <label className="mb-2 block text-[11px] font-semibold text-slate-700">Cara menampilkan gambar</label>
+                            <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">Cara menampilkan gambar</label>
                             <select
                               value={contentForm.settings.image_fit}
                               onChange={(event) => setContentForm({
                                 ...contentForm,
                                 settings: { ...contentForm.settings, image_fit: event.target.value as ContentDisplaySettings["image_fit"] },
                               })}
-                              className="w-full rounded-xl border-0 bg-white px-3 py-3 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
+                              className="h-12 w-full rounded-xl border-0 bg-white px-3.5 text-sm font-normal text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
                             >
                               <option value="contain">Utuh (tidak terpotong)</option>
                               <option value="cover">Penuhi area (dapat terpotong)</option>
                             </select>
                           </div>
                           <div>
-                            <label className="mb-2 block text-[11px] font-semibold text-slate-700">Tinggi maksimal</label>
+                            <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">Tinggi maksimal</label>
                             <select
                               value={contentForm.settings.image_height}
                               onChange={(event) => setContentForm({
                                 ...contentForm,
                                 settings: { ...contentForm.settings, image_height: event.target.value as ContentDisplaySettings["image_height"] },
                               })}
-                              className="w-full rounded-xl border-0 bg-white px-3 py-3 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
+                              className="h-12 w-full rounded-xl border-0 bg-white px-3.5 text-sm font-normal text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
                             >
                               <option value="compact">Ringkas</option>
                               <option value="medium">Sedang</option>
@@ -3274,14 +3284,14 @@ export default function MateriManager({
                       {contentForm.content_type === "pdf" && (
                         <div className="grid gap-3 sm:grid-cols-2">
                           <div>
-                            <label className="mb-2 block text-[11px] font-semibold text-slate-700">Tampilan PDF</label>
+                            <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">Tampilan PDF</label>
                             <select
                               value={contentForm.settings.pdf_display}
                               onChange={(event) => setContentForm({
                                 ...contentForm,
                                 settings: { ...contentForm.settings, pdf_display: event.target.value as ContentDisplaySettings["pdf_display"] },
                               })}
-                              className="w-full rounded-xl border-0 bg-white px-3 py-3 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
+                              className="h-12 w-full rounded-xl border-0 bg-white px-3.5 text-sm font-normal text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
                             >
                               <option value="preview">Preview langsung + tombol buka/unduh</option>
                               <option value="button">Tombol buka/unduh saja</option>
@@ -3289,14 +3299,14 @@ export default function MateriManager({
                           </div>
                           {contentForm.settings.pdf_display === "preview" && (
                             <div>
-                              <label className="mb-2 block text-[11px] font-semibold text-slate-700">Tinggi preview</label>
+                              <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">Tinggi preview</label>
                               <select
                                 value={contentForm.settings.pdf_height}
                                 onChange={(event) => setContentForm({
                                   ...contentForm,
                                   settings: { ...contentForm.settings, pdf_height: event.target.value as ContentDisplaySettings["pdf_height"] },
                                 })}
-                                className="w-full rounded-xl border-0 bg-white px-3 py-3 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
+                                className="h-12 w-full rounded-xl border-0 bg-white px-3.5 text-sm font-normal text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
                               >
                                 <option value="compact">Ringkas</option>
                                 <option value="medium">Sedang</option>
@@ -3309,14 +3319,14 @@ export default function MateriManager({
 
                       {contentForm.content_type === "callout" && (
                         <div>
-                          <label className="mb-2 block text-[11px] font-semibold text-slate-700">Gaya catatan</label>
+                          <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">Gaya catatan</label>
                           <select
                             value={contentForm.settings.callout_variant}
                             onChange={(event) => setContentForm({
                               ...contentForm,
                               settings: { ...contentForm.settings, callout_variant: event.target.value as ContentDisplaySettings["callout_variant"] },
                             })}
-                            className="w-full rounded-xl border-0 bg-white px-3 py-3 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
+                            className="h-12 w-full rounded-xl border-0 bg-white px-3.5 text-sm font-normal text-[#1B1730] outline-none focus:ring-2 focus:ring-[#8B5CF6]/25"
                           >
                             <option value="info">Informasi (ungu)</option>
                             <option value="success">Tips (hijau)</option>
@@ -3329,7 +3339,7 @@ export default function MateriManager({
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
-                      <label className="mb-2 block text-xs font-bold text-slate-700">
+                      <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
                         Status Mini Materi
                       </label>
                       <select
@@ -3340,7 +3350,7 @@ export default function MateriManager({
                             status: event.target.value as "draft" | "published",
                           })
                         }
-                        className="w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm text-[#1B1730] outline-none focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
+                        className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
                       >
                         <option value="draft">Draft</option>
                         <option value="published">Dipublikasikan</option>
@@ -3368,7 +3378,7 @@ export default function MateriManager({
                         <p className="text-xs font-bold text-violet-900">
                           Pengaturan Publikasi
                         </p>
-                        <p className="mt-1 text-[11px] leading-5 text-violet-700">
+                        <p className="mt-1 text-xs font-normal leading-5 text-violet-700">
                           Mini materi Draft hanya terlihat di admin. Mini materi yang dipublikasikan mengikuti hak akses materi inti dan kelas.
                         </p>
                       </div>
@@ -3388,7 +3398,7 @@ export default function MateriManager({
                         setContentError("");
                       }}
                       disabled={contentSaving}
-                      className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                      className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
                     >
                       Batal
                     </button>
@@ -3396,7 +3406,7 @@ export default function MateriManager({
                     <button
                       type="submit"
                       disabled={contentSaving}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-6 py-3 text-sm font-bold text-white disabled:opacity-60"
+                      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-5 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto"
                     >
                       {contentSaving ? (
                         <RefreshCw size={16} className="animate-spin" />
@@ -3425,7 +3435,7 @@ export default function MateriManager({
                   type="button"
                   onClick={closeContentModal}
                   disabled={contentSaving || reorderingContent}
-                  className="rounded-xl border border-slate-200 px-5 py-3 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                  className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
                 >
                   Selesai
                 </button>

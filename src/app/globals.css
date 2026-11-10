@@ -447,3 +447,345 @@ b {
   font-weight: var(--kcc-font-medium);
 }
 
+
+
+/* ==========================================================
+   KIKI CREATOR CLASS — MOBILE-FIRST RESPONSIVE NORMALIZATION
+   Final layer: aligns the existing UI with the supplied UI guide.
+   This layer intentionally changes presentation only.
+========================================================== */
+:root {
+  --kcc-card-radius: 16px;
+  --kcc-control-radius: 9px;
+  --kcc-mobile-gutter: 16px;
+}
+
+html,
+body {
+  max-width: 100%;
+}
+
+body {
+  font-weight: var(--kcc-font-regular, 400);
+}
+
+/* Keep long text readable without splitting ordinary words mid-word. */
+button,
+a {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+main,
+main > *,
+section,
+article,
+aside,
+form,
+[role="dialog"] {
+  min-width: 0;
+}
+
+/* Shared card surfaces use the guide's 12–16 px radius, not oversized pills. */
+.app-surface,
+.app-stat-card {
+  border-radius: var(--kcc-card-radius);
+}
+
+/* Touch and control sizes follow the UI guide. */
+.app-primary-button,
+.app-secondary-button {
+  min-height: 40px;
+  border-radius: var(--kcc-control-radius);
+  font-size: 14px;
+  font-weight: var(--kcc-font-semibold, 600);
+}
+
+.app-primary-button {
+  padding-inline: 16px;
+}
+
+.app-secondary-button {
+  padding-inline: 16px;
+  box-shadow: none;
+}
+
+.app-icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--kcc-control-radius);
+}
+
+/* Tables retain the guide-approved horizontal-scroll fallback on narrow screens. */
+main .overflow-x-auto {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 640px) and (max-width: 1023px) {
+  .app-page,
+  main {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  .app-mobile-safe {
+    padding-bottom: calc(104px + env(safe-area-inset-bottom));
+  }
+
+  .kcc-workspace-header-inner {
+    min-height: 64px !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .kcc-workspace-menu-button,
+  .kcc-sidebar-close-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    border-radius: 9px !important;
+  }
+
+  .kcc-workspace-header-kicker {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+    letter-spacing: .08em !important;
+  }
+
+  .kcc-workspace-sidebar {
+    width: min(264px, calc(100vw - 40px)) !important;
+  }
+
+  .kcc-sidebar-menu-label {
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+  }
+
+  .kcc-mobile-bottom-nav {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 12px !important;
+    min-height: 68px;
+    gap: 2px;
+    border-radius: 16px !important;
+    padding: 6px 6px max(6px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .kcc-sidebar-mobile-link,
+  .kcc-sidebar-mobile-action {
+    min-width: 0;
+    min-height: 52px !important;
+    justify-content: center;
+    gap: 2px !important;
+    border-radius: 10px !important;
+    padding: 4px 2px !important;
+    font-size: 12px !important;
+    line-height: 1.15 !important;
+    white-space: nowrap;
+  }
+
+  .kcc-sidebar-mobile-link > span:first-child,
+  .kcc-sidebar-mobile-action > span:first-child {
+    width: 36px;
+    height: 24px;
+  }
+
+  .kcc-logout-button {
+    min-height: 44px !important;
+    border-radius: 9px !important;
+    font-size: 14px !important;
+  }
+}
+
+@media (max-width: 639px) {
+  html,
+  body {
+    width: 100%;
+    overflow-x: clip;
+  }
+
+  body {
+    font-size: 15px;
+    font-weight: var(--kcc-font-regular, 400);
+  }
+
+  .app-page {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .app-page-heading {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .app-page-title {
+    max-width: 100%;
+    font-size: 24px !important;
+    line-height: 1.25 !important;
+    letter-spacing: -.02em !important;
+  }
+
+  .app-page-description {
+    max-width: 42ch;
+    font-size: 14px !important;
+    line-height: 1.55 !important;
+  }
+
+  .app-eyebrow {
+    font-size: 12px !important;
+    line-height: 1.35 !important;
+    letter-spacing: .08em !important;
+  }
+
+  .app-surface,
+  .app-stat-card,
+  :where(section, article, aside, div)[class*="rounded-"][class*="bg-white"]:not([class*="rounded-full"]) {
+    border-radius: 16px !important;
+  }
+
+  .app-stat-card {
+    padding: 16px;
+  }
+
+  :where(section, article, aside, div)[class*="rounded-"][class*="bg-white"][class*="shadow-"]:not([class*="rounded-full"]) {
+    box-shadow: 0 1px 3px rgba(38, 0, 71, .045) !important;
+  }
+
+  button:not([aria-hidden="true"]),
+  a[role="button"] {
+    min-height: 44px !important;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: var(--kcc-font-semibold, 600);
+  }
+
+  button[class*="h-"][class*="w-"]:not(.cursor-nwse-resize) {
+    min-width: 44px;
+  }
+
+  /* Preserve the certificate editor's intentionally small drag handle. */
+  button.cursor-nwse-resize {
+    min-width: 20px !important;
+    min-height: 20px !important;
+  }
+
+  a[class*="inline-flex"][class*="rounded-"][class*="px-"] {
+    min-height: 44px;
+  }
+
+  .app-primary-button,
+  .app-secondary-button {
+    min-height: 44px !important;
+    border-radius: 9px !important;
+    padding-inline: 16px;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    box-shadow: none;
+  }
+
+  .app-icon-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    border-radius: 9px !important;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+  select {
+    min-height: 44px;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    line-height: 1.4;
+  }
+
+  textarea {
+    min-height: 104px;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    line-height: 1.5;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  label {
+    line-height: 1.4;
+  }
+
+  main p[class~="text-xs"] {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  main p[class~="text-[10px]"],
+  main p[class~="text-[9px]"] {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  main .overflow-x-auto {
+    border-radius: 10px;
+    scrollbar-width: thin;
+  }
+
+  main .overflow-x-auto::-webkit-scrollbar {
+    height: 5px;
+  }
+
+  main .overflow-x-auto::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #cfc5d6;
+  }
+
+  [role="dialog"] {
+    max-width: calc(100vw - 32px);
+    max-height: calc(100dvh - 32px);
+  }
+
+  .app-mobile-safe {
+    padding-bottom: calc(104px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 374px) {
+  .kcc-mobile-bottom-nav {
+    left: 8px !important;
+    right: 8px !important;
+  }
+
+  .kcc-sidebar-mobile-link,
+  .kcc-sidebar-mobile-action {
+    font-size: 11px !important;
+  }
+
+  .app-page-title {
+    font-size: 22px !important;
+  }
+}

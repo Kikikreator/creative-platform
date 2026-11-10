@@ -43,7 +43,7 @@ export default function AdminSidebar({ open, collapsed, onClose, onOpen, onToggl
         className={`fixed inset-0 z-40 bg-[#17112b]/35 backdrop-blur-[2px] transition-opacity duration-200 lg:hidden ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
       />
 
-      <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/10 bg-[#260047] text-white shadow-[10px_0_34px_rgba(38,0,71,.18)] transition-[width,transform] duration-300 ${collapsed ? "w-[84px]" : "w-[264px]"} ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
+      <aside className={`kcc-workspace-sidebar fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/10 bg-[#260047] text-white shadow-[10px_0_34px_rgba(38,0,71,.18)] transition-[width,transform] duration-300 ${collapsed ? "w-[84px]" : "w-[264px]"} ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         <div className={`flex h-[82px] shrink-0 items-center gap-3 px-4 ${collapsed ? "justify-center" : ""}`}>
           {collapsed ? (
             <button type="button" onClick={onToggleCollapsed} aria-label="Perluas sidebar" title="Buka sidebar" className="group/logo relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[15px] bg-white p-1.5 shadow-[0_8px_18px_rgba(8,13,34,.2)]">
@@ -59,7 +59,7 @@ export default function AdminSidebar({ open, collapsed, onClose, onOpen, onToggl
               <button type="button" onClick={onToggleCollapsed} aria-label="Ciutkan sidebar" title="Ciutkan sidebar" className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/80 transition hover:bg-white/20 lg:flex"><PanelLeftClose size={16} /></button>
             </>
           )}
-          <button type="button" onClick={onClose} aria-label="Tutup menu" className="ml-auto flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white/80 lg:hidden"><ChevronLeft size={17} /></button>
+          <button type="button" onClick={onClose} aria-label="Tutup menu" className="kcc-sidebar-close-button ml-auto flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white/80 lg:hidden"><ChevronLeft size={17} /></button>
         </div>
 
         <div className="mx-4 h-px shrink-0 bg-white/15" />
@@ -96,7 +96,7 @@ export default function AdminSidebar({ open, collapsed, onClose, onOpen, onToggl
         </div>
       </aside>
 
-      <nav aria-label="Navigasi cepat admin" className="fixed bottom-3 left-3 right-3 z-30 flex items-center justify-around rounded-[22px] border border-white/80 bg-white/95 px-1.5 py-2 shadow-[0_12px_35px_rgba(38,27,72,.14)] backdrop-blur-xl lg:hidden" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}>
+      <nav aria-label="Navigasi cepat admin" className="kcc-mobile-bottom-nav fixed bottom-3 left-3 right-3 z-30 flex items-center justify-around rounded-[22px] border border-white/80 bg-white/95 px-1.5 py-2 shadow-[0_12px_35px_rgba(38,27,72,.14)] backdrop-blur-xl lg:hidden" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}>
         {mobileItems.map((item) => {
           const nav = adminNavigation.flatMap((section) => section.items).find((entry) => entry.href === item.href)!;
           const Icon = nav.icon;

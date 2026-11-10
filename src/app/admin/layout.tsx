@@ -1,5 +1,6 @@
 
 import { Suspense, type ReactNode } from "react";
+import "./admin-ui-standard.css";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -89,7 +90,7 @@ async function AdminContent({ children }: AdminContentProps) {
         email: user.email ?? "",
       }}
     >
-      {children}
+      <div className="admin-ui-standard">{children}</div>
     </AdminShell>
   );
 }

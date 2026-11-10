@@ -118,9 +118,14 @@ export default async function AdminMentorPage() {
     revenueAgreementMap.set(row.mentor_user_id, current);
   }
 
-  const accounts: MentorAccount[] = (
-    profilesResult.data ?? []
-  ).map((profile) => ({
+  // Halaman Manajemen Mentor hanya menampilkan akun yang sudah memiliki
+  // role instructor. Role ini diaktifkan setelah calon mentor menerima
+  // undangan melalui alur accept_mentor_invitation.
+  const mentorProfiles = (profilesResult.data ?? []).filter((profile) =>
+    (roleMap.get(profile.id) ?? []).includes("instructor")
+  );
+
+  const accounts: MentorAccount[] = mentorProfiles.map((profile) => ({
     ...profile,
     roles: roleMap.get(profile.id) ?? [],
     assignedCourses: assignmentsMap.get(profile.id) ?? [],

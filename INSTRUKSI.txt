@@ -1,0 +1,32 @@
+GARMENT PADANG — USERNAME LOGIN UPDATE
+
+PENTING:
+- Jangan jalankan migrasi dengan --apply.
+- Jangan upload Users.csv atau file exports ke GitHub/chat.
+- Paket ini berisi file pengganti. Salin ke folder proyek dengan mempertahankan struktur folder.
+- Buat backup salinan file lama sebelum menimpa.
+- Folder exports CSV milikmu TIDAK termasuk dalam ZIP ini dan tidak akan tertimpa.
+
+File pengganti:
+1. public/index.html
+2. api/garment.js
+3. supabase/migrations/001_initial_schema.sql
+4. scripts/import-legacy-data.mjs
+5. README.md
+6. docs/legacy-audit.md
+7. exports/README.txt
+
+Catatan skema:
+001_initial_schema.sql adalah skema awal untuk project Supabase BARU yang belum pernah menjalankan migration sebelumnya.
+Jika schema email-login sebelumnya sudah dijalankan di Supabase, JANGAN jalankan ulang file ini. Buat migration ALTER TABLE terpisah setelah memeriksa kondisi database.
+
+Setelah file disalin:
+1. node --check .\api\garment.js
+2. node --check .\scripts\import-legacy-data.mjs
+3. npm.cmd run migrate:legacy
+
+Perintah migrate:legacy hanya preflight selama tidak ada argumen --apply.
+Jangan jalankan --apply sampai preflight lolos, project Supabase disiapkan, dan backup terverifikasi.
+
+Supabase Auth tetap menggunakan email internal yang dibuat otomatis dari ID_User.
+Karyawan tidak memasukkan alamat email. Password lama dikirim dari CSV lokal ke Supabase Auth untuk di-hash.

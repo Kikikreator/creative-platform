@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { fitCertificateName } from "@/lib/certificates/name-layout";
 import {
   CheckCircle2, CircleAlert, FileImage, ImagePlus, LoaderCircle, Move, Save,
-  ShieldCheck, Sparkles, UploadCloud,
+  UploadCloud,
 } from "lucide-react";
 
 const BUCKET = "course-certificate-templates";
@@ -262,14 +262,9 @@ export default function CertificateSettingsManager({ courses, tasks, settings, i
   }, [box.height, box.width, fontBold, fontFamily, maxFontSize, minFontSize, mounted, previewName, previewWidth, templateHeight, templateWidth]);
 
   return (
-    <main className="mx-auto w-full max-w-[1500px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <main className="certificate-settings-manager mx-auto w-full max-w-[1500px] space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.16em] text-violet-700"><Sparkles size={13}/> Certificate studio</div>
-          <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-[#211A37] sm:text-3xl">Sertifikat & Kelulusan</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#89829B]">Atur kelulusan kelas dan unggah desain sertifikat sendiri. Nama peserta akan ditempatkan otomatis pada area yang kamu tentukan.</p>
-        </div>
-        <div className="inline-flex items-center gap-2 self-start rounded-2xl bg-white px-4 py-3 text-xs font-bold text-violet-700 shadow-[0_8px_24px_rgba(47,30,82,.06)]"><ShieldCheck size={16}/> Admin Workspace</div>
+        
       </header>
 
       <section className="grid gap-3 sm:grid-cols-3">
@@ -285,7 +280,26 @@ export default function CertificateSettingsManager({ courses, tasks, settings, i
         <label className={labelClass}>Pilih kelas<select value={courseId} onChange={(event) => changeCourse(event.target.value)} className={`${inputClass} max-w-xl`}><option value="">Pilih kelas</option>{courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}</select></label>
         {!selectedCourse ? <div className="mt-6 rounded-2xl bg-[#F8F6FC] p-6 text-sm text-[#938BA5]">Belum ada kelas yang dapat diatur.</div> : <div className="mt-6 grid items-start gap-6 xl:grid-cols-[minmax(310px,.82fr)_minmax(0,1.5fr)]">
           <div className="space-y-5">
-            <div className="rounded-2xl bg-[#F8F6FC] p-4"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-extrabold text-[#33284D]">Aktifkan penerbitan otomatis</p><p className="mt-1 text-[10px] leading-5 text-[#938BA5]">Sertifikat diterbitkan setelah semua syarat kelulusan dan ulasan terpenuhi.</p></div><button type="button" onClick={() => setEnabled((value) => !value)} aria-pressed={enabled} className={`relative h-8 w-[58px] shrink-0 rounded-full transition ${enabled ? "bg-violet-600" : "bg-[#D9D4E3]"}`}><span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition ${enabled ? "left-[30px]" : "left-1"}`}/></button></div></div>
+            <div className="rounded-2xl bg-[#F8F6FC] p-4"><div className="flex items-center justify-between gap-3"><div><p className="text-xs font-extrabold text-[#33284D]">Aktifkan penerbitan otomatis</p><p className="mt-1 text-[10px] leading-5 text-[#938BA5]">Sertifikat diterbitkan setelah semua syarat kelulusan dan ulasan terpenuhi.</p></div><div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  role="switch"
+                  onClick={() => setEnabled((value) => !value)}
+                  aria-label="Aktifkan penerbitan otomatis"
+                  aria-checked={enabled}
+                  aria-pressed={enabled}
+                  data-state={enabled ? "on" : "off"}
+                  className="certificate-auto-toggle"
+                >
+                  <span className="certificate-auto-toggle__thumb" />
+                </button>
+                <span
+                  className={`certificate-auto-toggle__label ${enabled ? "is-on" : "is-off"}`}
+                  aria-live="polite"
+                >
+                  {enabled ? "Aktif" : "Nonaktif"}
+                </span>
+              </div></div></div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
               <label className={labelClass}>Nilai minimum kelulusan (%)<input type="number" min="1" max="100" step="1" value={passingScore} onChange={(event) => setPassingScore(event.target.value)} className={inputClass}/><span className="mt-1 block text-[10px] font-normal text-[#A29AAF]">Nilai tugas dibandingkan secara proporsional dengan nilai maksimal tugas.</span></label>
               <label className={labelClass}>Tugas Akhir *<select value={finalTaskId} onChange={(event) => setFinalTaskId(event.target.value)} className={inputClass}><option value="">Pilih tugas akhir</option>{publishedRequiredTasks.map((task) => <option key={task.id} value={task.id}>{task.title} · maks. {task.max_score}</option>)}</select><span className="mt-1 block text-[10px] font-normal text-[#A29AAF]">Tugas wajib lainnya otomatis dihitung sebagai Tugas Bab.</span></label>
@@ -297,7 +311,7 @@ export default function CertificateSettingsManager({ courses, tasks, settings, i
           </div>
 
           <div className="space-y-4">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h2 className="text-base font-extrabold text-[#261E3C]">Studio template sertifikat</h2><p className="mt-1 text-xs leading-5 text-[#938BA5]">Seret kotak ungu ke area nama kosong. Tarik sudut kanan bawah untuk mengubah ukuran.</p></div><div className="flex flex-wrap gap-2"><input ref={fileInputRef} type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" onChange={uploadTemplate} className="hidden"/><button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading || !courseId} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-600 px-4 text-xs font-extrabold text-white shadow-[0_7px_18px_rgba(109,40,217,.18)] disabled:opacity-50">{uploading ? <LoaderCircle size={15} className="animate-spin"/> : <UploadCloud size={15}/>} {templatePath ? "Ganti desain" : "Unggah desain"}</button></div></div>
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><h2 className="text-base font-extrabold text-[#261E3C]">Studio template sertifikat</h2><p className="mt-1 text-xs leading-5 text-[#938BA5]">Seret kotak ungu ke area nama kosong. Tarik sudut kanan bawah untuk mengubah ukuran.</p></div><div className="flex flex-wrap gap-2"><input ref={fileInputRef} type="file" accept="image/png,image/jpeg,.png,.jpg,.jpeg" onChange={uploadTemplate} className="hidden"/><button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading || !courseId} className="certificate-upload-button inline-flex h-9 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-gradient-to-r from-violet-700 to-fuchsia-600 px-3.5 text-[12px] font-semibold text-white shadow-[0_4px_12px_rgba(109,40,217,.14)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50">{uploading ? <LoaderCircle size={15} className="animate-spin"/> : <UploadCloud size={15}/>} {templatePath ? "Ganti desain" : "Unggah desain"}</button></div></div>
             {templateUrl && templateWidth > 0 && templateHeight > 0 ? <>
               <div className="overflow-hidden rounded-2xl bg-[#F0EDF6] p-3 sm:p-4">
                 <div ref={previewRef} className="relative mx-auto w-full max-w-[900px] touch-none select-none overflow-hidden rounded-lg bg-white shadow-[0_14px_34px_rgba(38,24,64,.15)]" style={{ aspectRatio: `${templateWidth} / ${templateHeight}` }} onPointerMove={moveBox} onPointerUp={() => setDragState(null)} onPointerCancel={() => setDragState(null)}>
@@ -323,11 +337,11 @@ export default function CertificateSettingsManager({ courses, tasks, settings, i
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {([['Posisi X', box.x, (value: number) => setBox((current) => ({ ...current, x: clamp(value / 100, 0, 1 - current.width) }))], ['Posisi Y', box.y, (value: number) => setBox((current) => ({ ...current, y: clamp(value / 100, 0, 1 - current.height) }))], ['Lebar', box.width, (value: number) => setBox((current) => ({ ...current, width: clamp(value / 100, 0.08, 1 - current.x) }))], ['Tinggi', box.height, (value: number) => setBox((current) => ({ ...current, height: clamp(value / 100, 0.06, 1 - current.y) }))]] as Array<[string, number, (value: number) => void]>).map(([label, value, setter]) => <label key={label} className={labelClass}>{label} (%)<input type="number" min="0" max="100" step="0.5" value={(value * 100).toFixed(1)} onChange={(event) => setter(Number(event.target.value || 0))} className={inputClass}/></label>)}
               </div>
-            </> : <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#E4DDF0] bg-[#FAF9FC] px-6 py-10 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-700"><FileImage size={27}/></span><h3 className="mt-4 text-sm font-extrabold text-[#302647]">Belum ada desain sertifikat</h3><p className="mt-2 max-w-md text-xs leading-5 text-[#938BA5]">Unggah file PNG/JPG yang sudah didesain dan sisakan area kosong untuk nama peserta. Kamu akan mengatur posisi nama langsung pada preview.</p><button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading || !courseId} className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-violet-50 px-4 text-xs font-bold text-violet-700">{uploading ? <LoaderCircle size={14} className="animate-spin"/> : <ImagePlus size={14}/>} Pilih file desain</button></div>}
+            </> : <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#E4DDF0] bg-[#FAF9FC] px-6 py-10 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-700"><FileImage size={27}/></span><h3 className="mt-4 text-sm font-extrabold text-[#302647]">Belum ada desain sertifikat</h3><p className="mt-2 max-w-md text-xs leading-5 text-[#938BA5]">Unggah file PNG/JPG yang sudah didesain dan sisakan area kosong untuk nama peserta. Kamu akan mengatur posisi nama langsung pada preview.</p><button type="button" onClick={() => fileInputRef.current?.click()} disabled={uploading || !courseId} className="certificate-upload-button mt-5 inline-flex h-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-violet-50 px-3.5 text-[12px] font-semibold text-violet-700 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50">{uploading ? <LoaderCircle size={14} className="animate-spin"/> : <ImagePlus size={14}/>} Pilih file desain</button></div>}
             <p className="text-[10px] leading-5 text-[#9A92A9]">Format PNG/JPG · Maksimal 10 MB · Template lama tidak dihapus agar sertifikat yang sudah terbit tetap menggunakan desain aslinya.</p>
           </div>
         </div>}
-        {selectedCourse && <div className="mt-7 flex flex-col justify-between gap-3 border-t border-[#F0ECF6] pt-5 sm:flex-row sm:items-center"><div><p className="text-xs font-extrabold text-[#33284D]">{activeCertificates} sertifikat telah diterbitkan</p><p className="mt-1 text-[10px] text-[#938BA5]">Arsip sertifikat yang sudah terbit tidak berubah saat template diperbarui.</p></div><button type="button" onClick={() => void saveSettings()} disabled={saving || uploading || (enabled && !enableReady)} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-600 px-6 text-xs font-extrabold text-white shadow-[0_8px_20px_rgba(109,40,217,.2)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45">{saving ? <LoaderCircle size={15} className="animate-spin"/> : <Save size={15}/>} Simpan pengaturan sertifikat</button></div>}
+        {selectedCourse && <div className="mt-7 flex flex-col justify-between gap-3 border-t border-[#F0ECF6] pt-5 sm:flex-row sm:items-center"><div><p className="text-xs font-extrabold text-[#33284D]">{activeCertificates} sertifikat telah diterbitkan</p><p className="mt-1 text-[10px] text-[#938BA5]">Arsip sertifikat yang sudah terbit tidak berubah saat template diperbarui.</p></div><button type="button" onClick={() => void saveSettings()} disabled={saving || uploading || (enabled && !enableReady)} className="certificate-save-button inline-flex h-10 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-gradient-to-r from-violet-700 to-fuchsia-600 px-4 text-[12px] font-semibold text-white shadow-[0_4px_14px_rgba(109,40,217,.16)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45 sm:w-auto">{saving ? <LoaderCircle size={15} className="animate-spin"/> : <Save size={15}/>} Simpan pengaturan sertifikat</button></div>}
       </section>
     </main>
   );

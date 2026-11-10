@@ -16,7 +16,6 @@ import {
   ArrowUp,
   BookOpen,
   CheckCircle2,
-  ChevronDown,
   ClipboardCheck,
   File,
   FileText,
@@ -24,6 +23,7 @@ import {
   Image as ImageIcon,
   Layers3,
   Link2,
+  ListPlus,
   Music,
   Pencil,
   PlayCircle,
@@ -32,6 +32,7 @@ import {
   Send,
   Trash2,
   Type,
+  Undo2,
   Video,
   X,
 } from "lucide-react";
@@ -135,8 +136,8 @@ const contentTypes: { value: ContentType; label: string }[] = [
 ];
 
 const inputClass =
-  "mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-2 focus:ring-violet-100";
-const labelClass = "block text-[11px] font-bold text-slate-700";
+  "mt-1.5 h-12 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-normal text-slate-800 outline-none transition placeholder:text-sm placeholder:font-normal placeholder:text-slate-400 focus:border-violet-500 focus:ring-2 focus:ring-violet-100";
+const labelClass = "block text-sm font-medium leading-5 text-slate-700";
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Terjadi kesalahan. Coba kembali.";
@@ -932,39 +933,37 @@ export default function MentorContentManager({
             const statusClass = locked ? "bg-amber-50 text-amber-700" : draft?.status === "revision_requested" ? "bg-rose-50 text-rose-700" : draft?.status === "approved" ? "bg-emerald-50 text-emerald-700" : draft ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700";
             return (
               <section key={section.id} className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${markedDelete ? "border-rose-200" : "border-[#EEEAF7]"}`}>
-                <div className="flex flex-col gap-4 border-b border-slate-100 bg-white p-4 sm:p-5">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
-                      <Layers3 size={18} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-violet-700">Bab {sectionIndex + 1}</p>
-                        <span className={`rounded-full px-2.5 py-1 text-[9px] font-medium ${statusClass}`}>{statusLabel}</span>
-                        {markedDelete && <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[9px] font-medium text-rose-700">Ditandai untuk dihapus</span>}
+                <div className="border-b border-slate-100 bg-white p-4 sm:p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+                        <Layers3 size={18} />
                       </div>
-                      <h3 className="mt-1 text-base font-semibold leading-snug text-slate-900">{section.title}</h3>
-                      {section.description && <p className="mt-1.5 max-w-[78ch] text-xs leading-6 text-slate-500">{section.description}</p>}
-                      <p className="mt-1.5 text-[9px] font-medium text-slate-400">{sectionLessons.length} Materi Inti · {contents.filter((item) => sectionLessons.some((lesson) => lesson.id === item.lesson_id)).length} Mini Materi</p>
-                      {draft?.admin_note && draft.status === "revision_requested" && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700">Catatan Admin: {draft.admin_note}</p>}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-violet-700">Bab {sectionIndex + 1}</p>
+                          <span className={`rounded-full px-2.5 py-1 text-[9px] font-medium ${statusClass}`}>{statusLabel}</span>
+                          {markedDelete && <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[9px] font-medium text-rose-700">Ditandai untuk dihapus</span>}
+                        </div>
+                        <h3 className="mt-1 text-base font-semibold leading-snug text-slate-900">{section.title}</h3>
+                        {section.description && <p className="mt-1.5 max-w-[78ch] text-xs leading-6 text-slate-500">{section.description}</p>}
+                        <p className="mt-1.5 text-[9px] font-medium text-slate-400">{sectionLessons.length} Materi Inti · {contents.filter((item) => sectionLessons.some((lesson) => lesson.id === item.lesson_id)).length} Mini Materi</p>
+                        {draft?.admin_note && draft.status === "revision_requested" && <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700">Catatan Admin: {draft.admin_note}</p>}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-col gap-3 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <button type="button" title="Pindah Bab ke atas" aria-label="Pindah Bab ke atas" onClick={() => void moveSection(section, -1)} disabled={sectionIndex === 0 || saving || locked || markedDelete} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ArrowUp size={15} /></button>
-                        <button type="button" title="Pindah Bab ke bawah" aria-label="Pindah Bab ke bawah" onClick={() => void moveSection(section, 1)} disabled={sectionIndex === sections.length - 1 || saving || locked || markedDelete} className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 disabled:opacity-30"><ArrowDown size={15} /></button>
-                      </div>
-                      <button type="button" onClick={() => void openParticipantPreview(section)} disabled={markedDelete || previewLoading} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-40"><Eye size={14} /> Preview Peserta</button>
-                      <button type="button" onClick={() => openSection(section)} disabled={locked || markedDelete || saving} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"><Pencil size={14} /> Edit Bab</button>
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:max-w-[290px]">
+                      <button type="button" title="Pindah Bab ke atas" aria-label="Pindah Bab ke atas" onClick={() => void moveSection(section, -1)} disabled={sectionIndex === 0 || saving || locked || markedDelete} className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-30 sm:h-9 sm:w-9"><ArrowUp size={15} /></button>
+                      <button type="button" title="Pindah Bab ke bawah" aria-label="Pindah Bab ke bawah" onClick={() => void moveSection(section, 1)} disabled={sectionIndex === sections.length - 1 || saving || locked || markedDelete} className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-30 sm:h-9 sm:w-9"><ArrowDown size={15} /></button>
+                      <button type="button" onClick={() => void openParticipantPreview(section)} disabled={markedDelete || previewLoading} aria-label="Preview peserta" title="Preview peserta" className="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-40 sm:h-9 sm:w-9"><Eye size={16} /></button>
+                      <button type="button" onClick={() => openSection(section)} disabled={locked || markedDelete || saving} aria-label="Edit Bab" title="Edit Bab" className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 sm:h-9 sm:w-9"><Pencil size={15} /></button>
                       {markedDelete ? (
-                        <button type="button" onClick={() => void undoDeleteSection(section)} disabled={saving || locked} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-3.5 text-xs font-medium text-emerald-700 disabled:opacity-40">Batalkan hapus</button>
+                        <button type="button" onClick={() => void undoDeleteSection(section)} disabled={saving || locked} aria-label="Batalkan penghapusan Bab" title="Batalkan penghapusan Bab" className="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-40 sm:h-9 sm:w-9"><Undo2 size={15} /></button>
                       ) : (
-                        <button type="button" onClick={() => void deleteSection(section)} disabled={saving || locked} aria-label="Hapus Bab" title="Hapus Bab" className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 hover:bg-rose-50 disabled:opacity-40"><Trash2 size={14} /></button>
+                        <button type="button" onClick={() => void deleteSection(section)} disabled={saving || locked} aria-label="Hapus Bab" title="Hapus Bab" className="flex h-10 w-10 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 transition hover:bg-rose-50 disabled:opacity-40 sm:h-9 sm:w-9"><Trash2 size={15} /></button>
                       )}
+                      <button type="button" onClick={() => openLesson(section.id)} disabled={locked || markedDelete || saving} aria-label="Tambah Materi Inti" title="Tambah Materi Inti" className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#260047] text-white shadow-sm transition hover:bg-[#09483F] disabled:opacity-40 sm:h-9 sm:w-9"><Plus size={17} /></button>
                     </div>
-                    <button type="button" onClick={() => openLesson(section.id)} disabled={locked || markedDelete || saving} className="inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-[#260047] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#09483F] disabled:opacity-40 sm:w-auto sm:min-w-[132px]"><Plus size={15} /> Tambah Materi</button>
                   </div>
                 </div>
 
@@ -1006,10 +1005,10 @@ export default function MentorContentManager({
                               <p className="mt-1 text-[9px] text-slate-400">{lesson.duration_minutes ? `${lesson.duration_minutes} menit` : "Durasi fleksibel"} · {lessonContents.length} Mini Materi</p>
                             </div>
                           </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <button type="button" onClick={() => openLesson(section.id, lesson)} disabled={locked || markedDelete || saving} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"><Pencil size={12} /> Edit</button>
-                            <button type="button" onClick={() => setActiveLessonId(activeLessonId === lesson.id ? "" : lesson.id)} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-violet-100 bg-violet-50 px-3 text-xs font-medium text-violet-800"><ChevronDown size={12} /> Mini Materi</button>
-                            <button type="button" onClick={() => void deleteLesson(lesson)} disabled={saving || locked || markedDelete} className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 hover:bg-rose-50 disabled:opacity-40"><Trash2 size={12} /></button>
+                          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                            <button type="button" onClick={() => openLesson(section.id, lesson)} disabled={locked || markedDelete || saving} aria-label={`Edit materi ${lesson.title}`} title="Edit Materi Inti" className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 sm:h-9 sm:w-9"><Pencil size={15} /></button>
+                            <button type="button" onClick={() => setActiveLessonId(activeLessonId === lesson.id ? "" : lesson.id)} aria-label={`Kelola Mini Materi untuk ${lesson.title}`} title={`Kelola Mini Materi (${lessonContents.length})`} aria-expanded={activeLessonId === lesson.id} className={`flex h-10 w-10 items-center justify-center rounded-lg border transition sm:h-9 sm:w-9 ${activeLessonId === lesson.id ? "border-violet-200 bg-violet-100 text-violet-800" : "border-violet-100 bg-violet-50 text-violet-800 hover:bg-violet-100"}`}><ListPlus size={16} /></button>
+                            <button type="button" onClick={() => void deleteLesson(lesson)} disabled={saving || locked || markedDelete} aria-label={`Hapus materi ${lesson.title}`} title="Hapus Materi Inti" className="flex h-10 w-10 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 transition hover:bg-rose-50 disabled:opacity-40 sm:h-9 sm:w-9"><Trash2 size={15} /></button>
                           </div>
                         </div>
 
@@ -1020,7 +1019,7 @@ export default function MentorContentManager({
                                 <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-violet-700">Mini Materi</p>
                                 <p className="mt-1 text-[10px] text-slate-500">Konten pendukung untuk {lesson.title}.</p>
                               </div>
-                              <button type="button" onClick={() => openContent(lesson.id)} disabled={locked || markedDelete || saving} className="inline-flex h-8 items-center gap-1 rounded-lg bg-violet-700 px-3 text-[9px] font-bold text-white disabled:opacity-40"><Plus size={12} /> Tambah Mini Materi</button>
+                              <button type="button" onClick={() => openContent(lesson.id)} disabled={locked || markedDelete || saving} aria-label="Tambah Mini Materi" title="Tambah Mini Materi" className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-700 text-white transition hover:bg-violet-800 disabled:opacity-40"><Plus size={16} /></button>
                             </div>
                             <div className="mt-3 space-y-2">
                               {lessonContents.length === 0 ? <p className="rounded-xl border border-dashed border-violet-200 p-4 text-center text-[10px] text-slate-400">Belum ada Mini Materi.</p> : lessonContents.map((item) => (
@@ -1032,9 +1031,9 @@ export default function MentorContentManager({
                                       <p className="mt-0.5 text-[9px] text-slate-400">{contentTypes.find((type) => type.value === item.content_type)?.label ?? item.content_type}</p>
                                     </div>
                                   </div>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    <button type="button" onClick={() => openContent(lesson.id, item)} disabled={saving || locked || markedDelete} className="h-7 rounded-lg border border-slate-200 px-2.5 text-[9px] font-bold text-slate-600 disabled:opacity-40">Edit</button>
-                                    <button type="button" onClick={() => void deleteContent(item)} disabled={saving || locked || markedDelete} className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-100 text-rose-600 disabled:opacity-40"><Trash2 size={12} /></button>
+                                  <div className="flex shrink-0 items-center gap-1.5">
+                                    <button type="button" onClick={() => openContent(lesson.id, item)} disabled={saving || locked || markedDelete} aria-label={`Edit mini materi ${item.title}`} title="Edit Mini Materi" className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"><Pencil size={14} /></button>
+                                    <button type="button" onClick={() => void deleteContent(item)} disabled={saving || locked || markedDelete} aria-label={`Hapus mini materi ${item.title}`} title="Hapus Mini Materi" className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-100 text-rose-600 transition hover:bg-rose-50 disabled:opacity-40"><Trash2 size={14} /></button>
                                   </div>
                                 </div>
                               ))}
@@ -1123,61 +1122,61 @@ export default function MentorContentManager({
           <form onSubmit={saveSection} className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div><p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-700">Chapter draft</p><h3 className="mt-1 text-lg font-extrabold text-slate-900">{editingSection ? "Edit Bab" : "Tambah Bab"}</h3></div>
-              <button type="button" onClick={() => setSectionEditor(false)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button>
+              <button type="button" onClick={() => setSectionEditor(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button>
             </div>
             <label className={`${labelClass} mt-5`}>Nama Bab *<input required maxLength={160} value={sectionTitle} onChange={(event) => setSectionTitle(event.target.value)} className={inputClass} placeholder="Contoh: Dasar-Dasar Desain" /></label>
-            <label className={`${labelClass} mt-4`}>Deskripsi Bab<textarea rows={3} maxLength={1000} value={sectionDescription} onChange={(event) => setSectionDescription(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-xs outline-none focus:border-violet-500" placeholder="Gambaran singkat isi Bab." /></label>
-            <p className="mt-4 rounded-xl bg-violet-50 p-3 text-[10px] leading-5 text-violet-800">Bab disimpan sebagai draft. Kamu tetap bisa menambahkan dan mengedit seluruh Materi Inti serta Mini Materi sebelum mengajukannya ke Admin.</p>
-            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setSectionEditor(false)} className="h-10 rounded-xl border border-slate-200 px-4 text-[10px] font-bold text-slate-600">Batal</button><button disabled={saving} className="h-10 rounded-xl bg-violet-700 px-5 text-[10px] font-bold text-white disabled:opacity-50">{saving ? "Menyimpan..." : "Simpan Draft Bab"}</button></div>
+            <label className={`${labelClass} mt-4`}>Deskripsi Bab<textarea rows={3} maxLength={1000} value={sectionDescription} onChange={(event) => setSectionDescription(event.target.value)} className="mt-1.5 min-h-[112px] w-full rounded-xl border border-slate-200 px-3.5 py-3 text-sm font-normal leading-6 outline-none placeholder:text-sm placeholder:font-normal placeholder:text-slate-400 focus:border-violet-500" placeholder="Gambaran singkat isi Bab." /></label>
+            <p className="mt-4 rounded-xl bg-violet-50 p-3 text-xs font-normal leading-5 text-violet-800">Bab disimpan sebagai draft. Kamu tetap bisa menambahkan dan mengedit seluruh Materi Inti serta Mini Materi sebelum mengajukannya ke Admin.</p>
+            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setSectionEditor(false)} className="h-11 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600">Batal</button><button disabled={saving} className="h-11 rounded-xl bg-violet-700 px-5 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Menyimpan..." : "Simpan Draft Bab"}</button></div>
           </form>
         </div>
       )}
 
       {lessonEditor && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-sm">
-          <form onSubmit={saveLesson} className="my-5 w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
+          <form onSubmit={saveLesson} className="my-5 w-full max-w-[560px] rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div><p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-700">Chapter draft</p><h3 className="mt-1 text-lg font-extrabold text-slate-900">{editingLesson ? "Edit Materi Inti" : "Tambah Materi Inti"}</h3></div>
-              <button type="button" onClick={() => setLessonEditor(false)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button>
+              <button type="button" onClick={() => setLessonEditor(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button>
             </div>
             <div className="mt-5 space-y-4">
               <label className={labelClass}>Judul Materi *<input required maxLength={180} value={lessonTitle} onChange={(event) => setLessonTitle(event.target.value)} className={inputClass} /></label>
-              <label className={labelClass}>Ringkasan / Deskripsi<textarea rows={3} value={lessonDescription} onChange={(event) => setLessonDescription(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-xs outline-none focus:border-violet-500" /></label>
+              <label className={labelClass}>Ringkasan / Deskripsi<textarea rows={3} value={lessonDescription} onChange={(event) => setLessonDescription(event.target.value)} className="mt-1.5 min-h-[112px] w-full rounded-xl border border-slate-200 px-3.5 py-3 text-sm font-normal leading-6 outline-none placeholder:text-sm placeholder:font-normal placeholder:text-slate-400 focus:border-violet-500" /></label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className={labelClass}>Penyedia video<select value={videoProvider} onChange={(event) => setVideoProvider(event.target.value)} className={inputClass}><option value="youtube">YouTube</option><option value="vimeo">Vimeo</option><option value="external">Eksternal</option></select></label>
                 <label className={labelClass}>Durasi (menit)<input type="number" min="0" step="1" value={duration} onChange={(event) => setDuration(event.target.value)} className={inputClass} /></label>
               </div>
               <label className={labelClass}>URL video / media<input type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} className={inputClass} placeholder="https://" /></label>
-              <label className="flex items-center gap-2 text-[10px] font-semibold text-slate-600"><input type="checkbox" checked={isPreview} onChange={(event) => setIsPreview(event.target.checked)} className="rounded border-slate-300 text-violet-700 focus:ring-violet-600" /> Jadikan materi pratinjau</label>
-              <p className="rounded-xl bg-violet-50 p-3 text-[10px] leading-5 text-violet-800">Materi Inti menjadi bagian dari draft Bab. Simpan beberapa materi sekaligus, lalu ajukan Bab ketika seluruh isinya siap.</p>
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600"><input type="checkbox" checked={isPreview} onChange={(event) => setIsPreview(event.target.checked)} className="rounded border-slate-300 text-violet-700 focus:ring-violet-600" /> Jadikan materi pratinjau</label>
+              <p className="rounded-xl bg-violet-50 p-3 text-xs font-normal leading-5 text-violet-800">Materi Inti menjadi bagian dari draft Bab. Simpan beberapa materi sekaligus, lalu ajukan Bab ketika seluruh isinya siap.</p>
             </div>
-            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setLessonEditor(false)} className="h-10 rounded-xl border border-slate-200 px-4 text-[10px] font-bold text-slate-600">Batal</button><button disabled={saving} className="h-10 rounded-xl bg-violet-700 px-5 text-[10px] font-bold text-white disabled:opacity-50">{saving ? "Menyimpan..." : "Simpan Materi"}</button></div>
+            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setLessonEditor(false)} className="h-11 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600">Batal</button><button disabled={saving} className="h-11 rounded-xl bg-violet-700 px-5 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Menyimpan..." : "Simpan Materi"}</button></div>
           </form>
         </div>
       )}
 
       {contentEditor && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-sm">
-          <form onSubmit={saveContent} className="my-5 w-full max-w-xl rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
+          <form onSubmit={saveContent} className="my-5 w-full max-w-[560px] rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
             <div className="flex items-start justify-between gap-3">
               <div><p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-700">Chapter draft</p><h3 className="mt-1 text-lg font-extrabold text-slate-900">{editingContent ? "Edit Mini Materi" : "Tambah Mini Materi"}</h3></div>
-              <button type="button" onClick={() => setContentEditor(false)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button>
+              <button type="button" onClick={() => setContentEditor(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button>
             </div>
             <div className="mt-5 space-y-4">
               <label className={labelClass}>Judul Mini Materi *<input required maxLength={180} value={contentTitle} onChange={(event) => setContentTitle(event.target.value)} className={inputClass} /></label>
               <label className={labelClass}>Jenis Konten<select value={contentType} onChange={(event) => { setContentType(event.target.value as ContentType); setSelectedFile(null); }} className={inputClass}>{contentTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-              {["text", "callout"].includes(contentType) && <label className={labelClass}>Isi konten *<textarea rows={5} value={contentBody} onChange={(event) => setContentBody(event.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-xs leading-6 outline-none focus:border-violet-500" /></label>}
+              {["text", "callout"].includes(contentType) && <label className={labelClass}>Isi konten *<textarea rows={5} value={contentBody} onChange={(event) => setContentBody(event.target.value)} className="mt-1.5 min-h-[132px] w-full rounded-xl border border-slate-200 px-3.5 py-3 text-sm font-normal leading-6 outline-none placeholder:text-sm placeholder:font-normal placeholder:text-slate-400 focus:border-violet-500" /></label>}
               {["tiktok", "youtube"].includes(contentType) && <label className={labelClass}>URL video *<input required type="url" value={mediaUrl} onChange={(event) => setMediaUrl(event.target.value)} className={inputClass} placeholder="https://" /></label>}
               {["image", "pdf", "audio"].includes(contentType) && (
                 <div className="space-y-2">
-                  <label className={labelClass}>Upload file (maks. 20 MB)<input type="file" accept={contentType === "image" ? ".jpg,.jpeg,.png,.webp" : contentType === "pdf" ? ".pdf" : ".mp3,.wav,.ogg"} onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-white p-2.5 text-[10px] file:mr-3 file:rounded-lg file:border-0 file:bg-violet-50 file:px-3 file:py-2 file:text-[10px] file:font-bold file:text-violet-800" /></label>
+                  <label className={labelClass}>Upload file (maks. 20 MB)<input type="file" accept={contentType === "image" ? ".jpg,.jpeg,.png,.webp" : contentType === "pdf" ? ".pdf" : ".mp3,.wav,.ogg"} onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)} className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-normal file:mr-3 file:rounded-lg file:border-0 file:bg-violet-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-violet-800" /></label>
                   <label className={labelClass}>Atau URL file<input type="url" value={mediaUrl} onChange={(event) => setMediaUrl(event.target.value)} className={inputClass} placeholder="https://" /></label>
                 </div>
               )}
               {contentType === "link" && <><label className={labelClass}>URL tautan *<input required type="url" value={linkUrl} onChange={(event) => setLinkUrl(event.target.value)} className={inputClass} placeholder="https://" /></label><label className={labelClass}>Label tautan<input value={linkLabel} onChange={(event) => setLinkLabel(event.target.value)} className={inputClass} placeholder="Buka referensi" /></label></>}
-              <p className="rounded-xl bg-violet-50 p-3 text-[10px] leading-5 text-violet-800">Mini Materi tersimpan di draft Bab dan akan diperiksa Admin bersama seluruh isi Bab.</p>
+              <p className="rounded-xl bg-violet-50 p-3 text-xs font-normal leading-5 text-violet-800">Mini Materi tersimpan di draft Bab dan akan diperiksa Admin bersama seluruh isi Bab.</p>
             </div>
-            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setContentEditor(false)} className="h-10 rounded-xl border border-slate-200 px-4 text-[10px] font-bold text-slate-600">Batal</button><button disabled={saving} className="h-10 rounded-xl bg-violet-700 px-5 text-[10px] font-bold text-white disabled:opacity-50">{saving ? "Menyimpan..." : "Simpan Mini Materi"}</button></div>
+            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setContentEditor(false)} className="h-11 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600">Batal</button><button disabled={saving} className="h-11 rounded-xl bg-violet-700 px-5 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Menyimpan..." : "Simpan Mini Materi"}</button></div>
           </form>
         </div>
       )}

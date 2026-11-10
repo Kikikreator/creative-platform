@@ -5,20 +5,17 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import {
-  ArrowLeft,
   BookOpen,
   CalendarClock,
-  CheckCircle2,
   ChevronDown,
   ClipboardList,
   FileText,
   Layers3,
+  Pencil,
   Plus,
   RefreshCw,
   Save,
-  ShieldCheck,
   Trash2,
-  UserRoundCheck,
   X,
 } from "lucide-react";
 
@@ -27,12 +24,6 @@ export type TaskCourseOption = {
   title: string;
   slug: string;
   status: string;
-};
-
-export type TaskProfileOption = {
-  id: string;
-  full_name: string | null;
-  roles: string[];
 };
 
 type SectionRow = {
@@ -147,21 +138,19 @@ function submissionLabel(type: CourseTask["submission_type"]) {
 }
 
 function inputClass() {
-  return "mt-1.5 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-2 focus:ring-violet-100";
+  return "mt-1.5 h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none transition placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25";
 }
 
 function labelClass() {
-  return "block text-xs font-semibold text-slate-700";
+  return "mb-2 block text-sm font-medium leading-5 text-slate-700";
 }
 
 export default function TaskManager({
   courses,
-  profiles,
   userId,
   initialError,
 }: {
   courses: TaskCourseOption[];
-  profiles: TaskProfileOption[];
   userId: string;
   initialError: string | null;
 }) {
@@ -171,7 +160,6 @@ export default function TaskManager({
   const [sections, setSections] = useState<SectionRow[]>([]);
   const [lessons, setLessons] = useState<LessonRow[]>([]);
   const [tasks, setTasks] = useState<CourseTask[]>([]);
-  const [assignedMentorIds, setAssignedMentorIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -194,7 +182,6 @@ export default function TaskManager({
       setSections([]);
       setLessons([]);
       setTasks([]);
-      setAssignedMentorIds([]);
       setLoading(false);
       return;
     }
@@ -204,7 +191,7 @@ export default function TaskManager({
     setSuccess("");
 
     try {
-      const [sectionResult, taskResult, mentorResult] = await Promise.all([
+      const [sectionResult, taskResult] = await Promise.all([
         supabase
           .from("course_sections")
           .select("id, course_id, title, position")
@@ -215,22 +202,14 @@ export default function TaskManager({
           .select("*")
           .eq("course_id", selectedCourseId)
           .order("created_at", { ascending: false }),
-        supabase
-          .from("course_task_mentors")
-          .select("mentor_user_id")
-          .eq("course_id", selectedCourseId),
       ]);
 
       if (sectionResult.error) throw sectionResult.error;
       if (taskResult.error) throw taskResult.error;
-      if (mentorResult.error) throw mentorResult.error;
 
       const loadedSections = (sectionResult.data ?? []) as SectionRow[];
       setSections(loadedSections);
       setTasks((taskResult.data ?? []) as CourseTask[]);
-
-      const mentorIds = (mentorResult.data ?? []).map((row) => row.mentor_user_id as string);
-      setAssignedMentorIds(mentorIds);
 
       if (loadedSections.length > 0) {
         const sectionIds = loadedSections.map((section) => section.id);
@@ -249,7 +228,6 @@ export default function TaskManager({
       setSections([]);
       setLessons([]);
       setTasks([]);
-      setAssignedMentorIds([]);
     } finally {
       setLoading(false);
     }
@@ -424,36 +402,25 @@ export default function TaskManager({
 
   const publishedCount = tasks.filter((task) => task.status === "published").length;
   const draftCount = tasks.length - publishedCount;
-  const assignedMentors = profiles.filter((profile) => assignedMentorIds.includes(profile.id));
-
   return (
-    <div className="app-page space-y-6">
-      <div className="space-y-6">
-        <section className="app-page-heading">
-          <div>
-            <p className="app-eyebrow">Learning management</p>
-            
-            <p className="app-page-description">Buat tugas praktik dan tentukan posisinya di dalam Bab serta materi. Penugasan mentor dikelola terpusat melalui Manajemen Mentor.</p>
-          </div>
-        </section>
-
+    <div className="space-y-5">
         {error && <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
         {success && <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</div>}
 
         <section className="mt-5 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0 flex-1">
-              <label className="text-xs font-bold text-slate-700" htmlFor="task-course">Pilih kelas</label>
+              <label className="text-sm font-medium text-slate-700" htmlFor="task-course">Pilih kelas</label>
               <select id="task-course" value={selectedCourseId} onChange={(event) => { setSelectedCourseId(event.target.value); setFormOpen(false); }} className={inputClass()}>
                 {courses.length === 0 && <option value="">Belum ada kelas</option>}
                 {courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
               </select>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href="/admin/materi" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-xs font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800">
+              <Link href="/admin/materi" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-[12px] font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800">
                 <Layers3 size={15} /> Atur Bab & Materi
               </Link>
-              <button type="button" onClick={() => openCreateForm()} disabled={!selectedCourseId || sections.length === 0} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 text-xs font-bold text-white transition hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-50">
+              <button type="button" onClick={() => openCreateForm()} disabled={!selectedCourseId || sections.length === 0} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5B21B6] disabled:cursor-not-allowed disabled:opacity-50">
                 <Plus size={16} /> Buat Tugas
               </button>
             </div>
@@ -500,11 +467,11 @@ export default function TaskManager({
               </div>
 
               <label className={labelClass()}>Deskripsi singkat
-                <textarea rows={2} maxLength={1000} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-800 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100" placeholder="Gambaran singkat tugas untuk peserta." />
+                <textarea rows={2} maxLength={1000} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="mt-1.5 min-h-[88px] w-full resize-y rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm font-normal leading-6 text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25" placeholder="Gambaran singkat tugas untuk peserta." />
               </label>
 
               <label className={labelClass()}>Instruksi pengerjaan *
-                <textarea required rows={5} value={form.instructions} onChange={(event) => setForm((current) => ({ ...current, instructions: event.target.value }))} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm leading-6 text-slate-800 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-100" placeholder="Jelaskan apa yang harus dibuat peserta, ketentuan karya, dan cara pengumpulannya." />
+                <textarea required rows={5} value={form.instructions} onChange={(event) => setForm((current) => ({ ...current, instructions: event.target.value }))} className="mt-1.5 min-h-[132px] w-full resize-y rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm font-normal leading-6 text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25" placeholder="Jelaskan apa yang harus dibuat peserta, ketentuan karya, dan cara pengumpulannya." />
               </label>
 
               <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4">
@@ -572,8 +539,8 @@ export default function TaskManager({
               </div>
 
               <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
-                <button type="button" onClick={closeForm} disabled={saving} className="h-11 rounded-xl border border-slate-200 px-5 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Batal</button>
-                <button type="submit" disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-violet-700 px-5 text-xs font-bold text-white hover:bg-violet-800 disabled:opacity-60">
+                <button type="button" onClick={closeForm} disabled={saving} className="h-11 rounded-xl border border-slate-200 px-5 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">Batal</button>
+                <button type="submit" disabled={saving} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-5 text-sm font-semibold text-white hover:bg-[#5B21B6] disabled:opacity-60">
                   {saving ? <RefreshCw size={15} className="animate-spin" /> : <Save size={15} />}
                   {saving ? "Menyimpan..." : editingTaskId ? "Simpan Perubahan" : "Simpan Tugas"}
                 </button>
@@ -582,14 +549,14 @@ export default function TaskManager({
           </section>
         )}
 
-        <section className="mt-5 grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="mt-5">
           <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-700">Daftar tugas</p>
                 <h2 className="mt-1 text-lg font-bold text-slate-900">{selectedCourse?.title ?? "Pilih kelas"}</h2>
               </div>
-              <button type="button" onClick={() => void loadData()} disabled={loading} className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"><RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Muat ulang</button>
+              <button type="button" onClick={() => void loadData()} disabled={loading} className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 px-4 text-[12px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"><RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Muat ulang</button>
             </div>
 
             {loading ? (
@@ -597,9 +564,9 @@ export default function TaskManager({
             ) : courses.length === 0 ? (
               <div className="mt-5 rounded-2xl border border-dashed border-slate-200 p-8 text-center"><BookOpen className="mx-auto text-slate-400" size={30} /><p className="mt-3 text-sm font-bold text-slate-800">Belum ada kelas</p><p className="mt-1 text-xs text-slate-500">Buat kelas terlebih dahulu sebelum membuat tugas.</p></div>
             ) : sections.length === 0 ? (
-              <div className="mt-5 rounded-2xl border border-dashed border-slate-200 p-8 text-center"><Layers3 className="mx-auto text-slate-400" size={30} /><p className="mt-3 text-sm font-bold text-slate-800">Bab belum tersedia</p><p className="mt-1 text-xs text-slate-500">Tambahkan Bab dan materi melalui Manajemen Materi terlebih dahulu.</p><Link href="/admin/materi" className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-violet-700 px-4 text-xs font-bold text-white"><Plus size={14} /> Buka Manajemen Materi</Link></div>
+              <div className="mt-5 rounded-2xl border border-dashed border-slate-200 p-8 text-center"><Layers3 className="mx-auto text-slate-400" size={30} /><p className="mt-3 text-sm font-bold text-slate-800">Bab belum tersedia</p><p className="mt-1 text-xs text-slate-500">Tambahkan Bab dan materi melalui Manajemen Materi terlebih dahulu.</p><Link href="/admin/materi" className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[12px] font-semibold text-white"><Plus size={14} /> Buka Manajemen Materi</Link></div>
             ) : tasks.length === 0 ? (
-              <div className="mt-5 rounded-2xl border border-dashed border-violet-200 bg-violet-50/40 p-8 text-center"><ClipboardList className="mx-auto text-violet-600" size={32} /><p className="mt-3 text-sm font-bold text-slate-800">Belum ada tugas di kelas ini</p><p className="mt-1 text-xs leading-5 text-slate-500">Buat tugas pertama dan tentukan letaknya di dalam kurikulum.</p><button type="button" onClick={() => openCreateForm()} className="mt-4 inline-flex h-10 items-center gap-2 rounded-xl bg-violet-700 px-4 text-xs font-bold text-white"><Plus size={14} /> Buat Tugas</button></div>
+              <div className="mt-5 rounded-2xl border border-dashed border-violet-200 bg-violet-50/40 p-8 text-center"><ClipboardList className="mx-auto text-violet-600" size={32} /><p className="mt-3 text-sm font-bold text-slate-800">Belum ada tugas di kelas ini</p><p className="mt-1 text-xs leading-5 text-slate-500">Buat tugas pertama dan tentukan letaknya di dalam kurikulum.</p><button type="button" onClick={() => openCreateForm()} className="mt-4 inline-flex h-11 items-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[12px] font-semibold text-white"><Plus size={14} /> Buat Tugas</button></div>
             ) : (
               <div className="mt-5 space-y-5">
                 {sections.map((section, sectionIndex) => {
@@ -612,7 +579,7 @@ export default function TaskManager({
                   if (sectionTasks.length === 0) return null;
                   return (
                     <div key={section.id}>
-                      <div className="mb-2 flex items-center justify-between gap-2"><div><p className="text-[10px] font-bold uppercase tracking-wider text-violet-700">Bab {sectionIndex + 1}</p><h3 className="mt-0.5 text-sm font-bold text-slate-800">{section.title}</h3></div><button type="button" onClick={() => openCreateForm(section.id)} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-200 px-2.5 text-[10px] font-bold text-violet-800 hover:bg-violet-50"><Plus size={12} /> Tambah tugas</button></div>
+                      <div className="mb-2 flex items-center justify-between gap-2"><div><p className="text-[10px] font-bold uppercase tracking-wider text-violet-700">Bab {sectionIndex + 1}</p><h3 className="mt-0.5 text-sm font-bold text-slate-800">{section.title}</h3></div><button type="button" onClick={() => openCreateForm(section.id)} className="inline-flex h-11 items-center gap-2 rounded-xl border border-violet-200 px-4 text-[12px] font-semibold text-violet-800 hover:bg-violet-50"><Plus size={14} /> Tambah tugas</button></div>
                       <div className="space-y-2">
                         {sectionTasks.map((task) => {
                           const anchor = lessons.find((lesson) => lesson.id === task.anchor_lesson_id);
@@ -625,7 +592,7 @@ export default function TaskManager({
                                   <p className="mt-1 text-xs leading-5 text-slate-500">{task.description || task.instructions}</p>
                                   <div className="mt-2 flex flex-wrap gap-1.5"><span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">{placementLabel(task.placement)}{anchor ? ` · ${anchor.title}` : ""}</span><span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">{submissionLabel(task.submission_type)}</span><span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">Maks. {task.max_score}</span><span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600"><CalendarClock size={11} className="mr-1 inline" />{formatDate(task.due_at)}</span></div>
                                 </div>
-                                <div className="flex shrink-0 gap-2 sm:flex-col"><button type="button" onClick={() => openEditForm(task)} className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 text-[10px] font-bold text-slate-600 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800">Edit</button><button type="button" onClick={() => void handleDeleteTask(task)} disabled={deletingId === task.id} className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-rose-100 px-3 text-[10px] font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50">{deletingId === task.id ? <RefreshCw size={12} className="animate-spin" /> : <Trash2 size={12} />} Hapus</button></div>
+                                <div className="flex shrink-0 items-center gap-2 sm:flex-col"><button type="button" onClick={() => openEditForm(task)} aria-label={`Edit tugas ${task.title}`} title="Edit tugas" className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"><Pencil size={15} /></button><button type="button" onClick={() => void handleDeleteTask(task)} disabled={deletingId === task.id} aria-label={`Hapus tugas ${task.title}`} title="Hapus tugas" className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-100 text-rose-600 transition hover:bg-rose-50 disabled:opacity-50">{deletingId === task.id ? <RefreshCw size={14} className="animate-spin" /> : <Trash2 size={15} />}</button></div>
                               </div>
                             </article>
                           );
@@ -638,26 +605,7 @@ export default function TaskManager({
               </div>
             )}
           </div>
-
-          <aside className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-            <div className="flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-700"><UserRoundCheck size={18} /></div><div><p className="text-[10px] font-bold uppercase tracking-wider text-violet-700">Mentor kelas</p><h2 className="text-sm font-bold text-slate-900">Penugasan mentor</h2></div></div>
-            <p className="mt-3 text-xs leading-5 text-slate-500">Daftar ini hanya untuk melihat mentor yang saat ini ditugaskan pada kelas. Perubahan penugasan dan kesepakatan bagi hasil dilakukan melalui Manajemen Mentor.</p>
-            {!selectedCourseId ? <p className="mt-4 text-xs text-slate-500">Pilih kelas terlebih dahulu.</p> : assignedMentors.length === 0 ? <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">Belum ada mentor yang ditugaskan.</p> : (
-              <div className="mt-4 space-y-2">
-                {assignedMentors.map((profile) => (
-                  <div key={profile.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-3">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-[10px] font-bold text-violet-800">{(profile.full_name || "M").slice(0, 1).toUpperCase()}</span>
-                    <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-slate-800">{profile.full_name?.trim() || "Pengguna tanpa nama"}</span><span className="mt-0.5 block truncate text-[9px] text-slate-400">Mentor ditugaskan</span></span>
-                    <CheckCircle2 size={15} className="shrink-0 text-emerald-600" />
-                  </div>
-                ))}
-              </div>
-            )}
-            <Link href="/admin/mentor" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#260047] px-4 text-xs font-bold text-white transition hover:bg-[#09483F]">Buka Manajemen Mentor</Link>
-            <div className="mt-3 rounded-xl bg-slate-50 p-3 text-[10px] leading-5 text-slate-500"><ShieldCheck size={13} className="mr-1 inline text-violet-700" />Akses Mentor tetap dibatasi pada kelas yang ditugaskan.</div>
-          </aside>
         </section>
-      </div>
     </div>
   );
 }

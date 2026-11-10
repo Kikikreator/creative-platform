@@ -14,7 +14,6 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
-  UserPlus,
   UserRound,
   UserX,
 } from "lucide-react";
@@ -44,7 +43,7 @@ type Props = {
   initialError: string | null;
 };
 
-type FilterType = "all" | "mentor" | "not_mentor";
+type FilterType = "all" | "assigned" | "unassigned";
 
 function initials(name: string) {
   return (
@@ -94,26 +93,22 @@ export default function MentorManager({
   const [selectedAgreedCourseIds, setSelectedAgreedCourseIds] = useState<string[]>([]);
   const [savingSetup, setSavingSetup] = useState(false);
 
-  const mentorCount = accounts.filter((account) =>
-    account.roles.includes("instructor")
+  const assignedMentorCount = accounts.filter(
+    (account) => account.assignedCourses.length > 0
   ).length;
 
-  const assignedMentorCount = accounts.filter(
-    (account) =>
-      account.roles.includes("instructor") &&
-      account.assignedCourses.length > 0
-  ).length;
+  const unassignedMentorCount = accounts.length - assignedMentorCount;
 
   const filteredAccounts = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
     return accounts.filter((account) => {
-      const isMentor = account.roles.includes("instructor");
+      const hasAssignment = account.assignedCourses.length > 0;
 
       const matchesFilter =
         filter === "all" ||
-        (filter === "mentor" && isMentor) ||
-        (filter === "not_mentor" && !isMentor);
+        (filter === "assigned" && hasAssignment) ||
+        (filter === "unassigned" && !hasAssignment);
 
       const matchesSearch =
         !keyword ||
@@ -210,13 +205,17 @@ export default function MentorManager({
       }
 
       setAccounts(
-        (profilesResult.data ?? []).map((profile) => ({
-          ...profile,
-          roles: roleMap.get(profile.id) ?? [],
-          assignedCourses: assignmentsMap.get(profile.id) ?? [],
-          assignedCourseIds: assignmentIdsMap.get(profile.id) ?? [],
-          revenueAgreedCourseIds: revenueAgreementMap.get(profile.id) ?? [],
-        }))
+        (profilesResult.data ?? [])
+          .filter((profile) =>
+            (roleMap.get(profile.id) ?? []).includes("instructor")
+          )
+          .map((profile) => ({
+            ...profile,
+            roles: roleMap.get(profile.id) ?? [],
+            assignedCourses: assignmentsMap.get(profile.id) ?? [],
+            assignedCourseIds: assignmentIdsMap.get(profile.id) ?? [],
+            revenueAgreedCourseIds: revenueAgreementMap.get(profile.id) ?? [],
+          }))
       );
     } catch (err) {
       setError(
@@ -228,53 +227,6 @@ export default function MentorManager({
       setRefreshing(false);
     }
   }, [supabase]);
-
-  async function activateMentor(account: MentorAccount) {
-    if (account.roles.includes("instructor")) return;
-
-    const confirmed = await confirmDialog({
-      title: "Aktifkan role Mentor?",
-      message: `Tambahkan role Mentor untuk akun "${account.full_name}"? Akun ini tetap mempertahankan role yang sudah dimiliki.`,
-      confirmLabel: "Aktifkan Mentor",
-      variant: "primary",
-    });
-
-    if (!confirmed) return;
-
-    setBusyId(account.id);
-    setError("");
-    setSuccess("");
-
-    try {
-      const { error: upsertError } = await supabase
-        .from("user_roles")
-        .upsert(
-          {
-            user_id: account.id,
-            role: "instructor",
-          },
-          {
-            onConflict: "user_id,role",
-            ignoreDuplicates: true,
-          }
-        );
-
-      if (upsertError) throw upsertError;
-
-      await loadData();
-      setSuccess(
-        `Role Mentor berhasil diaktifkan untuk ${account.full_name}. Akun tersebut sekarang dapat ditugaskan ke kelas.`
-      );
-    } catch (err) {
-      setError(
-        err && typeof err === "object" && "message" in err
-          ? String((err as { message: unknown }).message)
-          : "Gagal mengaktifkan role Mentor."
-      );
-    } finally {
-      setBusyId(null);
-    }
-  }
 
   function openCourseSetup(account: MentorAccount) {
     setSetupAccount(account);
@@ -370,72 +322,80 @@ export default function MentorManager({
 
   return (
     <div className="space-y-7 text-[#1B1730]">
-      <section className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-        <div>
+      <section className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#6D28D9]">
             <span className="h-2 w-2 rounded-full bg-[#A78BFA]" />
             Instructor Management
           </div>
-          <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#817A97]">
-            Aktifkan role Mentor, tetapkan kelas, dan atur kesepakatan bagi hasil 80:20 dari satu tempat.
+          <p className="mt-2 max-w-2xl text-[12px] leading-5 text-[#817A97]">
+            Kelola akun dengan akses Mentor aktif, tetapkan kelas, dan atur kesepakatan bagi hasil 80:20.
           </p>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <div className="mentor-toolbar grid grid-cols-2 gap-2 sm:grid-cols-4 xl:w-[480px] xl:shrink-0">
           <Link
             href="/admin/tugas"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#EEEAF7] bg-white px-4 text-[12px] font-semibold text-[#6D28D9] transition hover:bg-[#F6F2FF]"
+            title="Kelola Tugas"
+            aria-label="Kelola Tugas"
+            className="mentor-toolbar-action inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[#EEEAF7] bg-white px-2.5 text-[10px] font-semibold text-[#6D28D9] transition hover:bg-[#F6F2FF]"
           >
-            <BookOpen size={15} />
-            Kelola Tugas
-            <ArrowRight size={14} />
+            <BookOpen size={14} />
+            <span>Kelola Tugas</span>
+            <ArrowRight size={12} />
           </Link>
           <Link
             href="/admin/mentor/publikasi"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#EEEAF7] bg-white px-4 text-[12px] font-semibold text-[#6D28D9] transition hover:bg-[#F6F2FF]"
+            title="Review Materi"
+            aria-label="Review Materi"
+            className="mentor-toolbar-action inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[#EEEAF7] bg-white px-2.5 text-[10px] font-semibold text-[#6D28D9] transition hover:bg-[#F6F2FF]"
           >
-            <FileCheck2 size={15} />
-            Review Materi
+            <FileCheck2 size={14} />
+            <span>Review Materi</span>
           </Link>
           <Link
             href="/admin/mentor/profil"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#EEEAF7] bg-white px-4 text-[12px] font-semibold text-[#6D28D9] transition hover:bg-[#F6F2FF]"
+            title="Review Profil"
+            aria-label="Review Profil"
+            className="mentor-toolbar-action inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-[#EEEAF7] bg-white px-2.5 text-[10px] font-semibold text-[#6D28D9] transition hover:bg-[#F6F2FF]"
           >
-            <UserRound size={15} />
-            Review Profil
+            <UserRound size={14} />
+            <span>Review Profil</span>
           </Link>
           <button
             type="button"
             onClick={() => void loadData()}
             disabled={refreshing}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5B21B6] disabled:opacity-60"
+            title="Perbarui Data"
+            aria-label="Perbarui Data"
+            className="mentor-toolbar-action inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl bg-[#6D28D9] px-2.5 text-[10px] font-semibold text-white transition hover:bg-[#5B21B6] disabled:opacity-60"
           >
-            <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
-            {refreshing ? "Memuat..." : "Perbarui Data"}
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+            <span>{refreshing ? "Memuat..." : "Perbarui Data"}</span>
           </button>
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-[20px] bg-white p-5 shadow-sm">
-          <p className="text-xs text-[#817A97]">Total akun terdaftar</p>
-          <p className="mt-2 text-3xl font-bold">{accounts.length}</p>
+          <p className="text-xs text-[#817A97]">Total mentor</p>
+          <p className="mt-2 text-2xl font-bold">{accounts.length}</p>
           <p className="mt-1 text-[11px] text-[#9D97B4]">
-            Akun yang dapat diberi role Mentor
-          </p>
-        </div>
-        <div className="rounded-[20px] bg-white p-5 shadow-sm">
-          <p className="text-xs text-[#817A97]">Mentor aktif</p>
-          <p className="mt-2 text-3xl font-bold">{mentorCount}</p>
-          <p className="mt-1 text-[11px] text-[#9D97B4]">
-            Memiliki role instructor
+            Role Mentor sudah aktif
           </p>
         </div>
         <div className="rounded-[20px] bg-white p-5 shadow-sm">
           <p className="text-xs text-[#817A97]">Mentor dengan penugasan</p>
-          <p className="mt-2 text-3xl font-bold">{assignedMentorCount}</p>
+          <p className="mt-2 text-2xl font-bold">{assignedMentorCount}</p>
           <p className="mt-1 text-[11px] text-[#9D97B4]">
             Sudah ditetapkan pada minimal satu kelas
+          </p>
+        </div>
+        <div className="rounded-[20px] bg-white p-5 shadow-sm">
+          <p className="text-xs text-[#817A97]">Belum ditugaskan</p>
+          <p className="mt-2 text-2xl font-bold">{unassignedMentorCount}</p>
+          <p className="mt-1 text-[11px] text-[#9D97B4]">
+            Menunggu penetapan kelas
           </p>
         </div>
       </section>
@@ -467,9 +427,9 @@ export default function MentorManager({
               <GraduationCap size={21} />
             </div>
             <div>
-              <h3 className="text-base font-semibold">Daftar Akun dan Role Mentor</h3>
+              <h3 className="text-base font-semibold">Mentor Terdaftar</h3>
               <p className="mt-1 text-[11px] text-[#9D97B4]">
-                Pilih akun yang sudah terdaftar untuk mengaktifkan akses Mentor.
+                Hanya akun dengan role Mentor aktif yang ditampilkan di sini.
               </p>
             </div>
           </div>
@@ -483,7 +443,7 @@ export default function MentorManager({
               <input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Cari nama atau ID akun..."
+                placeholder="Cari nama atau ID mentor..."
                 className="h-11 w-full rounded-xl bg-[#F7F6FC] pl-11 pr-4 text-xs outline-none focus:ring-2 focus:ring-violet-600/20"
               />
             </div>
@@ -492,9 +452,9 @@ export default function MentorManager({
               onChange={(event) => setFilter(event.target.value as FilterType)}
               className="h-11 rounded-xl bg-[#F7F6FC] px-4 text-xs font-semibold text-[#6C6280] outline-none"
             >
-              <option value="all">Semua Akun</option>
-              <option value="mentor">Sudah Menjadi Mentor</option>
-              <option value="not_mentor">Belum Menjadi Mentor</option>
+              <option value="all">Semua Mentor</option>
+              <option value="assigned">Sudah Ditugaskan</option>
+              <option value="unassigned">Belum Ditugaskan</option>
             </select>
           </div>
         </div>
@@ -504,15 +464,18 @@ export default function MentorManager({
             <div className="px-6 py-14 text-center">
               <UserRound className="mx-auto text-slate-300" size={32} />
               <p className="mt-3 text-sm font-semibold text-slate-700">
-                Tidak ada akun yang cocok
+                {accounts.length === 0
+                  ? "Belum ada mentor yang menerima undangan"
+                  : "Tidak ada mentor yang cocok"}
               </p>
               <p className="mt-1 text-xs text-slate-500">
-                Coba ubah kata kunci atau filter pencarian.
+                {accounts.length === 0
+                  ? "Akun akan muncul setelah calon mentor menyelesaikan proses undangan."
+                  : "Coba ubah kata kunci atau filter pencarian."}
               </p>
             </div>
           ) : (
             filteredAccounts.map((account) => {
-              const isMentor = account.roles.includes("instructor");
               const isBusy = busyId === account.id;
 
               return (
@@ -538,7 +501,9 @@ export default function MentorManager({
                         <h4 className="truncate text-sm font-bold text-[#211A37]">
                           {account.full_name || "Pengguna tanpa nama"}
                         </h4>
-                        {account.roles.map((role) => (
+                        {account.roles
+                          .filter((role) => role === "admin" || role === "instructor")
+                          .map((role) => (
                           <span
                             key={role}
                             className={`rounded-full px-2.5 py-1 text-[9px] font-semibold ${
@@ -580,57 +545,37 @@ export default function MentorManager({
                           })}
                         </div>
                       ) : (
-                        isMentor && (
-                          <p className="mt-2 text-[10px] text-amber-700">
-                            Belum ditugaskan ke kelas.
-                          </p>
-                        )
+                        <p className="mt-2 text-[10px] text-amber-700">
+                          Belum ditugaskan ke kelas.
+                        </p>
                       )}
 
                     </div>
                   </div>
 
                   <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
-                    {isMentor && (
-                      <button
-                        type="button"
-                        onClick={() => openCourseSetup(account)}
-                        disabled={isBusy}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D9D0E4] px-3 text-[11px] font-semibold text-[#260047] transition hover:bg-[#F7F3FA] disabled:opacity-50"
-                      >
-                        <BookOpen size={14} />
-                        Atur Kelas & Bagi Hasil
-                      </button>
-                    )}
-                    {isMentor ? (
-                      <button
-                        type="button"
-                        onClick={() => void deactivateMentor(account)}
-                        disabled={isBusy}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 px-3 text-[11px] font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
-                      >
-                        {isBusy ? (
-                          <RefreshCw size={14} className="animate-spin" />
-                        ) : (
-                          <UserX size={14} />
-                        )}
-                        Cabut Role Mentor
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => void activateMentor(account)}
-                        disabled={isBusy}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[11px] font-semibold text-white transition hover:bg-[#5B21B6] disabled:opacity-50"
-                      >
-                        {isBusy ? (
-                          <RefreshCw size={14} className="animate-spin" />
-                        ) : (
-                          <UserPlus size={14} />
-                        )}
-                        Aktifkan sebagai Mentor
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => openCourseSetup(account)}
+                      disabled={isBusy}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D9D0E4] px-3 text-[11px] font-semibold text-[#260047] transition hover:bg-[#F7F3FA] disabled:opacity-50"
+                    >
+                      <BookOpen size={14} />
+                      Atur Kelas & Bagi Hasil
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void deactivateMentor(account)}
+                      disabled={isBusy}
+                      className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-200 px-3 text-[11px] font-semibold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50"
+                    >
+                      {isBusy ? (
+                        <RefreshCw size={14} className="animate-spin" />
+                      ) : (
+                        <UserX size={14} />
+                      )}
+                      Cabut Role Mentor
+                    </button>
                   </div>
                 </article>
               );
@@ -639,8 +584,8 @@ export default function MentorManager({
         </div>
 
         <div className="flex flex-col gap-2 border-t border-[#F7F5FB] bg-[#FFFFFF] px-5 py-4 text-[10px] leading-5 text-[#9D97B4] sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <span>Menampilkan {filteredAccounts.length} dari {accounts.length} akun.</span>
-          <span>Role Mentor ditambahkan tanpa menghapus role Member atau Administrator.</span>
+          <span>Menampilkan {filteredAccounts.length} dari {accounts.length} mentor.</span>
+          <span>Member biasa dikelola melalui menu Pengguna & Akses.</span>
         </div>
       </section>
 
@@ -689,16 +634,17 @@ export default function MentorManager({
           <ShieldCheck className="mt-0.5 shrink-0 text-violet-700" size={19} />
           <div>
             <h3 className="text-sm font-bold text-violet-900">
-              Bagaimana cara mengaktifkan Mentor?
+              Alur undangan Mentor
             </h3>
             <ol className="mt-2 list-inside list-decimal space-y-1 text-xs leading-5 text-violet-900/80">
-              <li>Pastikan orang yang akan menjadi Mentor sudah memiliki akun Kiki Creator Class.</li>
-              <li>Cari akunnya di daftar di atas, lalu klik <strong>Aktifkan sebagai Mentor</strong>.</li>
-              <li>Buka <strong>Manajemen Mentor</strong>, pilih akun Mentor, lalu atur kelas pada tombol <strong>Atur Kelas & Bagi Hasil</strong>.</li>
-              <li>Mentor login kembali. Akun dengan role Mentor saja diarahkan ke Workspace Mentor.</li>
+              <li>Masukkan email calon Mentor pada bagian <strong>Undang Mentor Baru</strong>.</li>
+              <li>Bagikan tautan undangan yang dibuat oleh sistem kepada calon Mentor.</li>
+              <li>Calon Mentor mendaftar atau login menggunakan alamat email yang sama dengan email undangan.</li>
+              <li>Setelah undangan berhasil diterima dan role Mentor aktif, akun akan muncul otomatis di daftar ini.</li>
+              <li>Pilih <strong>Atur Kelas & Bagi Hasil</strong> untuk menetapkan kelas dan kesepakatan 80:20.</li>
             </ol>
             <p className="mt-3 text-[10px] leading-5 text-violet-900/70">
-              Catatan: tombol ini mengaktifkan role untuk akun yang sudah terdaftar. Undangan email dan pembuatan akun baru otomatis akan dibuat pada tahap lanjutan.
+              Akun tanpa role Mentor tidak ditampilkan di halaman ini. Akun Member biasa tetap dikelola melalui menu <strong>Pengguna & Akses</strong>.
             </p>
           </div>
         </div>

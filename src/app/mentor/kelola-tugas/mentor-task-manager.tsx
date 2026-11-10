@@ -326,15 +326,15 @@ export default function MentorTaskManager({
               {courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
             </select>
           </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={() => void loadData()} disabled={loading} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3 text-[10px] font-bold text-slate-600"><RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Perbarui</button>
-            <button type="button" onClick={() => openCreate()} disabled={!courseId || sections.length === 0} className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-700 px-4 text-[10px] font-bold text-white disabled:opacity-40"><Plus size={14} /> Buat tugas</button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => void loadData()} disabled={loading} className="inline-flex min-w-[120px] flex-1 h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-[10px] font-bold text-slate-600"><RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Perbarui</button>
+            <button type="button" onClick={() => openCreate()} disabled={!courseId || sections.length === 0} className="inline-flex min-w-[120px] flex-1 h-10 items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 text-[10px] font-bold text-white disabled:opacity-40"><Plus size={14} /> Buat tugas</button>
           </div>
         </div>
         <div className="mt-4 grid grid-cols-3 gap-2">
-          <div className="rounded-xl bg-slate-50 p-3"><p className="text-[9px] text-slate-500">Total tugas</p><p className="mt-1 text-xl font-extrabold text-slate-900">{tasks.length}</p></div>
-          <div className="rounded-xl bg-emerald-50 p-3"><p className="text-[9px] text-emerald-700">Dipublikasikan</p><p className="mt-1 text-xl font-extrabold text-emerald-800">{published}</p></div>
-          <div className="rounded-xl bg-amber-50 p-3"><p className="text-[9px] text-amber-700">Draft</p><p className="mt-1 text-xl font-extrabold text-amber-800">{draft}</p></div>
+          <div className="min-w-0 rounded-xl bg-slate-50 p-2.5 sm:p-3"><p className="text-[11px] leading-tight text-slate-500">Total tugas</p><p className="mt-1 text-xl font-semibold text-slate-900">{tasks.length}</p></div>
+          <div className="min-w-0 rounded-xl bg-emerald-50 p-2.5 sm:p-3"><p className="text-[11px] leading-tight text-emerald-700">Terbit</p><p className="mt-1 text-xl font-semibold text-emerald-800">{published}</p></div>
+          <div className="min-w-0 rounded-xl bg-amber-50 p-2.5 sm:p-3"><p className="text-[11px] leading-tight text-amber-700">Draft</p><p className="mt-1 text-xl font-semibold text-amber-800">{draft}</p></div>
         </div>
       </section>
 

@@ -145,7 +145,7 @@ function RoleBadges({
           <span
             key={role}
             className={`inline-flex items-center rounded-full px-2.5 py-1 font-semibold ${
-              compact ? "text-[9px]" : "text-[10px]"
+              compact ? "text-[10px]" : "text-[11px]"
             } ${item.className}`}
           >
             {item.label}
@@ -224,7 +224,7 @@ function StatCard({
             {title}
           </p>
 
-          <p className="mt-3 text-[30px] font-semibold leading-none tracking-tight text-[#1B1730]">
+          <p className="mt-3 text-[26px] font-semibold leading-none tracking-tight text-[#1B1730]">
             {value.toLocaleString("id-ID")}
           </p>
 
@@ -234,9 +234,9 @@ function StatCard({
         </div>
 
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${iconBackground} ${iconColor}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconBackground} ${iconColor}`}
         >
-          <Icon size={21} strokeWidth={1.8} />
+          <Icon size={19} strokeWidth={1.8} />
         </div>
       </div>
     </div>
@@ -278,6 +278,8 @@ export default function PenggunaManager({
     useState(courses[0]?.id ?? "");
 
   const [participantSearch, setParticipantSearch] = useState("");
+
+  const [activeTab, setActiveTab] = useState<"users" | "participants">("users");
 
   const [saving, setSaving] = useState(false);
 
@@ -684,7 +686,7 @@ export default function PenggunaManager({
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#6D28D9]">
             <span className="h-2 w-2 rounded-full bg-[#A78BFA]" />
-            Member Management
+            Manajemen Pengguna
           </div>
 
           <p className="mt-2 max-w-2xl text-[13px] leading-6 text-[#817A97]">
@@ -695,7 +697,7 @@ export default function PenggunaManager({
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
           <Link
             href="/admin/mentor"
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#EEEAF7] bg-white px-4 text-[12px] font-semibold text-[#6D28D9] transition hover:bg-[#F6F2FF]"
+            className="inline-flex h-11 min-h-11 items-center justify-center gap-2 rounded-xl border border-[#EEEAF7] bg-white px-4 text-[12px] font-semibold text-[#6D28D9] transition hover:bg-[#F6F2FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
           >
             <GraduationCap size={15} />
             Manajemen Mentor
@@ -704,7 +706,7 @@ export default function PenggunaManager({
             type="button"
             onClick={() => void loadData()}
             disabled={refreshing}
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[12px] font-semibold text-white shadow-[0_4px_12px_rgba(109,40,217,0.14)] transition hover:bg-[#5B21B6] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[12px] font-semibold text-white shadow-[0_4px_12px_rgba(109,40,217,0.14)] transition hover:bg-[#5B21B6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
             {refreshing ? "Memperbarui..." : "Perbarui Data"}
@@ -762,30 +764,105 @@ export default function PenggunaManager({
           </div>
         )}
 
-        <section className="overflow-hidden rounded-[22px] border border-[#EEEAF7] bg-white shadow-sm">
+        {/* =================================================
+            CONTENT TABS
+        ================================================= */}
+        <div className="rounded-2xl border border-[#EEEAF7] bg-[#F7F6FC] p-1.5">
+          <div
+            role="tablist"
+            aria-label="Kategori pengguna"
+            className="grid grid-cols-2 gap-1.5"
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+              event.preventDefault();
+              const nextTab = activeTab === "users" ? "participants" : "users";
+              setActiveTab(nextTab);
+              document.getElementById(`${nextTab}-tab`)?.focus();
+            }}
+          >
+            <button
+              id="users-tab"
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "users"}
+              aria-controls="users-panel"
+              tabIndex={activeTab === "users" ? 0 : -1}
+              onClick={() => setActiveTab("users")}
+              className={`inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-3 text-[12px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6] sm:text-[13px] ${
+                activeTab === "users"
+                  ? "bg-white text-[#5B21B6] shadow-[0_2px_8px_rgba(31,20,55,0.08)]"
+                  : "text-[#817A97] hover:bg-white/70 hover:text-[#5B21B6]"
+              }`}
+            >
+              <Users size={16} />
+              <span>Pengguna</span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] ${
+                activeTab === "users"
+                  ? "bg-[#F1EBFF] text-[#6D28D9]"
+                  : "bg-white/80 text-[#817A97]"
+              }`}>
+                {members.length.toLocaleString("id-ID")}
+              </span>
+            </button>
+
+            <button
+              id="participants-tab"
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "participants"}
+              aria-controls="participants-panel"
+              tabIndex={activeTab === "participants" ? 0 : -1}
+              onClick={() => setActiveTab("participants")}
+              className={`inline-flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-3 text-[12px] font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6] sm:text-[13px] ${
+                activeTab === "participants"
+                  ? "bg-white text-[#5B21B6] shadow-[0_2px_8px_rgba(31,20,55,0.08)]"
+                  : "text-[#817A97] hover:bg-white/70 hover:text-[#5B21B6]"
+              }`}
+            >
+              <BookOpen size={16} />
+              <span>Peserta Kelas</span>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] ${
+                activeTab === "participants"
+                  ? "bg-[#F1EBFF] text-[#6D28D9]"
+                  : "bg-white/80 text-[#817A97]"
+              }`}>
+                {activeMembers.toLocaleString("id-ID")}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <section
+          hidden={activeTab !== "participants"}
+          id="participants-panel"
+          role="tabpanel"
+          aria-labelledby="participants-tab"
+          tabIndex={0}
+          className="overflow-hidden rounded-[22px] border border-[#EEEAF7] bg-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
+        >
           <div className="flex flex-col gap-3 border-b border-slate-100 p-5 sm:flex-row sm:items-end sm:justify-between sm:p-6">
             <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-[.18em] text-[#09483F]">Class participants</p>
-              <h3 className="mt-1 text-sm font-extrabold text-[#211A37]">Daftar Peserta per Kelas</h3>
-              <p className="mt-1 text-[10px] text-[#9D97B4]">Menampilkan akun yang memiliki enrollment aktif pada kelas terpilih.</p>
+              <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#6D28D9]">Peserta Kelas</p>
+              <h3 className="mt-1 text-[16px] font-semibold text-[#211A37]">Daftar Peserta per Kelas</h3>
+              <p className="mt-1 text-[12px] leading-5 text-[#9D97B4]">Menampilkan akun yang memiliki akses aktif pada kelas terpilih.</p>
             </div>
-            <div className="grid gap-2 sm:grid-cols-[minmax(210px,1fr)_190px] sm:min-w-[440px]">
-              <select value={participantCourseId} onChange={(event) => setParticipantCourseId(event.target.value)} className="h-10 min-w-0 rounded-xl border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700 outline-none focus:border-[#260047]">
+            <div className="grid gap-2 sm:grid-cols-[minmax(180px,1fr)_190px] sm:min-w-[390px]">
+              <select value={participantCourseId} onChange={(event) => setParticipantCourseId(event.target.value)} className="h-11 min-w-0 rounded-xl border border-[#EEEAF7] bg-[#F7F6FC] px-3 text-[12px] font-medium text-[#584C6E] outline-none transition focus:border-[#8B5CF6] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/20">
                 {courses.length === 0 && <option value="">Belum ada kelas</option>}
                 {courses.map((course) => <option key={course.id} value={course.id}>{course.title}</option>)}
               </select>
-              <input value={participantSearch} onChange={(event) => setParticipantSearch(event.target.value)} placeholder="Cari nama peserta..." className="h-10 min-w-0 rounded-xl border border-slate-200 px-3 text-[11px] outline-none focus:border-[#260047]" />
+              <input value={participantSearch} onChange={(event) => setParticipantSearch(event.target.value)} placeholder="Cari nama peserta..." className="h-11 min-w-0 rounded-xl border border-[#EEEAF7] bg-[#F7F6FC] px-3 text-[12px] text-[#1B1730] outline-none transition placeholder:text-[#AAA5B8] focus:border-[#8B5CF6] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/20" />
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 bg-[#FBFAFD] px-5 py-3 sm:px-6">
-            <p className="text-[10px] text-slate-500">Kelas: <strong className="text-slate-700">{participantCourse?.title ?? "Belum dipilih"}</strong></p>
-            <p className="text-[10px] font-bold text-[#09483F]">{participantRows.length} peserta aktif</p>
+            <p className="text-[11px] text-slate-500">Kelas: <strong className="text-slate-700">{participantCourse?.title ?? "Belum dipilih"}</strong></p>
+            <p className="text-[11px] font-semibold text-[#09483F]">{participantRows.length} peserta aktif</p>
           </div>
           {participantRows.length === 0 ? (
             <div className="px-5 py-10 text-center">
               <Users className="mx-auto text-slate-300" size={28} />
-              <p className="mt-2 text-xs font-bold text-slate-700">Belum ada peserta pada kelas ini</p>
-              <p className="mt-1 text-[10px] text-slate-400">Peserta akan muncul setelah akses kelas diberikan dan status enrollment aktif.</p>
+              <p className="mt-2 text-[13px] font-semibold text-slate-700">Belum ada peserta pada kelas ini</p>
+              <p className="mt-1 text-[12px] text-slate-400">Peserta akan muncul setelah akses kelas diberikan dan status enrollment aktif.</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-100">
@@ -794,14 +871,24 @@ export default function PenggunaManager({
                   <div className="flex min-w-0 items-center gap-3">
                     {member ? <MemberAvatar member={member} size="sm" /> : <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-xs font-bold text-slate-500">P</div>}
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-[#211A37]">{member?.full_name || "Peserta"}</p>
-                      <p className="mt-0.5 truncate text-[9px] text-slate-400">{member?.phone || member?.whatsapp_number || enrollment.user_id}</p>
+                      <p className="truncate text-[13px] font-semibold text-[#211A37]">{member?.full_name || "Peserta"}</p>
+                      <p className="mt-0.5 truncate text-[10px] text-slate-400">{member?.phone || member?.whatsapp_number || enrollment.user_id}</p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between gap-3 sm:justify-end">
-                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-700">Akses aktif</span>
-                    <span className="text-[9px] text-slate-400">Bergabung {formatDate(enrollment.granted_at || enrollment.created_at)}</span>
-                    {member && <button type="button" onClick={() => openAccess(member)} className="text-[9px] font-bold text-[#260047] hover:underline">Detail</button>}
+                  <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
+                    <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">Akses aktif</span>
+                    <span className="text-[10px] text-slate-400">Bergabung {formatDate(enrollment.granted_at || enrollment.created_at)}</span>
+                    {member && (
+                      <button
+                        type="button"
+                        onClick={() => openAccess(member)}
+                        aria-label={`Kelola akses ${member.full_name}`}
+                        title={`Kelola akses ${member.full_name}`}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#EEEAF7] bg-white text-[#6D28D9] transition hover:bg-[#F3EEFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
+                      >
+                        <LockKeyhole size={15} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -814,7 +901,12 @@ export default function PenggunaManager({
         ================================================= */}
 
         <section
-          className="overflow-hidden rounded-[22px] bg-white"
+          hidden={activeTab !== "users"}
+          id="users-panel"
+          role="tabpanel"
+          aria-labelledby="users-tab"
+          tabIndex={0}
+          className="overflow-hidden rounded-[22px] border border-[#EEEAF7] bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
           style={{ boxShadow: SURFACE_SHADOW }}
         >
 
@@ -830,11 +922,11 @@ export default function PenggunaManager({
 
               <div>
                 <h3 className="text-[16px] font-semibold tracking-tight text-[#1B1730]">
-                  Daftar Member
+                  Daftar Pengguna
                 </h3>
 
-                <p className="mt-1 text-[11px] text-[#9D97B4]">
-                  Kelola akun dan akses kelas pengguna.
+                <p className="mt-1 text-[12px] text-[#9D97B4]">
+                  Kelola akun, peran, dan hak akses pengguna.
                 </p>
               </div>
 
@@ -855,7 +947,7 @@ export default function PenggunaManager({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Cari nama, nomor, atau ID..."
-                  className="h-11 w-full rounded-xl border-0 bg-[#F7F6FC] pl-11 pr-4 text-[12px] text-[#1B1730] outline-none transition placeholder:text-[#AAA5B8] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/30"
+                  className="h-11 w-full rounded-xl border border-transparent bg-[#F7F6FC] pl-11 pr-4 text-[12px] text-[#1B1730] outline-none transition placeholder:text-[#AAA5B8] focus:border-[#8B5CF6] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/20"
                 />
               </div>
 
@@ -864,7 +956,7 @@ export default function PenggunaManager({
                 onChange={(e) =>
                   setFilter(e.target.value as FilterType)
                 }
-                className="h-11 w-full cursor-pointer rounded-xl border-0 bg-[#F7F6FC] px-4 text-[12px] font-semibold text-[#6C6280] outline-none transition focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/30"
+                className="h-11 w-full cursor-pointer rounded-xl border border-transparent bg-[#F7F6FC] px-4 text-[12px] font-medium text-[#6C6280] outline-none transition focus:border-[#8B5CF6] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/20"
               >
                 <option value="all">Semua Pengguna</option>
                 <option value="active">Memiliki Akses</option>
@@ -919,7 +1011,7 @@ export default function PenggunaManager({
                       className="group transition hover:bg-[#FBFAFF]"
                     >
 
-                      <td className="px-7 py-5">
+                      <td className="px-7 py-4">
                         <div className="flex items-center gap-3">
 
                           <MemberAvatar
@@ -947,11 +1039,11 @@ export default function PenggunaManager({
                         </div>
                       </td>
 
-                      <td className="px-5 py-5">
+                      <td className="px-5 py-4">
                         <RoleBadges roles={member.roles} />
                       </td>
 
-                      <td className="px-5 py-5">
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <BookOpen
                             size={15}
@@ -964,7 +1056,7 @@ export default function PenggunaManager({
                         </div>
                       </td>
 
-                      <td className="px-5 py-5">
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-2 text-[11px] text-[#817A97]">
                           <CalendarDays
                             size={14}
@@ -978,7 +1070,7 @@ export default function PenggunaManager({
                         <button
                           type="button"
                           onClick={() => openAccess(member)}
-                          className="inline-flex items-center gap-2 rounded-xl bg-[#6D28D9] px-4 py-2.5 text-[11px] font-semibold text-white transition hover:bg-[#5B21B6] active:scale-[0.98]"
+                          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5B21B6] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
                         >
                           <LockKeyhole size={14} />
                           Kelola Akses
@@ -1043,7 +1135,7 @@ export default function PenggunaManager({
                       </div>
 
                       <div>
-                        <p className="text-[10px] text-[#9D97B4]">
+                        <p className="text-[11px] text-[#9D97B4]">
                           Akses kelas
                         </p>
 
@@ -1056,7 +1148,7 @@ export default function PenggunaManager({
                     <button
                       type="button"
                       onClick={() => openAccess(member)}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 py-3 text-[11px] font-semibold text-white transition hover:bg-[#5B21B6]"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5B21B6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
                     >
                       <LockKeyhole size={14} />
                       Kelola Akses
@@ -1090,7 +1182,7 @@ export default function PenggunaManager({
                 Pengguna tidak ditemukan
               </h4>
 
-              <p className="mx-auto mt-2 max-w-xs text-[11px] leading-5 text-[#9D97B4]">
+              <p className="mx-auto mt-2 max-w-xs text-[12px] leading-5 text-[#9D97B4]">
                 Tidak ada member yang sesuai dengan kata
                 kunci atau filter yang dipilih.
               </p>
@@ -1101,7 +1193,7 @@ export default function PenggunaManager({
                   setSearch("");
                   setFilter("all");
                 }}
-                className="mt-5 rounded-xl bg-[#F3EEFF] px-4 py-2.5 text-[11px] font-semibold text-[#6D28D9] transition hover:bg-[#EAE1FF]"
+                className="mt-5 inline-flex h-9 items-center justify-center rounded-xl bg-[#F3EEFF] px-3 text-[11px] font-semibold text-[#6D28D9] transition hover:bg-[#EAE1FF]"
               >
                 Reset Pencarian
               </button>
@@ -1112,7 +1204,7 @@ export default function PenggunaManager({
           {/* PANEL FOOTER */}
 
           <div className="flex flex-wrap items-center justify-between gap-2 bg-[#FAF9FF] px-5 py-4 sm:px-7">
-            <p className="text-[10px] text-[#9D97B4]">
+            <p className="text-[11px] text-[#9D97B4]">
               Menampilkan{" "}
               <span className="font-semibold text-[#6C6280]">
                 {filteredMembers.length}
@@ -1124,7 +1216,7 @@ export default function PenggunaManager({
               akun.
             </p>
 
-            <div className="flex items-center gap-1.5 text-[10px] font-medium text-[#6D28D9]">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#6D28D9]">
               <CheckCircle2 size={13} />
               Data tersimpan di Supabase
             </div>
@@ -1181,7 +1273,7 @@ export default function PenggunaManager({
 
                   <h3
                     id="access-modal-title"
-                    className="mt-1.5 text-[17px] font-semibold tracking-tight sm:text-[19px]"
+                    className="mt-1.5 text-[16px] font-semibold tracking-tight sm:text-[17px]"
                   >
                     Kelola Akses Kelas
                   </h3>
@@ -1198,7 +1290,7 @@ export default function PenggunaManager({
                 onClick={closeAccess}
                 disabled={saving}
                 aria-label="Tutup modal"
-                className="ml-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 transition hover:bg-white/20 disabled:opacity-50"
+                className="ml-3 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:opacity-50"
               >
                 <X size={19} />
               </button>
@@ -1260,7 +1352,7 @@ export default function PenggunaManager({
               {/* REGISTRATION DETAILS */}
               <section className="rounded-[22px] bg-white p-4 shadow-sm ring-1 ring-slate-200/70 sm:p-5">
                 <div className="mb-3">
-                  <h4 className="text-[13px] font-bold text-[#202742]">
+                  <h4 className="text-[14px] font-semibold text-[#202742]">
                     Informasi pendaftaran
                   </h4>
                   <p className="mt-1 text-[10px] leading-5 text-slate-500">
@@ -1269,25 +1361,25 @@ export default function PenggunaManager({
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="min-w-0 rounded-xl bg-[#f7f7fb] p-3">
-                    <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">WhatsApp</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">WhatsApp</p>
                     <p className="mt-1 break-words text-xs font-semibold text-[#28304a]">
                       {selectedMember.whatsapp_number || selectedMember.phone || "Belum diisi"}
                     </p>
                   </div>
                   <div className="min-w-0 rounded-xl bg-[#f7f7fb] p-3">
-                    <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Alamat domisili</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Alamat domisili</p>
                     <p className="mt-1 break-words text-xs font-semibold text-[#28304a]">
                       {selectedMember.address || "Belum diisi"}
                     </p>
                   </div>
                   <div className="min-w-0 rounded-xl bg-[#f7f7fb] p-3">
-                    <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Mengetahui dari</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Mengetahui dari</p>
                     <p className="mt-1 break-words text-xs font-semibold text-[#28304a]">
                       {selectedMember.acquisition_source || "Data lama / belum diisi"}
                     </p>
                   </div>
                   <div className="min-w-0 rounded-xl bg-[#f7f7fb] p-3">
-                    <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Tujuan mengikuti kelas</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Tujuan mengikuti kelas</p>
                     <p className="mt-1 break-words text-xs font-semibold text-[#28304a]">
                       {selectedMember.registration_reason || "Data lama / belum diisi"}
                     </p>
@@ -1342,7 +1434,7 @@ export default function PenggunaManager({
                           setSelectedCourseId(e.target.value)
                         }
                         disabled={saving}
-                        className="h-12 min-w-0 flex-1 rounded-xl border-0 bg-white px-4 text-[12px] font-medium text-[#584C6E] outline-none focus:ring-2 focus:ring-[#8B5CF6]/30 disabled:opacity-60"
+                        className="h-12 min-w-0 flex-1 rounded-xl border border-transparent bg-white px-4 text-[12px] font-medium text-[#584C6E] outline-none focus:border-[#8B5CF6] focus:ring-2 focus:ring-[#8B5CF6]/20 disabled:opacity-60"
                       >
                         {availableCourses.map((course) => (
                           <option
@@ -1358,7 +1450,7 @@ export default function PenggunaManager({
                         type="button"
                         onClick={() => void grantAccess()}
                         disabled={saving || !selectedCourseId}
-                        className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-5 text-[11px] font-semibold text-white transition hover:bg-[#5B21B6] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5B21B6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6] disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {saving ? (
                           <RefreshCw
@@ -1476,7 +1568,7 @@ export default function PenggunaManager({
                             }
                             disabled={saving}
                             title="Cabut akses kelas"
-                            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#FCECEA] px-3 py-2.5 text-[10px] font-semibold text-[#B94740] transition hover:bg-[#F8DCD9] disabled:opacity-50"
+                            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#FCECEA] px-3 text-[11px] font-semibold text-[#B94740] transition hover:bg-[#F8DCD9] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#B94740] disabled:opacity-50"
                           >
                             <Ban size={13} />
                             <span className="hidden sm:inline">
@@ -1502,11 +1594,11 @@ export default function PenggunaManager({
                 </div>
 
                 <div>
-                  <p className="text-[11px] font-semibold text-[#5B21B6]">
+                  <p className="text-[12px] font-semibold text-[#5B21B6]">
                     Sistem Akses Permanen
                   </p>
 
-                  <p className="mt-1 text-[10px] leading-5 text-[#716687]">
+                  <p className="mt-1 text-[11px] leading-5 text-[#716687]">
                     Akses kelas bersifat permanen sesuai konfigurasi
                     database. Jika akses dicabut, status enrollment
                     akan berubah menjadi revoked.
@@ -1521,7 +1613,7 @@ export default function PenggunaManager({
 
             <div className="flex shrink-0 items-center justify-between gap-3 bg-white px-5 py-4 shadow-[0_-5px_20px_rgba(20,50,45,0.045)] sm:px-7">
 
-              <p className="hidden text-[10px] text-[#9D97B4] sm:block">
+              <p className="hidden text-[11px] text-[#9D97B4] sm:block">
                 Pengaturan akses member
               </p>
 
@@ -1529,7 +1621,7 @@ export default function PenggunaManager({
                 type="button"
                 onClick={closeAccess}
                 disabled={saving}
-                className="ml-auto inline-flex h-11 items-center justify-center rounded-xl bg-[#F6F2FC] px-6 text-[11px] font-semibold text-[#6C6280] transition hover:bg-[#EEE7FF] disabled:opacity-50"
+                className="ml-auto inline-flex h-11 items-center justify-center rounded-xl bg-[#F6F2FC] px-4 text-[12px] font-semibold text-[#6C6280] transition hover:bg-[#EEE7FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6] disabled:opacity-50"
               >
                 Selesai
               </button>
