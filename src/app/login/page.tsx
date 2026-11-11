@@ -580,7 +580,7 @@ export default function LoginPage() {
 </div>
 
 
-            <h2 className="mt-2 text-[27px] font-extrabold tracking-tight text-[#211A37] sm:text-[30px]">
+            
 
             <h2 className="mt-0 text-[27px] font-extrabold tracking-tight text-[#211A37] sm:text-[30px] lg:mt-2">
 
