@@ -560,7 +560,7 @@ export default function LoginPage() {
           </Link>
 
           {/* MOBILE LEARNING IDENTITY — kept directly below the brand */}
-<<<<<<< HEAD
+
           <div className="kcc-login-mobile-intro mb-6 lg:hidden">
             <span className="inline-flex items-center gap-2 rounded-full border border-[#EEEAF7] bg-[#F8F6FA] px-3 py-1.5 text-[12px] font-medium text-[#51436F]">
               <Sparkles size={14} />
@@ -570,9 +570,7 @@ export default function LoginPage() {
               Belajar dan kembangkan kreativitas bersama.
             </p>
           </div>
-=======
-          
->>>>>>> 22fc54a (AKu)
+
 
           {/* HEADING */}
           <div className="mb-6">
@@ -581,11 +579,11 @@ export default function LoginPage() {
   <GraduationCap size={23} />
 </div>
 
-<<<<<<< HEAD
+
             <h2 className="mt-2 text-[27px] font-extrabold tracking-tight text-[#211A37] sm:text-[30px]">
-=======
+
             <h2 className="mt-0 text-[27px] font-extrabold tracking-tight text-[#211A37] sm:text-[30px] lg:mt-2">
->>>>>>> 22fc54a (AKu)
+
               Selamat datang!
             </h2>
 
