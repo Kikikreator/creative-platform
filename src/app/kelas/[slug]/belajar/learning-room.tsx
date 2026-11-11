@@ -15,7 +15,6 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
-  Circle,
   ClipboardCheck,
   ClipboardList,
   ChevronDown,
@@ -1019,13 +1018,11 @@ function MiniContentPlaylist({
   items,
   activeId,
   onSelect,
-  completedIds = [],
   mobile = false,
 }: {
   items: LearningContent[];
   activeId: string;
   onSelect: (item: LearningContent) => void;
-  completedIds?: string[];
   mobile?: boolean;
 }) {
   return (
@@ -1043,15 +1040,11 @@ function MiniContentPlaylist({
         <p className="mt-1 text-[11px] leading-5 text-slate-500">
           Pilih bagian yang ingin kamu pelajari.
         </p>
-        <p className="mt-1 text-[10px] font-semibold text-[#09483F]">
-          {completedIds.filter((id) => items.some((item) => item.id === id)).length} dari {items.length} segmen selesai
-        </p>
       </div>
 
       <div className={`${mobile ? "max-h-[calc(84dvh-190px)]" : "max-h-[560px]"} space-y-1.5 overflow-y-auto p-2.5`}>
         {items.map((item, index) => {
           const isActive = item.id === activeId;
-          const isCompleted = completedIds.includes(item.id);
           return (
             <button
               key={item.id}
@@ -1090,13 +1083,7 @@ function MiniContentPlaylist({
                   </span>
                 )}
               </span>
-              {isCompleted ? (
-                <span title="Mini materi selesai" className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${isActive ? "bg-[#09483F] text-white" : "bg-[#EDF4F2] text-[#09483F]"}`}>
-                  <CheckCircle2 size={15} strokeWidth={2.5} />
-                </span>
-              ) : (
-                <ChevronRight size={15} className={`mt-1 shrink-0 ${isActive ? "text-white/70" : "text-slate-300 group-hover:text-[#260047]"}`} />
-              )}
+              <ChevronRight size={15} className={`mt-1 shrink-0 ${isActive ? "text-white/70" : "text-slate-300 group-hover:text-[#260047]"}`} />
             </button>
           );
         })}
@@ -2028,8 +2015,6 @@ export default function LearningRoom({
   }, [submissions]);
 
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>(initialCompletedLessonIds);
-  const [completedMiniContentIds, setCompletedMiniContentIds] = useState<string[]>([]);
-  const miniProgressStorageKey = course ? `kcc-mini-progress:${userId}:${course.id}` : "";
   const [markingLesson, setMarkingLesson] = useState(false);
   const [lessonProgressError, setLessonProgressError] = useState("");
   const [certificateRefreshKey, setCertificateRefreshKey] = useState(0);
@@ -2037,17 +2022,6 @@ export default function LearningRoom({
   useEffect(() => {
     setCompletedLessonIds(initialCompletedLessonIds);
   }, [initialCompletedLessonIds]);
-
-  useEffect(() => {
-    if (!miniProgressStorageKey) return;
-    try {
-      const stored = window.localStorage.getItem(miniProgressStorageKey);
-      const parsed: unknown = stored ? JSON.parse(stored) : [];
-      setCompletedMiniContentIds(Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : []);
-    } catch {
-      setCompletedMiniContentIds([]);
-    }
-  }, [miniProgressStorageKey]);
 
   const [activeLessonId, setActiveLessonId] = useState(
     () => orderedLessons[0]?.id ?? ""
@@ -2225,24 +2199,8 @@ export default function LearningRoom({
     if (target) handleSelectMiniContent(target);
   }
 
-  function handleMarkMiniContentComplete() {
-    if (!activeMiniContent || !miniProgressStorageKey || completedMiniContentIds.includes(activeMiniContent.id)) return;
-    const next = [...completedMiniContentIds, activeMiniContent.id];
-    setCompletedMiniContentIds(next);
-    try {
-      window.localStorage.setItem(miniProgressStorageKey, JSON.stringify(next));
-    } catch {
-      // The visible check remains for the current session if browser storage is unavailable.
-    }
-  }
-
   async function handleMarkLessonComplete() {
     if (!course || !activeLesson || completedLessonIds.includes(activeLesson.id)) return;
-    const unfinishedMiniContents = activeContents.filter((item) => !completedMiniContentIds.includes(item.id));
-    if (unfinishedMiniContents.length > 0) {
-      setLessonProgressError(`Selesaikan ${unfinishedMiniContents.length} mini materi yang tersisa terlebih dahulu.`);
-      return;
-    }
     setMarkingLesson(true);
     setLessonProgressError("");
     const { error } = await (supabase as any).rpc("mark_course_lesson_complete", {
@@ -2610,25 +2568,9 @@ export default function LearningRoom({
             {activeLesson && (
               <section className="space-y-4" aria-labelledby="mini-material-heading">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-extrabold uppercase tracking-[.18em] text-[#67518f]">
-                      Learning library
-                    </p>
-                    <h3
-                      id="mini-material-heading"
-                      className="mt-1 text-lg font-extrabold tracking-tight text-[#1c2340] sm:text-xl"
-                    >
-                      Mini Materi
-                    </h3>
-                    <p className="mt-1 max-w-xl text-xs leading-6 text-slate-500">
-                      Pelajari setiap segmen satu per satu. Pilih segmen lain melalui playlist tanpa perlu menggulir semua video.
-                    </p>
-                  </div>
+                  
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-2 text-[10px] font-bold text-[#51436f] shadow-sm ring-1 ring-slate-200/70">
-                      <Layers3 size={14} className="text-[#67518f]" />
-                      {activeContents.length} segmen
-                    </span>
+                    
                     {activeContents.length > 0 && (
                       <button
                         type="button"
@@ -2670,39 +2612,8 @@ export default function LearningRoom({
                         supabase={supabase}
                       />
 
-                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#EAE5ED] bg-white p-3 shadow-[0_8px_22px_rgba(23,28,54,.035)]">
-                        <div className="flex min-w-0 items-center gap-2 text-[11px]">
-                          {completedMiniContentIds.includes(activeMiniContent.id) ? <CheckCircle2 size={16} className="shrink-0 text-[#09483F]" /> : <Circle size={16} className="shrink-0 text-slate-300" />}
-                          <span className="font-semibold text-slate-600">{completedMiniContentIds.includes(activeMiniContent.id) ? "Mini materi selesai" : "Tandai segmen ini selesai setelah dipelajari"}</span>
-                        </div>
-                        <button type="button" onClick={handleMarkMiniContentComplete} disabled={completedMiniContentIds.includes(activeMiniContent.id)} className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#260047] px-3.5 py-2 text-[10px] font-bold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:bg-[#EDF4F2] disabled:text-[#09483F]">
-                          <CheckCircle2 size={14} />
-                          {completedMiniContentIds.includes(activeMiniContent.id) ? "Selesai" : "Tandai selesai"}
-                        </button>
-                      </div>
-
                       <div className="flex items-center justify-between gap-3 rounded-2xl bg-white p-3 shadow-[0_8px_22px_rgba(23,28,54,.045)] ring-1 ring-slate-200/70">
-                        <button
-                          type="button"
-                          onClick={() => handleStepMiniContent("previous")}
-                          disabled={!previousMiniContent}
-                          className="inline-flex min-h-10 min-w-0 items-center gap-2 rounded-xl px-3 text-xs font-bold text-[#51436f] transition hover:bg-[#f4f1fa] disabled:cursor-not-allowed disabled:opacity-35 sm:px-4"
-                        >
-                          <ArrowLeft size={15} />
-                          <span className="truncate">Sebelumnya</span>
-                        </button>
-                        <span className="shrink-0 text-[10px] font-bold tabular-nums text-slate-400">
-                          {activeMiniContentIndex + 1}/{activeContents.length}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleStepMiniContent("next")}
-                          disabled={!nextMiniContent}
-                          className="inline-flex min-h-10 min-w-0 items-center gap-2 rounded-xl bg-gradient-to-r from-[#342254] to-[#263b61] px-3 text-xs font-bold text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-35 sm:px-4"
-                        >
-                          <span className="truncate">Selanjutnya</span>
-                          <ArrowRight size={15} />
-                        </button>
+                        
                       </div>
                     </div>
 
@@ -2712,7 +2623,6 @@ export default function LearningRoom({
                           items={activeContents}
                           activeId={activeMiniContent.id}
                           onSelect={handleSelectMiniContent}
-                          completedIds={completedMiniContentIds}
                         />
                       </div>
                     </aside>
@@ -2773,7 +2683,6 @@ export default function LearningRoom({
                     items={activeContents}
                     activeId={activeMiniContent?.id ?? ""}
                     onSelect={handleSelectMiniContent}
-                    completedIds={completedMiniContentIds}
                     mobile
                   />
                 </div>
@@ -2792,20 +2701,18 @@ export default function LearningRoom({
                         <p className="mt-1 text-[10px] leading-5 text-slate-500">
                           {completedLessonIds.includes(activeLesson.id)
                             ? "Materi ini sudah kamu tandai selesai."
-                            : activeContents.some((item) => !completedMiniContentIds.includes(item.id))
-                              ? `Selesaikan semua mini materi terlebih dahulu (${completedMiniContentIds.filter((id) => activeContents.some((item) => item.id === id)).length}/${activeContents.length}).`
-                              : "Video dan seluruh mini materi sudah dipelajari. Kamu dapat menandai materi ini selesai."}
+                            : "Jika materi utama ini sudah kamu pelajari, tandai sebagai selesai."}
                         </p>
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => void handleMarkLessonComplete()}
-                      disabled={markingLesson || completedLessonIds.includes(activeLesson.id) || activeContents.some((item) => !completedMiniContentIds.includes(item.id))}
-                      className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-xs font-bold transition disabled:cursor-not-allowed ${completedLessonIds.includes(activeLesson.id) ? "bg-emerald-50 text-emerald-700" : "bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-[0_7px_18px_rgba(109,40,217,.16)] hover:brightness-105 disabled:opacity-50"}`}
+                      disabled={markingLesson || completedLessonIds.includes(activeLesson.id)}
+                      className={`inline-flex h-4 shrink-0 items-center justify-center gap-1 rounded-xl px-4 text-xs font-semibold transition disabled:cursor-not-allowed ${completedLessonIds.includes(activeLesson.id) ? "bg-emerald-50 text-emerald-700" : "bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-[0_7px_18px_rgba(109,40,217,.16)] hover:brightness-105 disabled:opacity-50"}`}
                     >
                       {markingLesson ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                      {completedLessonIds.includes(activeLesson.id) ? "Materi selesai" : markingLesson ? "Menyimpan..." : activeContents.some((item) => !completedMiniContentIds.includes(item.id)) ? "Selesaikan mini materi dulu" : "Tandai materi selesai"}
+                      {completedLessonIds.includes(activeLesson.id) ? "Materi selesai" : markingLesson ? "Menyimpan..." : "Tandai materi selesai"}
                     </button>
                   </div>
                   {lessonProgressError && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-[10px] text-rose-700">{lessonProgressError}</p>}

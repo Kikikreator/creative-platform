@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";
@@ -18,7 +19,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Kiki Creator Class | Kelas Kreatif Online",
-  description: "Kelas kreatif online dengan materi terstruktur, mentor berpengalaman, dan ruang belajar yang fleksibel.",
+  description:
+    "Kelas kreatif online dengan materi terstruktur, mentor berpengalaman, dan ruang belajar yang fleksibel.",
+
+  icons: {
+    icon: "/logo_brand.png",
+    shortcut: "/logo_brand.png",
+    apple: "/logo_brand.png",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

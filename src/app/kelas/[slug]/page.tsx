@@ -69,6 +69,41 @@ type PublicReview = {
   show_date?: boolean;
 };
 
+type MentorSocialPlatform = "instagram" | "pinterest" | "tiktok";
+
+type MentorSocialLink = {
+  platform: MentorSocialPlatform;
+  url: string;
+};
+
+function MentorSocialIcon({ platform }: { platform: MentorSocialPlatform }) {
+  if (platform === "instagram") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px]" fill="none">
+        <rect x="3" y="3" width="18" height="18" rx="5" stroke="currentColor" strokeWidth="1.8" />
+        <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.8" />
+        <circle cx="17.6" cy="6.6" r="1.1" fill="currentColor" />
+      </svg>
+    );
+  }
+
+  if (platform === "pinterest") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px]" fill="currentColor">
+        <text x="12" y="18" textAnchor="middle" fontFamily="Georgia, serif" fontSize="21" fontWeight="700">
+          P
+        </text>
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[18px] w-[18px]" fill="currentColor">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.99-4.38V2h-3.72v14.67a3.11 3.11 0 1 1-3.12-3.11c.3 0 .6.04.88.12V9.69a6.8 6.8 0 0 0-.88-.06 6.84 6.84 0 1 0 6.84 6.84V9.01a8.49 8.49 0 0 0 4.98 1.61V6.9c-.34 0-.67-.07-.99-.21Z" />
+    </svg>
+  );
+}
+
 type PublicPromotionMentor = {
   display_name: string | null;
   headline: string | null;
@@ -215,6 +250,18 @@ export default async function DetailKelasPage({ params }: PageProps) {
     }),
   ]);
 
+  // Media sosial diambil melalui RPC publik terpisah agar fungsi mentor yang sudah ada
+  // tetap kompatibel dan tidak perlu diubah.
+  const { data: mentorSocialLinksData, error: mentorSocialLinksError } = await (
+    supabase as any
+  ).rpc("get_public_course_mentor_social_links", {
+    p_course_id: course.id,
+  });
+
+  if (mentorSocialLinksError) {
+    console.error("Gagal memuat media sosial mentor:", mentorSocialLinksError.message);
+  }
+
   const user = userResult.data.user;
   let userRole: AppRole | null = null;
 
@@ -271,6 +318,44 @@ export default async function DetailKelasPage({ params }: PageProps) {
   const promotionMentor = promotionMentorResult.data
     ? (promotionMentorResult.data as unknown as PublicPromotionMentor)
     : null;
+
+  const socialDomainByPlatform: Record<MentorSocialPlatform, string[]> = {
+    instagram: ["instagram.com"],
+    pinterest: ["pinterest.com", "pin.it"],
+    tiktok: ["tiktok.com"],
+  };
+
+  const mentorSocialLinks: MentorSocialLink[] = Array.isArray(mentorSocialLinksData)
+    ? mentorSocialLinksData.filter((item: unknown): item is MentorSocialLink => {
+        if (!item || typeof item !== "object") return false;
+
+        const candidate = item as { platform?: unknown; url?: unknown };
+        if (
+          (candidate.platform !== "instagram" &&
+            candidate.platform !== "pinterest" &&
+            candidate.platform !== "tiktok") ||
+          typeof candidate.url !== "string"
+        ) {
+          return false;
+        }
+
+        try {
+          const parsedUrl = new URL(candidate.url);
+          const platform = candidate.platform as MentorSocialPlatform;
+          const hostname = parsedUrl.hostname.toLowerCase();
+
+          return (
+            ["http:", "https:"].includes(parsedUrl.protocol) &&
+            socialDomainByPlatform[platform].some(
+              (domain) => hostname === domain || hostname.endsWith(`.${domain}`),
+            )
+          );
+        } catch {
+          return false;
+        }
+      })
+    : [];
+
   const caseStudyImages = Array.isArray(promotionMentor?.case_study_images)
     ? promotionMentor.case_study_images.filter(
         (image): image is CaseStudySlide =>
@@ -300,7 +385,8 @@ export default async function DetailKelasPage({ params }: PageProps) {
         promotionMentor.headline ||
         promotionMentor.bio ||
         promotionMentor.photo_url ||
-        promotionMentor.expertise?.length),
+        promotionMentor.expertise?.length ||
+        mentorSocialLinks.length > 0),
   );
   const curriculum = Array.isArray(curriculumResult.data)
     ? (curriculumResult.data as unknown as PublicSection[])
@@ -771,6 +857,24 @@ export default async function DetailKelasPage({ params }: PageProps) {
                         {promotionMentor.bio}
                       </p>
                     )}
+                    {mentorSocialLinks.length > 0 && (
+                      <div className="mt-3 flex items-center gap-2">
+                        {mentorSocialLinks.map((socialLink, index) => (
+                          <a
+                            key={`${socialLink.platform}-${index}`}
+                            href={socialLink.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Buka akun ${socialLink.platform}`}
+                            title={socialLink.platform}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#EAE5ED] bg-white text-[#51405D] transition hover:-translate-y-0.5 hover:border-[#C8B5D6] hover:text-[#260047] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6D4388]/30"
+                          >
+                            <MentorSocialIcon platform={socialLink.platform} />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
                     {promotionMentor.expertise?.length ? (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {promotionMentor.expertise.map((skill) => (
