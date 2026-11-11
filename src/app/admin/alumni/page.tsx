@@ -32,14 +32,7 @@ export default async function AdminAlumniAccessPage() {
   return (
     <div className="space-y-5">
       <div className="app-page-heading">
-        <div>
-          <p className="app-eyebrow">Member reactivation</p>
-          <h2 className="app-page-title">Akses Alumni</h2>
-          <p className="app-page-description">
-            Verifikasi peserta dari platform sebelumnya dan berikan akses kelas
-            gratis ke akun Kiki Creator Class mereka.
-          </p>
-        </div>
+        
       </div>
 
       <AlumniAccessManager

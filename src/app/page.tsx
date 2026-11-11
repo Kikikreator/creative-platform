@@ -340,9 +340,6 @@ export default async function Home() {
               <p className="truncate text-[13px] font-extrabold tracking-tight text-slate-900 sm:text-base">
                 Kiki Creator Class
               </p>
-              <p className="hidden text-[9px] font-semibold uppercase tracking-[0.17em] text-[#09483F] min-[370px]:block sm:text-[10px]">
-                Learn · Create · Grow
-              </p>
             </div>
           </Link>
 
@@ -379,19 +376,19 @@ export default async function Home() {
             </Link>
           </nav>
 
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Link
               href="/login"
-              className="hidden rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:inline-flex"
+              className="inline-flex h-9 items-center justify-center whitespace-nowrap rounded-lg px-2.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50 sm:h-10 sm:rounded-xl sm:px-3 sm:text-sm"
             >
               Masuk
             </Link>
             <Link
               href="#kelas"
-              className="inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#260047] px-3 text-[11px] font-semibold text-white shadow-[0_4px_12px_rgba(38,0,71,0.16)] transition hover:bg-[#09483F] sm:h-11 sm:gap-2 sm:px-4 sm:text-sm"
+              className="inline-flex h-9 items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-[#260047] px-2.5 text-[10px] font-semibold text-white shadow-[0_4px_12px_rgba(38,0,71,0.16)] transition hover:bg-[#09483F] sm:h-11 sm:gap-2 sm:rounded-xl sm:px-4 sm:text-sm"
             >
               Pilih Kelas
-              <ArrowRight size={14} />
+              <ArrowRight size={13} />
             </Link>
           </div>
         </div>
@@ -408,30 +405,30 @@ export default async function Home() {
           className="pointer-events-none absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-[#F0E8F7] blur-3xl"
         />
 
-        <div className="relative mx-auto grid max-w-7xl items-center gap-8 px-4 py-12 sm:gap-10 sm:px-5 sm:py-16 lg:grid-cols-2 lg:gap-8 lg:px-8 lg:py-20">
+        <div className="relative mx-auto grid max-w-7xl items-center gap-5 px-4 py-8 min-[480px]:gap-7 sm:gap-10 sm:px-5 sm:py-16 lg:grid-cols-2 lg:gap-8 lg:px-8 lg:py-20">
           <div className="relative z-10">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#EAE5ED] bg-white px-3 py-1.5 text-[10px] font-bold text-[#260047] shadow-sm sm:px-4 sm:py-2 sm:text-xs">
+            <div className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[#EAE5ED] bg-white px-2.5 py-1.5 text-[9px] font-bold text-[#260047] shadow-sm min-[370px]:gap-2 min-[370px]:px-3 sm:px-4 sm:py-2 sm:text-xs">
               <Sparkles size={13} className="text-amber-500" />
               RUANG BELAJAR DAN BERKEMBANG
             </div>
 
-            <h1 className="mt-5 max-w-2xl text-[36px] font-extrabold leading-[1.1] tracking-tight text-[#21182A] sm:mt-7 sm:text-5xl lg:text-[58px]">
+            <h1 className="mt-4 max-w-2xl text-[clamp(1.85rem,8vw,2.3rem)] font-extrabold leading-[1.08] tracking-tight text-[#21182A] sm:mt-7 sm:text-5xl lg:text-[58px]">
               Kembangkan Potensi,
               <span className="block text-[#260047]">
                 Wujudkan Karya Terbaikmu.
               </span>
             </h1>
 
-            <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600 sm:mt-6 sm:text-base sm:leading-8">
+            <p className="mt-3 max-w-xl text-[13px] leading-6 text-slate-600 sm:mt-6 sm:text-base sm:leading-8">
               Belajar desain dengan materi yang tersusun, praktik melalui
               tugas, dan kembangkan kemampuanmu selangkah demi selangkah
               bersama Kiki Creator Class.
             </p>
 
-            <div className="mt-6 flex flex-wrap gap-2.5 sm:mt-9 sm:gap-3">
+            <div className="mt-5 flex flex-wrap gap-2 sm:mt-9 sm:gap-3">
               <Link
                 href="#kelas"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#260047] px-4 text-xs font-bold text-white shadow-[0_6px_16px_rgba(38,0,71,0.18)] transition hover:-translate-y-0.5 hover:bg-[#09483F] sm:h-12 sm:px-6 sm:text-sm"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl bg-[#260047] px-3.5 text-[11px] font-bold text-white shadow-[0_6px_16px_rgba(38,0,71,0.18)] transition hover:-translate-y-0.5 hover:bg-[#09483F] sm:h-12 sm:gap-2 sm:px-6 sm:text-sm"
               >
                 Jelajahi Kelas
                 <ArrowRight size={15} />
@@ -440,7 +437,7 @@ export default async function Home() {
                 href={ADMIN_WHATSAPP_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-xs font-bold text-white shadow-[0_6px_18px_rgba(15,157,120,0.22)] transition hover:-translate-y-0.5 sm:h-12 sm:px-6 sm:text-sm"
+                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl px-3.5 text-[11px] font-bold text-white shadow-[0_6px_18px_rgba(15,157,120,0.22)] transition hover:-translate-y-0.5 sm:h-12 sm:gap-2 sm:px-6 sm:text-sm"
                 style={{
                   backgroundImage:
                     "linear-gradient(135deg, #25D366 0%, #12A879 55%, #087F5B 100%)",
@@ -451,7 +448,7 @@ export default async function Home() {
               </a>
             </div>
 
-            <div className="mt-7 flex flex-wrap gap-x-4 gap-y-2 sm:mt-9 sm:gap-x-6 sm:gap-y-3">
+            <div className="mt-5 flex flex-wrap gap-x-3 gap-y-2 sm:mt-9 sm:gap-x-6 sm:gap-y-3">
               {[
                 "Materi terstruktur",
                 "Akses permanen",
@@ -459,7 +456,7 @@ export default async function Home() {
               ].map((item) => (
                 <div
                   key={item}
-                  className="flex items-center gap-1.5 text-[10px] font-medium text-slate-600 sm:gap-2 sm:text-xs"
+                  className="flex items-center gap-1.5 text-[9px] font-medium text-slate-600 min-[370px]:text-[10px] sm:gap-2 sm:text-xs"
                 >
                   <CheckCircle2
                     size={14}
@@ -472,13 +469,13 @@ export default async function Home() {
           </div>
 
           {/* HERO VISUAL — menggunakan icon_01.png dari folder public */}
-          <div className="relative mx-auto flex w-full max-w-[540px] items-center justify-center lg:max-w-[590px]">
+          <div className="relative mx-auto flex w-full max-w-[300px] items-center justify-center min-[480px]:max-w-[380px] sm:max-w-[540px] lg:max-w-[590px]">
             <div
               aria-hidden="true"
               className="absolute left-1/2 top-1/2 h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#EDE5F3] blur-3xl"
             />
 
-            <div className="relative w-full max-w-[500px]">
+            <div className="relative w-full max-w-[300px] min-[480px]:max-w-[360px] sm:max-w-[500px]">
               <Image
                 src="/icon_01.png"
                 alt="Buku ilustrasi desain kreatif Kiki Creator Class"
@@ -723,9 +720,7 @@ export default async function Home() {
                 <span className="block text-sm font-extrabold text-[#21182A]">
                   Kiki Creator Class
                 </span>
-                <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-[0.16em] text-[#0F9D78]">
-                  Learn · Create · Grow
-                </span>
+                
               </span>
             </Link>
             <p className="mt-4 max-w-sm text-xs leading-6 text-slate-500 sm:text-sm">
@@ -820,14 +815,14 @@ export default async function Home() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Tanya Admin Kiki Creator Class melalui WhatsApp"
-        className="fixed bottom-4 right-4 z-50 inline-flex items-center gap-2.5 rounded-full px-4 py-3 text-xs font-extrabold text-white shadow-[0_12px_32px_rgba(8,127,91,0.30)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(8,127,91,0.38)] sm:bottom-6 sm:right-6 sm:px-5 sm:py-3.5 sm:text-sm"
+        className="fixed bottom-4 right-4 z-50 inline-flex h-11 w-11 items-center justify-center rounded-full p-0 text-xs font-extrabold text-white shadow-[0_12px_32px_rgba(8,127,91,0.30)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(8,127,91,0.38)] sm:bottom-6 sm:right-6 sm:h-auto sm:w-auto sm:gap-2.5 sm:px-5 sm:py-3.5 sm:text-sm"
         style={{
           backgroundImage:
             "linear-gradient(135deg, #25D366 0%, #12A879 55%, #087F5B 100%)",
         }}
       >
         <MessageCircle size={19} />
-        <span>Tanya Admin</span>
+        <span className="hidden sm:inline">Tanya Admin</span>
       </a>
     </main>
   );

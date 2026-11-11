@@ -10,6 +10,7 @@ import {
   BookOpen,
   CalendarDays,
   CheckCircle2,
+  ChevronRight,
   Clock3,
   Landmark,
   MessageCircle,
@@ -130,6 +131,8 @@ export default function MentorEarningsDashboard({
   const [accountNumber, setAccountNumber] = useState("");
   const [amount, setAmount] = useState("");
   const [isWithdrawalOpen, setIsWithdrawalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"withdrawals" | "purchases">("withdrawals");
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<MentorWithdrawalRow | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [success, setSuccess] = useState("");
@@ -179,18 +182,19 @@ export default function MentorEarningsDashboard({
   const expertiseLabel = (mentorExpertise ?? []).filter(Boolean).join(" · ");
 
   useEffect(() => {
-    if (!isWithdrawalOpen) return;
+    if (!isWithdrawalOpen && !selectedWithdrawal) return;
 
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape" && !submitting) {
-        setIsWithdrawalOpen(false);
+      if (event.key === "Escape") {
+        if (selectedWithdrawal) setSelectedWithdrawal(null);
+        if (isWithdrawalOpen && !submitting) setIsWithdrawalOpen(false);
       }
     }
 
     window.addEventListener("keydown", handleEscape);
 
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [isWithdrawalOpen, submitting]);
+  }, [isWithdrawalOpen, selectedWithdrawal, submitting]);
 
   function openWithdrawal() {
     setFormError("");
@@ -437,316 +441,507 @@ export default function MentorEarningsDashboard({
 
       </section>
 
-      {/* RIWAYAT PENARIKAN BERGAYA BANK */}
-
+      {/* TAB RIWAYAT PENARIKAN DAN DATA PEMBELIAN */}
       <section className="space-y-4">
-
-        <div className="flex flex-wrap items-end justify-between gap-2 px-1">
-
-          <div>
-            <h3 className="text-sm font-extrabold text-slate-900">
-              Riwayat Penarikan
-            </h3>
-            <p className="mt-1 text-[11px] text-slate-400">
-              Pantau status dan detail setiap pencairan saldo.
-            </p>
-          </div>
-
-          <span className="text-[10px] font-semibold text-slate-400">
-            {withdrawals.length} transaksi
-          </span>
-
-        </div>
-
-        {withdrawals.length === 0 ? (
-
-          <div className="rounded-[22px] border border-[#EEEAF7] bg-white px-5 py-12 text-center shadow-[0_8px_24px_rgba(38,0,71,.04)]">
-
-            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F4EFF8] text-[#5A3475]">
-              <Clock3 size={19} />
-            </div>
-
-            <p className="mt-3 text-xs font-semibold text-slate-600">
-              Belum ada riwayat penarikan.
-            </p>
-
-            <p className="mt-1 text-[10px] text-slate-400">
-              Pengajuan pencairan yang kamu buat akan muncul di sini.
-            </p>
-
-          </div>
-
-        ) : (
-
-          <div className="space-y-3">
-
-            {withdrawals.map((item) => {
-
-              const canConfirm = ["pending", "processing"].includes(item.status);
-              const transactionCode = `WD-${item.id.slice(0, 8).toUpperCase()}`;
-              const whatsappMessage = [
-                "Assalamu'alaikum Admin Kiki Creator Class,",
-                "",
-                "Saya ingin mengonfirmasi pengajuan pencairan saldo mentor.",
-                "",
-                `Nama Mentor: ${mentorName || "Mentor Kiki Creator Class"}`,
-                `Peran: ${mentorRole}`,
-                `Bidang keahlian: ${expertiseLabel || "-"}`,
-                `Nama pemilik rekening: ${item.full_name_snapshot || mentorName || "-"}`,
-                `Nominal penarikan: ${money(item.amount)}`,
-                `Bank tujuan: ${item.bank_name || "-"}`,
-                `Nomor rekening: ${maskedAccount(item.account_number)}`,
-                `ID penarikan: ${item.id}`,
-                `Tanggal pengajuan: ${dateTime(item.requested_at)}`,
-                `Status: ${statusLabel(item.status)}`,
-                "",
-                "Mohon bantu periksa dan proses pencairan tersebut. Terima kasih.",
-              ].join("\n");
-              const whatsappUrl = `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent(whatsappMessage)}`;
-
-              return (
-
-                <article
-                  key={item.id}
-                  className="rounded-[22px] border border-[#EDE8F2] bg-white p-4 shadow-[0_8px_24px_rgba(38,0,71,.045)] transition hover:border-[#DCD2E7] sm:p-5"
-                >
-
-                  <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-
-                    <div className="flex min-w-0 gap-3.5">
-
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F4EFF8] text-[#5A3475]">
-                        <Landmark size={19} />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-
-                        <div className="flex flex-wrap items-center gap-2">
-
-                          <p className="text-[10px] font-extrabold uppercase tracking-[.12em] text-slate-400">
-                            Penarikan Saldo Mentor
-                          </p>
-
-                          <span
-                            className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${statusClass(item.status)}`}
-                          >
-                            {statusLabel(item.status)}
-                          </span>
-
-                        </div>
-
-                        <p className="mt-1.5 break-words text-[25px] font-extrabold tracking-tight tabular-nums text-[#260047]">
-                          {money(item.amount)}
-                        </p>
-
-                        <p className="mt-1 truncate text-xs font-bold text-slate-800">
-                          {mentorName || "Mentor Kiki Creator Class"}
-                        </p>
-
-                        <p className="mt-0.5 text-[10px] font-medium text-slate-500">
-                          {mentorRole}
-                        </p>
-
-                        {expertiseLabel && (
-                          <p className="mt-1 text-[10px] leading-5 text-slate-400">
-                            Bidang keahlian: {expertiseLabel}
-                          </p>
-                        )}
-
-                        <div className="mt-3 grid grid-cols-1 gap-x-5 gap-y-2 border-t border-slate-100 pt-3 text-[10px] sm:grid-cols-2 xl:grid-cols-3">
-
-                          <div>
-                            <p className="text-slate-400">Rekening tujuan</p>
-                            <p className="mt-0.5 font-semibold text-slate-700">
-                              {item.bank_name} · {maskedAccount(item.account_number)}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-slate-400">Tanggal pengajuan</p>
-                            <p className="mt-0.5 font-semibold text-slate-700">
-                              {dateTime(item.requested_at)}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-slate-400">ID transaksi</p>
-                            <p className="mt-0.5 font-semibold tracking-wide text-slate-700">
-                              {transactionCode}
-                            </p>
-                          </div>
-
-                        </div>
-
-                        {item.status === "paid" && (
-                          <p className="mt-2 flex items-center gap-1.5 text-[10px] font-medium text-emerald-700">
-                            <CheckCircle2 size={12} />
-                            Dicairkan pada {dateTime(item.paid_at || item.reviewed_at || item.requested_at)}
-                          </p>
-                        )}
-
-                        {item.admin_note && (
-                          <p className="mt-2 rounded-xl border border-rose-100 bg-rose-50 px-3 py-2 text-[10px] leading-5 text-rose-700">
-                            Catatan Admin: {item.admin_note}
-                          </p>
-                        )}
-
-                      </div>
-
-                    </div>
-
-                    <div className="flex w-full shrink-0 flex-col gap-2 lg:w-[174px]">
-
-                      {canConfirm ? (
-
-                        <a
-                          href={whatsappUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0E9F6E] to-[#087F5B] px-4 text-xs font-extrabold text-white shadow-[0_6px_16px_rgba(8,127,91,.16)] transition hover:-translate-y-0.5 hover:shadow-[0_9px_20px_rgba(8,127,91,.2)] focus:outline-none focus:ring-4 focus:ring-emerald-100"
-                        >
-                          <MessageCircle size={15} />
-                          Konfirmasi Admin
-                          <ArrowUpRight size={13} />
-                        </a>
-
-                      ) : item.status === "paid" ? (
-
-                        <div className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-50 px-4 text-[11px] font-bold text-emerald-700">
-                          <CheckCircle2 size={15} />
-                          Dana diterima
-                        </div>
-
-                      ) : (
-
-                        <div className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-rose-50 px-4 text-[11px] font-bold text-rose-700">
-                          <AlertCircle size={15} />
-                          Pengajuan ditolak
-                        </div>
-
-                      )}
-
-                    </div>
-
-                  </div>
-
-                </article>
-
-              );
-
-            })}
-
-          </div>
-
-        )}
-
-      </section>
-
-      {/* DATA PEMBELIAN KELAS */}
-
-      <section className="overflow-hidden rounded-[22px] border border-[#EEEAF7] bg-white shadow-[0_8px_24px_rgba(38,0,71,.04)]">
-
-        <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
+        <div className="px-1">
           <h3 className="text-sm font-extrabold text-slate-900">
-            Data Pembelian Kelas
+            Aktivitas Mentor
           </h3>
+          <p className="mt-1 text-[11px] text-slate-400">
+            Pilih riwayat penarikan atau data pembelian kelas.
+          </p>
         </div>
 
-        {availableEarnings.length === 0 ? (
+        <div
+          role="tablist"
+          aria-label="Aktivitas pendapatan mentor"
+          aria-orientation="horizontal"
+          className="grid grid-cols-2 gap-2 rounded-2xl border border-[#EEEAF7] bg-[#F8F6FA] p-1.5"
+        >
+          <button
+            type="button"
+            role="tab"
+            id="mentor-tab-withdrawals"
+            aria-selected={activeTab === "withdrawals"}
+            aria-controls="mentor-panel-withdrawals"
+            tabIndex={activeTab === "withdrawals" ? 0 : -1}
+            onClick={() => setActiveTab("withdrawals")}
+            className={`inline-flex min-h-[52px] items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[10px] font-extrabold leading-tight transition sm:gap-2 sm:text-xs ${
+              activeTab === "withdrawals"
+                ? "bg-white text-[#260047] shadow-sm ring-1 ring-[#EDE8F2]"
+                : "text-slate-500 hover:bg-white/70 hover:text-[#260047]"
+            }`}
+          >
+            <Landmark size={15} className="shrink-0" />
+            <span>Riwayat Penarikan</span>
+            <span
+              className={`rounded-full px-1.5 py-0.5 text-[9px] ${
+                activeTab === "withdrawals"
+                  ? "bg-[#F4EFF8] text-[#5A3475]"
+                  : "bg-slate-200/70 text-slate-500"
+              }`}
+            >
+              {withdrawals.length}
+            </span>
+          </button>
 
-          <div className="px-5 py-12 text-center">
+          <button
+            type="button"
+            role="tab"
+            id="mentor-tab-purchases"
+            aria-selected={activeTab === "purchases"}
+            aria-controls="mentor-panel-purchases"
+            tabIndex={activeTab === "purchases" ? 0 : -1}
+            onClick={() => setActiveTab("purchases")}
+            className={`inline-flex min-h-[52px] items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[10px] font-extrabold leading-tight transition sm:gap-2 sm:text-xs ${
+              activeTab === "purchases"
+                ? "bg-white text-[#260047] shadow-sm ring-1 ring-[#EDE8F2]"
+                : "text-slate-500 hover:bg-white/70 hover:text-[#260047]"
+            }`}
+          >
+            <BookOpen size={15} className="shrink-0" />
+            <span>Data Pembelian</span>
+            <span
+              className={`rounded-full px-1.5 py-0.5 text-[9px] ${
+                activeTab === "purchases"
+                  ? "bg-[#E8F4F0] text-[#087F5B]"
+                  : "bg-slate-200/70 text-slate-500"
+              }`}
+            >
+              {availableEarnings.length}
+            </span>
+          </button>
+        </div>
 
-            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F4EFF8] text-[#5A3475]">
-              <BookOpen size={19} />
-            </div>
-
-            <p className="mt-3 text-xs font-semibold text-slate-600">
-              Belum ada pembelian kelas.
-            </p>
-
-          </div>
-
-        ) : (
-
-          <>
-
-            <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] gap-5 bg-[#FBFAFC] px-6 py-3 text-[10px] font-bold text-slate-400 sm:grid">
-
-              <span>Peserta</span>
-
-              <span>Kelas</span>
-
-              <span className="text-right">
-                Nilai pembelian
-              </span>
-
-              <span className="min-w-[130px] text-right">
-                Pendapatan Mentor
-              </span>
-
-            </div>
-
-            <div className="divide-y divide-slate-100">
-
-              {availableEarnings.slice(0, 50).map((item) => (
-
-                <article
-                  key={item.id}
-                  className="grid grid-cols-1 gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-5 sm:px-6"
-                >
-
-                  <div className="min-w-0">
-
-                    <p className="truncate text-xs font-bold text-slate-800">
-                      {item.participant_name || "Peserta"}
-                    </p>
-
-                    <p className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400">
-                      <CalendarDays size={12} />
-                      {dateTime(item.created_at)}
-                    </p>
-
+        <div
+          id="mentor-panel-withdrawals"
+          role="tabpanel"
+          tabIndex={0}
+          aria-labelledby="mentor-tab-withdrawals"
+          hidden={activeTab !== "withdrawals"}
+          className="outline-none"
+        >
+          {/* RIWAYAT PENARIKAN - CARD RINGKAS */}
+                <section className="space-y-4">
+                  <div className="flex flex-wrap items-end justify-between gap-2 px-1">
+                    <div>
+                      <h3 className="text-sm font-extrabold text-slate-900">
+                        Riwayat Penarikan
+                      </h3>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        Klik transaksi untuk melihat informasi lengkap.
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-semibold text-slate-400">
+                      {withdrawals.length} transaksi
+                    </span>
                   </div>
 
-                  <p className="truncate text-xs font-medium text-slate-600">
-                    {courseMap.get(item.course_id) ?? "Kelas"}
-                  </p>
+                  {withdrawals.length === 0 ? (
+                    <div className="rounded-[22px] border border-[#EEEAF7] bg-white px-5 py-12 text-center shadow-[0_8px_24px_rgba(38,0,71,.04)]">
+                      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F4EFF8] text-[#5A3475]">
+                        <Clock3 size={19} />
+                      </div>
+                      <p className="mt-3 text-xs font-semibold text-slate-600">
+                        Belum ada riwayat penarikan.
+                      </p>
+                      <p className="mt-1 text-[10px] text-slate-400">
+                        Pengajuan pencairan yang kamu buat akan muncul di sini.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {withdrawals.map((item) => {
+                        const transactionCode = `WD-${item.id.slice(0, 8).toUpperCase()}`;
 
-                  <div className="flex items-center justify-between gap-3 sm:block sm:text-right">
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => setSelectedWithdrawal(item)}
+                            aria-label={`Lihat detail penarikan ${money(item.amount)}, status ${statusLabel(item.status)}`}
+                            className="group flex w-full items-center gap-3 rounded-[20px] border border-[#EDE8F2] bg-white p-4 text-left shadow-[0_5px_18px_rgba(38,0,71,.035)] transition hover:-translate-y-0.5 hover:border-[#D8CBE5] hover:shadow-[0_10px_24px_rgba(38,0,71,.07)] focus:outline-none focus:ring-4 focus:ring-[#6D4388]/10 sm:gap-4 sm:p-5"
+                          >
+                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#F4EFF8] text-[#5A3475] transition group-hover:bg-[#EDE4F4]">
+                              <Landmark size={19} />
+                            </span>
 
-                    <span className="text-[10px] text-slate-400 sm:hidden">
-                      Nilai pembelian
-                    </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="flex flex-wrap items-center gap-2">
+                                <span className="text-[9px] font-extrabold uppercase tracking-[.12em] text-slate-400">
+                                  Penarikan saldo
+                                </span>
+                                <span
+                                  className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${statusClass(item.status)}`}
+                                >
+                                  {statusLabel(item.status)}
+                                </span>
+                              </span>
 
-                    <span className="text-xs font-semibold tabular-nums text-slate-600">
-                      {money(item.basis_amount)}
-                    </span>
+                              <span className="mt-1 block break-words text-xl font-extrabold tracking-tight tabular-nums text-[#260047] sm:text-[23px]">
+                                {money(item.amount)}
+                              </span>
 
+                              <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-400">
+                                <span className="inline-flex items-center gap-1">
+                                  <Landmark size={11} />
+                                  {item.bank_name || "Rekening tujuan"} · {maskedAccount(item.account_number)}
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <CalendarDays size={11} />
+                                  {dateTime(item.requested_at)}
+                                </span>
+                              </span>
+
+                              <span className="mt-1 block text-[9px] tracking-wide text-slate-300">
+                                {transactionCode}
+                              </span>
+                            </span>
+
+                            <span className="flex shrink-0 flex-col items-center gap-1 text-[#8B78A0] transition group-hover:text-[#260047]">
+                              <ChevronRight size={20} />
+                              <span className="hidden text-[9px] font-semibold sm:block">
+                                Detail
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </section>
+        </div>
+
+        <div
+          id="mentor-panel-purchases"
+          role="tabpanel"
+          tabIndex={0}
+          aria-labelledby="mentor-tab-purchases"
+          hidden={activeTab !== "purchases"}
+          className="outline-none"
+        >
+          {/* DATA PEMBELIAN KELAS */}
+
+                <section className="overflow-hidden rounded-[22px] border border-[#EEEAF7] bg-white shadow-[0_8px_24px_rgba(38,0,71,.04)]">
+
+                  <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
+                    <h3 className="text-sm font-extrabold text-slate-900">
+                      Data Pembelian Kelas
+                    </h3>
                   </div>
 
-                  <div className="flex items-center justify-between gap-3 sm:block sm:min-w-[130px] sm:text-right">
+                  {availableEarnings.length === 0 ? (
 
-                    <span className="text-[10px] text-slate-400 sm:hidden">
-                      Pendapatan Mentor
-                    </span>
+                    <div className="px-5 py-12 text-center">
 
-                    <span className="text-sm font-extrabold tabular-nums text-[#09483F]">
-                      {money(item.mentor_amount)}
-                    </span>
+                      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-[#F4EFF8] text-[#5A3475]">
+                        <BookOpen size={19} />
+                      </div>
 
-                  </div>
+                      <p className="mt-3 text-xs font-semibold text-slate-600">
+                        Belum ada pembelian kelas.
+                      </p>
 
-                </article>
+                    </div>
 
-              ))}
+                  ) : (
 
-            </div>
+                    <>
 
-          </>
+                      <div className="hidden grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] gap-5 bg-[#FBFAFC] px-6 py-3 text-[10px] font-bold text-slate-400 sm:grid">
 
-        )}
+                        <span>Peserta</span>
 
+                        <span>Kelas</span>
+
+                        <span className="text-right">
+                          Nilai pembelian
+                        </span>
+
+                        <span className="min-w-[130px] text-right">
+                          Pendapatan Mentor
+                        </span>
+
+                      </div>
+
+                      <div className="divide-y divide-slate-100">
+
+                        {availableEarnings.slice(0, 50).map((item) => (
+
+                          <article
+                            key={item.id}
+                            className="grid grid-cols-1 gap-3 px-5 py-4 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-5 sm:px-6"
+                          >
+
+                            <div className="min-w-0">
+
+                              <p className="truncate text-xs font-bold text-slate-800">
+                                {item.participant_name || "Peserta"}
+                              </p>
+
+                              <p className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400">
+                                <CalendarDays size={12} />
+                                {dateTime(item.created_at)}
+                              </p>
+
+                            </div>
+
+                            <p className="truncate text-xs font-medium text-slate-600">
+                              {courseMap.get(item.course_id) ?? "Kelas"}
+                            </p>
+
+                            <div className="flex items-center justify-between gap-3 sm:block sm:text-right">
+
+                              <span className="text-[10px] text-slate-400 sm:hidden">
+                                Nilai pembelian
+                              </span>
+
+                              <span className="text-xs font-semibold tabular-nums text-slate-600">
+                                {money(item.basis_amount)}
+                              </span>
+
+                            </div>
+
+                            <div className="flex items-center justify-between gap-3 sm:block sm:min-w-[130px] sm:text-right">
+
+                              <span className="text-[10px] text-slate-400 sm:hidden">
+                                Pendapatan Mentor
+                              </span>
+
+                              <span className="text-sm font-extrabold tabular-nums text-[#09483F]">
+                                {money(item.mentor_amount)}
+                              </span>
+
+                            </div>
+
+                          </article>
+
+                        ))}
+
+                      </div>
+
+                    </>
+
+                  )}
+
+                </section>
+        </div>
       </section>
+
+      {/* POPUP DETAIL RIWAYAT PENARIKAN */}
+      {selectedWithdrawal && (() => {
+        const item = selectedWithdrawal;
+        const canConfirm = ["pending", "processing"].includes(item.status);
+        const transactionCode = `WD-${item.id.slice(0, 8).toUpperCase()}`;
+        const whatsappMessage = [
+          "Assalamu'alaikum Admin Kiki Creator Class,",
+          "",
+          "Saya ingin mengonfirmasi pengajuan pencairan saldo mentor.",
+          "",
+          `Nama Mentor: ${mentorName || "Mentor Kiki Creator Class"}`,
+          `Peran: ${mentorRole}`,
+          `Bidang keahlian: ${expertiseLabel || "-"}`,
+          `Nama pemilik rekening: ${item.full_name_snapshot || mentorName || "-"}`,
+          `Nominal penarikan: ${money(item.amount)}`,
+          `Bank tujuan: ${item.bank_name || "-"}`,
+          `Nomor rekening: ${maskedAccount(item.account_number)}`,
+          `ID penarikan: ${item.id}`,
+          `Tanggal pengajuan: ${dateTime(item.requested_at)}`,
+          `Status: ${statusLabel(item.status)}`,
+          "",
+          "Mohon bantu periksa dan proses pencairan tersebut. Terima kasih.",
+        ].join("\n");
+        const whatsappUrl = `https://wa.me/${adminWhatsAppNumber}?text=${encodeURIComponent(whatsappMessage)}`;
+
+        return (
+          <div
+            className="fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-slate-950/55 p-4 backdrop-blur-sm"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setSelectedWithdrawal(null);
+            }}
+          >
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="withdrawal-detail-title"
+              className="my-auto w-full max-w-[520px] overflow-hidden rounded-[26px] border border-white/70 bg-white shadow-[0_24px_80px_rgba(15,23,42,.28)]"
+            >
+              <div className="relative overflow-hidden bg-gradient-to-br from-[#260047] via-[#321052] to-[#09483F] px-5 pb-6 pt-5 text-white sm:px-6">
+                <div className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-white/[0.08] blur-2xl" />
+                <div className="relative flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 text-white/70">
+                      <Landmark size={15} />
+                      <span className="text-[9px] font-extrabold uppercase tracking-[.17em]">
+                        Detail transaksi
+                      </span>
+                    </div>
+                    <h2
+                      id="withdrawal-detail-title"
+                      className="mt-2 text-lg font-extrabold tracking-tight"
+                    >
+                      Penarikan Saldo Mentor
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedWithdrawal(null)}
+                    aria-label="Tutup detail transaksi"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white"
+                  >
+                    <X size={17} />
+                  </button>
+                </div>
+
+                <div className="relative mt-6">
+                  <p className="text-[10px] font-semibold text-white/65">
+                    Nominal penarikan
+                  </p>
+                  <p className="mt-1 break-words text-3xl font-extrabold tracking-tight tabular-nums sm:text-4xl">
+                    {money(item.amount)}
+                  </p>
+                  <div className="mt-3">
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1.5 text-[10px] font-bold ${
+                        item.status === "paid"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : item.status === "rejected"
+                            ? "bg-rose-100 text-rose-800"
+                            : item.status === "processing"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      {statusLabel(item.status)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-5 px-5 py-5 sm:px-6">
+                <div className="rounded-2xl border border-[#EEEAF7] bg-[#FAF8FC] p-4">
+                  <p className="text-[9px] font-extrabold uppercase tracking-[.13em] text-slate-400">
+                    Informasi mentor
+                  </p>
+                  <p className="mt-2 text-sm font-extrabold text-slate-800">
+                    {mentorName || "Mentor Kiki Creator Class"}
+                  </p>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    {mentorRole}
+                  </p>
+                  {expertiseLabel && (
+                    <p className="mt-1 text-[10px] leading-5 text-slate-400">
+                      Bidang keahlian: {expertiseLabel}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="mb-3 text-[10px] font-extrabold uppercase tracking-[.13em] text-slate-400">
+                    Rincian pencairan
+                  </p>
+                  <div className="divide-y divide-slate-100 rounded-2xl border border-slate-100 px-4">
+                    <div className="flex items-start justify-between gap-4 py-3 text-xs">
+                      <span className="text-slate-400">Nama pemilik rekening</span>
+                      <span className="text-right font-semibold text-slate-700">
+                        {item.full_name_snapshot || mentorName || "-"}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4 py-3 text-xs">
+                      <span className="text-slate-400">Bank / e-wallet</span>
+                      <span className="text-right font-semibold text-slate-700">
+                        {item.bank_name || "-"}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4 py-3 text-xs">
+                      <span className="text-slate-400">Nomor rekening</span>
+                      <span className="text-right font-semibold tracking-wide text-slate-700">
+                        {maskedAccount(item.account_number)}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4 py-3 text-xs">
+                      <span className="text-slate-400">Tanggal pengajuan</span>
+                      <span className="text-right font-semibold text-slate-700">
+                        {dateTime(item.requested_at)}
+                      </span>
+                    </div>
+                    <div className="flex items-start justify-between gap-4 py-3 text-xs">
+                      <span className="text-slate-400">ID transaksi</span>
+                      <span className="text-right font-bold tracking-wide text-slate-700">
+                        {transactionCode}
+                      </span>
+                    </div>
+                    {item.reviewed_at && (
+                      <div className="flex items-start justify-between gap-4 py-3 text-xs">
+                        <span className="text-slate-400">Tanggal ditinjau</span>
+                        <span className="text-right font-semibold text-slate-700">
+                          {dateTime(item.reviewed_at)}
+                        </span>
+                      </div>
+                    )}
+                    {item.status === "paid" && (
+                      <div className="flex items-start justify-between gap-4 py-3 text-xs">
+                        <span className="text-slate-400">Tanggal pencairan</span>
+                        <span className="text-right font-semibold text-emerald-700">
+                          {dateTime(item.paid_at || item.reviewed_at || item.requested_at)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {item.admin_note && (
+                  <div className="rounded-xl border border-rose-100 bg-rose-50 px-3.5 py-3">
+                    <p className="text-[9px] font-extrabold uppercase tracking-[.1em] text-rose-500">
+                      Catatan Admin
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-rose-700">
+                      {item.admin_note}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedWithdrawal(null)}
+                    className="inline-flex h-11 items-center justify-center rounded-xl border border-slate-200 px-5 text-xs font-bold text-slate-600 transition hover:bg-slate-50"
+                  >
+                    Tutup
+                  </button>
+
+                  {canConfirm && (
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#0E9F6E] to-[#087F5B] px-5 text-xs font-extrabold text-white shadow-[0_6px_16px_rgba(8,127,91,.16)] transition hover:-translate-y-0.5 hover:shadow-[0_9px_20px_rgba(8,127,91,.2)] focus:outline-none focus:ring-4 focus:ring-emerald-100"
+                    >
+                      <MessageCircle size={15} />
+                      Konfirmasi Admin
+                      <ArrowUpRight size={13} />
+                    </a>
+                  )}
+
+                  {item.status === "paid" && (
+                    <div className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-50 px-5 text-xs font-bold text-emerald-700">
+                      <CheckCircle2 size={15} />
+                      Dana diterima
+                    </div>
+                  )}
+
+                  {item.status === "rejected" && (
+                    <div className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-rose-50 px-5 text-xs font-bold text-rose-700">
+                      <AlertCircle size={15} />
+                      Pengajuan ditolak
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          </div>
+        );
+      })()}
 
       {/* POPUP FORM PENARIKAN */}
 

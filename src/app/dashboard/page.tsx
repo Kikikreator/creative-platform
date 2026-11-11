@@ -21,6 +21,7 @@ import {
 
 import { createClient } from "@/lib/supabase/server";
 import LogoutButton from "@/components/auth/logout-button";
+import ImpersonationSwitcher from "@/components/impersonation/impersonation-switcher";
 import { getPrimaryRole, normalizeRoles } from "@/lib/auth/roles";
 
 // =====================================================
@@ -472,7 +473,9 @@ export default async function MemberDashboardPage() {
 
           </nav>
 
-          {/* PROFILE */}
+          {/* MODE PENGUJIAN + PROFILE */}
+
+          <ImpersonationSwitcher showWhenInactive={false} />
 
           <div className="flex items-center gap-2.5 rounded-xl border border-[#F1EDF8] bg-white px-3 py-2">
 
