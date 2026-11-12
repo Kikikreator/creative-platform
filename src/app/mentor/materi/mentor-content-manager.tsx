@@ -677,6 +677,40 @@ export default function MentorContentManager({
       if (newlyUploadedPath) {
         await supabase.storage.from("learning-resources").remove([newlyUploadedPath]);
       }
+
+      setError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteLesson(lesson: Lesson) {
+    const section = sections.find((item) => item.id === lesson.section_id);
+    const draft = section ? draftMap.get(section.id) : null;
+    if (!section || draft?.status === "pending" || draft?.is_deleted) return;
+
+    const confirmed = await confirmDialog({
+      title: "Hapus Materi Inti?",
+      message: `Hapus Materi Inti \"${lesson.title}\" dari draft Bab? Materi resmi peserta tidak berubah sebelum Bab disetujui Admin.`,
+      confirmLabel: "Ya, hapus materi",
+      variant: "danger",
+    });
+    if (!confirmed) return;
+
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const nextLessons = lessons.filter((item) => item.id !== lesson.id);
+      const nextContents = contents.filter((item) => item.lesson_id !== lesson.id);
+      await persistDraft(section, nextLessons, nextContents);
+      setLessons(nextLessons);
+      setContents(nextContents);
+      if (activeLessonId === lesson.id) setActiveLessonId("");
+      setNotice("Materi Inti dihapus dari draft Bab. Perubahan resmi berlaku setelah Bab disetujui Admin.");
+      await loadData();
+    } catch (err) {
+
       setError(errorMessage(err));
     } finally {
       setSaving(false);
