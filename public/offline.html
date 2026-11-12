@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#260047" />
+    <title>Koneksi Terputus | Kiki Creator Class</title>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: #f8f7fa;
+        color: #21182a;
+        font-family: Arial, sans-serif;
+      }
+      main {
+        width: min(100%, 440px);
+        padding: 32px 26px;
+        border: 1px solid #eae5ed;
+        border-radius: 24px;
+        background: #fff;
+        text-align: center;
+        box-shadow: 0 16px 48px rgba(38, 0, 71, .08);
+      }
+      .mark {
+        display: grid;
+        place-items: center;
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 20px;
+        border-radius: 20px;
+        background: #f4f1f6;
+        color: #260047;
+        font-size: 28px;
+        font-weight: 700;
+      }
+      h1 { margin: 0; color: #260047; font-size: 22px; }
+      p { margin: 12px 0 24px; color: #746d7b; font-size: 14px; line-height: 1.7; }
+      button {
+        border: 0;
+        border-radius: 12px;
+        padding: 13px 20px;
+        background: #260047;
+        color: white;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true">K</div>
+      <h1>Koneksi internet terputus</h1>
+      <p>
+        Kiki Creator Class membutuhkan koneksi internet untuk memuat akun,
+        kelas, tugas, dan data pembelajaran. Periksa koneksi lalu coba lagi.
+      </p>
+      <button type="button" onclick="window.location.reload()">Coba Lagi</button>
+    </main>
+  </body>
+</html>
