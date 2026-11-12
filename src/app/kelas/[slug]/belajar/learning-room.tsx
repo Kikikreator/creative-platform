@@ -21,6 +21,8 @@ import {
   ChevronRight,
   Clock3,
   ExternalLink,
+  Download,
+  Info,
   FileText,
   GraduationCap,
   Headphones,
@@ -83,6 +85,36 @@ export type LearningContentType =
   | "audio"
   | "link"
   | "callout";
+export type LearningLessonContentKind = "video" | "text" | "link" | "pdf" | "info";
+
+function getLessonContentKind(provider: string | null | undefined): LearningLessonContentKind {
+  const value = (provider ?? "").toLowerCase();
+  return (["text", "link", "pdf", "info"] as const).includes(value as never)
+    ? (value as LearningLessonContentKind)
+    : "video";
+}
+
+function getLessonKindLabel(kind: LearningLessonContentKind) {
+  const labels: Record<LearningLessonContentKind, string> = {
+    video: "Video Pembelajaran",
+    text: "Materi Teks",
+    link: "Link Eksternal",
+    pdf: "Dokumen PDF",
+    info: "Informasi",
+  };
+  return labels[kind];
+}
+
+function getLessonKindIcon(kind: LearningLessonContentKind) {
+  const icons = {
+    video: Video,
+    text: BookOpen,
+    link: Link2,
+    pdf: FileText,
+    info: Info,
+  };
+  return icons[kind];
+}
 export type LearningContent = {
   id: string;
   lesson_id: string;
@@ -554,6 +586,113 @@ function MainVideoPlayer({
     </div>
   );
 }
+function MainLessonContent({
+  lesson,
+}: {
+  lesson: LearningLesson;
+}) {
+  const supabase = useMemo(() => createClient(), []);
+  const kind = getLessonContentKind(lesson.video_provider);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    const path = lesson.resource_path?.trim() ?? "";
+    setPdfUrl(null);
+    setPdfError("");
+
+    if (kind !== "pdf" || !path) {
+      setPdfLoading(false);
+      return;
+    }
+
+    const directUrl = getSafeUrl(path);
+    if (directUrl) {
+      setPdfUrl(directUrl);
+      setPdfLoading(false);
+      return;
+    }
+
+    async function loadPdf() {
+      setPdfLoading(true);
+      const { data, error } = await supabase.storage
+        .from("learning-resources")
+        .createSignedUrl(path, 60 * 60 * 24);
+      if (cancelled) return;
+      if (error || !data?.signedUrl) {
+        setPdfError("Dokumen PDF tidak dapat diakses. Hubungi Mentor atau Admin.");
+        setPdfLoading(false);
+        return;
+      }
+      setPdfUrl(data.signedUrl);
+      setPdfLoading(false);
+    }
+
+    void loadPdf();
+    return () => {
+      cancelled = true;
+    };
+  }, [kind, lesson.id, lesson.resource_path, supabase]);
+
+  if (kind === "video") return <MainVideoPlayer lesson={lesson} />;
+
+  if (kind === "text") {
+    return (
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <div className="mb-4 flex items-center gap-2 text-violet-800"><BookOpen size={18} /><span className="text-xs font-bold uppercase tracking-wider">Materi Teks</span></div>
+        {lesson.content?.trim() ? (
+          <div className="whitespace-pre-wrap break-words text-sm leading-8 text-slate-700 sm:text-[15px]">{lesson.content}</div>
+        ) : (
+          <p className="text-sm text-slate-500">Isi materi belum tersedia.</p>
+        )}
+      </article>
+    );
+  }
+
+  if (kind === "info") {
+    return (
+      <article className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5 shadow-sm sm:p-7">
+        <div className="mb-3 flex items-center gap-2 text-sky-900"><Info size={19} /><span className="text-xs font-extrabold uppercase tracking-wider">Informasi Pembelajaran</span></div>
+        <div className="whitespace-pre-wrap break-words text-sm leading-8 text-sky-950 sm:text-[15px]">{lesson.content || "Belum ada informasi."}</div>
+      </article>
+    );
+  }
+
+  if (kind === "link") {
+    const linkUrl = getSafeUrl(lesson.video_url);
+    return (
+      <article className="rounded-2xl border border-violet-100 bg-white p-6 text-center shadow-sm sm:p-8">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-800"><Link2 size={25} /></div>
+        <h3 className="mt-4 text-base font-bold text-slate-900">Tautan Eksternal</h3>
+        {lesson.content && <p className="mx-auto mt-2 max-w-xl whitespace-pre-wrap text-sm leading-7 text-slate-500">{lesson.content}</p>}
+        {linkUrl ? (
+          <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-800 to-indigo-800 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:brightness-110">Buka Tautan <ExternalLink size={15} /></a>
+        ) : <p className="mt-4 text-xs text-rose-600">Tautan belum tersedia atau tidak valid.</p>}
+      </article>
+    );
+  }
+
+  return (
+    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center gap-2"><FileText size={19} className="text-violet-800" /><span className="text-xs font-bold uppercase tracking-wider text-violet-800">Dokumen PDF</span></div>
+      {pdfLoading ? (
+        <div className="flex min-h-48 items-center justify-center text-sm text-slate-500"><RefreshCw size={16} className="mr-2 animate-spin" />Menyiapkan dokumen...</div>
+      ) : pdfError ? (
+        <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">{pdfError}</div>
+      ) : pdfUrl ? (
+        <>
+          <iframe src={pdfUrl} title={lesson.title} className="h-[520px] w-full rounded-xl border border-slate-200 bg-slate-50 sm:h-[680px]" />
+          <a href={pdfUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-2 rounded-xl bg-violet-800 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-violet-900"><Download size={14} /> Buka / Unduh PDF</a>
+        </>
+      ) : (
+        <div className="rounded-xl bg-slate-50 p-5 text-sm text-slate-500">Dokumen PDF belum diunggah.</div>
+      )}
+    </article>
+  );
+}
+
 // =====================================================
 // MINI CONTENT RENDERER
 // =====================================================
@@ -1874,15 +2013,15 @@ function CurriculumPanel({
                           >
                             <div className="flex items-start gap-2.5">
                               <div
-                                aria-label="Materi video"
-                                title="Materi video"
+                                aria-label={getLessonKindLabel(getLessonContentKind(lesson.video_provider))}
+                                title={getLessonKindLabel(getLessonContentKind(lesson.video_provider))}
                                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm transition ${
                                   isActive
-                                    ? "bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-blue-200"
-                                    : "border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-700 group-hover:border-blue-200"
+                                    ? "bg-gradient-to-br from-violet-700 to-indigo-700 text-white shadow-violet-200"
+                                    : "border border-violet-100 bg-gradient-to-br from-violet-50 to-indigo-50 text-violet-700 group-hover:border-violet-200"
                                 }`}
                               >
-                                <Video size={17} strokeWidth={2.4} />
+                                {(() => { const LessonIcon = getLessonKindIcon(getLessonContentKind(lesson.video_provider)); return <LessonIcon size={17} strokeWidth={2.4} />; })()}
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex flex-wrap items-start gap-1.5">
@@ -1903,7 +2042,9 @@ function CurriculumPanel({
                                 </div>
                                 <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-400">
                                   <span>
-                                    {formatDuration(lesson.duration_minutes)}
+                                    {getLessonContentKind(lesson.video_provider) === "video"
+                                      ? formatDuration(lesson.duration_minutes)
+                                      : getLessonKindLabel(getLessonContentKind(lesson.video_provider))}
                                   </span>
                                   <span>•</span>
                                   <span>{miniCount} segmen</span>
@@ -2073,6 +2214,7 @@ export default function LearningRoom({
     publishedTasks.find((task) => task.id === activeTaskId) ?? null;
 
   const activeLesson = activeTask ? null : selectedLesson;
+  const activeLessonKind = activeLesson ? getLessonContentKind(activeLesson.video_provider) : null;
 
   const activeSectionId =
     activeTask?.section_id ?? activeLesson?.section_id ?? "";
@@ -2511,25 +2653,22 @@ export default function LearningRoom({
                     <h2 className="mt-2 break-words text-xl font-bold leading-tight text-slate-900 sm:text-2xl lg:text-[28px]">
                       {activeLesson.title}
                     </h2>
-                    {activeLesson.content && (
+                    {activeLesson.content && activeLessonKind !== "text" && activeLessonKind !== "info" && (
                       <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-600">
                         {activeLesson.content}
                       </p>
                     )}
-                    {/* VIDEO PLAYER */}
+                    {/* MAIN LESSON CONTENT: video, text, external link, PDF, or info */}
                     <div className="mt-5">
-                      <MainVideoPlayer lesson={activeLesson} />
+                      <MainLessonContent lesson={activeLesson} />
                     </div>
                     {/* LESSON INFORMATION */}
                     <div className="mt-4 flex flex-wrap items-center gap-2">
                       <div className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
-                        <Clock3
-                          size={14}
-                          className="text-violet-700"
-                        />
-                        {formatDuration(
-                          activeLesson.duration_minutes
-                        )}
+                        {activeLessonKind === "video" ? <Clock3 size={14} className="text-violet-700" /> : <BookOpen size={14} className="text-violet-700" />}
+                        {activeLessonKind === "video"
+                          ? formatDuration(activeLesson.duration_minutes)
+                          : getLessonKindLabel(activeLessonKind ?? "video")}
                       </div>
                       <div className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-[11px] text-slate-600">
                         <Layers3

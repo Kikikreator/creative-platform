@@ -66,6 +66,8 @@ type Section = {
   created_at: string;
 };
 
+type LessonContentKind = "video" | "text" | "link" | "pdf" | "info";
+
 type Lesson = {
   id: string;
   section_id: string;
@@ -141,9 +143,9 @@ type SectionForm = {
 type LessonForm = {
   title: string;
   content: string;
+  content_type: LessonContentKind;
   video_provider: string;
   video_url: string;
-  resource_path: string;
   duration_minutes: string;
   is_preview: boolean;
   status: "draft" | "published";
@@ -228,9 +230,9 @@ const emptySection: SectionForm = {
 const emptyLesson: LessonForm = {
   title: "",
   content: "",
+  content_type: "video",
   video_provider: "youtube",
   video_url: "",
-  resource_path: "",
   duration_minutes: "0",
   is_preview: false,
   status: "draft",
@@ -309,6 +311,36 @@ function statusStyle(status: string) {
     ? "border-violet-100 bg-violet-50 text-violet-700"
     : "border-amber-100 bg-amber-50 text-amber-700";
 }
+
+function createEntityId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (character) => {
+    const random = Math.floor(Math.random() * 16);
+    const value = character === "x" ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
+}
+
+function getLessonContentKind(provider: string | null | undefined): LessonContentKind {
+  const value = (provider ?? "").toLowerCase();
+  return (["text", "link", "pdf", "info"] as const).includes(value as never)
+    ? (value as LessonContentKind)
+    : "video";
+}
+
+function lessonContentKindLabel(kind: LessonContentKind) {
+  const labels: Record<LessonContentKind, string> = {
+    video: "Video Pembelajaran",
+    text: "Materi Teks",
+    link: "Link Eksternal",
+    pdf: "Dokumen PDF",
+    info: "Informasi",
+  };
+  return labels[kind];
+}
+
 
 function contentTypeLabel(type: LessonContentType) {
   const labels: Record<LessonContentType, string> = {
@@ -486,6 +518,8 @@ export default function MateriManager({
 
   const [sectionForm, setSectionForm] = useState<SectionForm>(emptySection);
   const [lessonForm, setLessonForm] = useState<LessonForm>(emptyLesson);
+  const [selectedLessonPdf, setSelectedLessonPdf] = useState<File | null>(null);
+  const [existingLessonPdfName, setExistingLessonPdfName] = useState("");
   const [contentForm, setContentForm] = useState<ContentForm>(emptyContent);
 
   const [contentSaving, setContentSaving] = useState(false);
@@ -804,6 +838,8 @@ export default function MateriManager({
     setActiveSectionId(sectionId);
     setEditingLessonId(null);
     setLessonForm(emptyLesson);
+    setSelectedLessonPdf(null);
+    setExistingLessonPdfName("");
     setError("");
     setLessonModal(true);
   }
@@ -812,16 +848,19 @@ export default function MateriManager({
     setActiveSectionId(lesson.section_id);
     setEditingLessonId(lesson.id);
 
+    const contentType = getLessonContentKind(lesson.video_provider);
     setLessonForm({
       title: lesson.title,
       content: lesson.content ?? "",
-      video_provider: lesson.video_provider || "youtube",
+      content_type: contentType,
+      video_provider: contentType === "video" ? (lesson.video_provider || "youtube") : "youtube",
       video_url: lesson.video_url ?? "",
-      resource_path: lesson.resource_path ?? "",
       duration_minutes: String(lesson.duration_minutes ?? 0),
       is_preview: lesson.is_preview,
       status: lesson.status,
     });
+    setSelectedLessonPdf(null);
+    setExistingLessonPdfName(contentType === "pdf" ? (lesson.resource_path?.split("/").filter(Boolean).pop() ?? "File PDF tersimpan") : "");
 
     setError("");
     setLessonModal(true);
@@ -834,6 +873,8 @@ export default function MateriManager({
     setEditingLessonId(null);
     setActiveSectionId("");
     setLessonForm(emptyLesson);
+    setSelectedLessonPdf(null);
+    setExistingLessonPdfName("");
   }
 
   // ========================================
@@ -844,18 +885,44 @@ export default function MateriManager({
     e.preventDefault();
 
     const title = lessonForm.title.trim();
+    const content = lessonForm.content.trim();
+    const contentType = lessonForm.content_type;
     const duration = Number(lessonForm.duration_minutes);
+    const mediaUrl = lessonForm.video_url.trim();
 
     if (!title) {
       setError("Judul materi wajib diisi.");
       return;
     }
-
-    if (!Number.isSafeInteger(duration) || duration < 0) {
-      setError("Durasi harus berupa angka bulat positif.");
+    if (["text", "info"].includes(contentType) && !content) {
+      setError(contentType === "info" ? "Isi informasi wajib diisi." : "Isi materi teks wajib diisi.");
       return;
     }
-
+    if (["video", "link"].includes(contentType) && !mediaUrl) {
+      setError(contentType === "link" ? "URL tujuan wajib diisi." : "URL video wajib diisi.");
+      return;
+    }
+    if (contentType === "video" && (!Number.isSafeInteger(duration) || duration < 0)) {
+      setError("Durasi harus berupa angka bulat 0 atau lebih.");
+      return;
+    }
+    const existingLesson = lessons.find((lesson) => lesson.id === editingLessonId);
+    const existingLessonKind = getLessonContentKind(existingLesson?.video_provider);
+    if (contentType === "pdf" && !selectedLessonPdf && !(existingLessonKind === "pdf" && existingLesson?.resource_path)) {
+      setError("Pilih file PDF terlebih dahulu.");
+      return;
+    }
+    if (selectedLessonPdf) {
+      const extension = selectedLessonPdf.name.split(".").pop()?.toLowerCase();
+      if (extension !== "pdf" || (selectedLessonPdf.type && !["application/pdf", "application/octet-stream"].includes(selectedLessonPdf.type))) {
+        setError("File harus berformat PDF.");
+        return;
+      }
+      if (selectedLessonPdf.size > 20 * 1024 * 1024) {
+        setError("Ukuran PDF maksimal 20 MB.");
+        return;
+      }
+    }
     if (!activeSectionId) {
       setError("Bab materi tidak ditemukan.");
       return;
@@ -865,27 +932,49 @@ export default function MateriManager({
     setError("");
     setSuccess("");
 
+    let newlyUploadedPath: string | null = null;
+    let databaseSaved = false;
+
     try {
-      const oldLesson = lessons.find(
-        (lesson) => lesson.id === editingLessonId
-      );
-
-      const sectionLessons = lessons.filter(
-        (lesson) => lesson.section_id === activeSectionId
-      );
-
+      const oldLesson = lessons.find((lesson) => lesson.id === editingLessonId);
+      const lessonId = editingLessonId ?? createEntityId();
+      const sectionLessons = lessons.filter((lesson) => lesson.section_id === activeSectionId);
       const position = oldLesson
         ? oldLesson.position
         : Math.max(-1, ...sectionLessons.map((l) => l.position)) + 1;
 
+      let nextResourcePath: string | null = null;
+      const oldContentType = getLessonContentKind(oldLesson?.video_provider);
+      if (contentType === "pdf") {
+        nextResourcePath = oldContentType === "pdf" ? (oldLesson?.resource_path ?? null) : null;
+        if (selectedLessonPdf) {
+          const safeName = sanitizeStorageFileName(selectedLessonPdf.name);
+          const uniqueId = createEntityId();
+          newlyUploadedPath = `courses/${selectedCourseId}/lessons/${lessonId}/${uniqueId}-${safeName}`;
+          const { error: uploadError } = await supabase.storage
+            .from(LEARNING_RESOURCE_BUCKET)
+            .upload(newlyUploadedPath, selectedLessonPdf, {
+              cacheControl: "3600",
+              contentType: "application/pdf",
+              upsert: false,
+            });
+          if (uploadError) throw new Error(`Gagal mengunggah PDF: ${uploadError.message}`);
+          nextResourcePath = newlyUploadedPath;
+        }
+      } else if (contentType === "video" && oldContentType === "video") {
+        // Pertahankan resource_path lama untuk materi video lama yang memakai file Storage.
+        nextResourcePath = oldLesson?.resource_path ?? null;
+      }
+
       const payload = {
+        id: lessonId,
         section_id: activeSectionId,
         title,
-        content: lessonForm.content.trim() || null,
-        video_provider: lessonForm.video_provider,
-        video_url: lessonForm.video_url.trim() || null,
-        resource_path: lessonForm.resource_path.trim() || null,
-        duration_minutes: duration,
+        content: content || null,
+        video_provider: contentType === "video" ? lessonForm.video_provider : contentType,
+        video_url: ["video", "link"].includes(contentType) ? mediaUrl || null : null,
+        resource_path: nextResourcePath,
+        duration_minutes: contentType === "video" ? duration : 0,
         is_preview: lessonForm.is_preview,
         status: lessonForm.status,
         position,
@@ -897,31 +986,41 @@ export default function MateriManager({
           .from("lessons")
           .update(payload)
           .eq("id", editingLessonId);
-
         if (dbError) throw dbError;
-
-        setSuccess("Materi berhasil diperbarui.");
       } else {
         const { error: dbError } = await supabase
           .from("lessons")
           .insert(payload);
-
         if (dbError) throw dbError;
-
-        setSuccess("Materi baru berhasil ditambahkan.");
       }
 
+      databaseSaved = true;
+
+      let successMessage = editingLessonId
+        ? "Materi berhasil diperbarui."
+        : "Materi baru berhasil ditambahkan.";
+      if (
+        oldLesson?.resource_path &&
+        oldLesson.resource_path !== nextResourcePath &&
+        isStorageObjectPath(oldLesson.resource_path)
+      ) {
+        const { error: removeError } = await supabase.storage
+          .from(LEARNING_RESOURCE_BUCKET)
+          .remove([oldLesson.resource_path]);
+        if (removeError) successMessage += " File lama belum berhasil dibersihkan dari Storage.";
+      }
+      setSuccess(successMessage);
       setLessonModal(false);
       setEditingLessonId(null);
       setLessonForm(emptyLesson);
-
+      setSelectedLessonPdf(null);
+      setExistingLessonPdfName("");
       await loadContent();
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Gagal menyimpan materi."
-      );
+      if (newlyUploadedPath && !databaseSaved) {
+        await supabase.storage.from(LEARNING_RESOURCE_BUCKET).remove([newlyUploadedPath]);
+      }
+      setError(err instanceof Error ? err.message : "Gagal menyimpan materi.");
     } finally {
       setSaving(false);
     }
@@ -953,7 +1052,18 @@ export default function MateriManager({
 
       if (dbError) throw dbError;
 
-      setSuccess("Materi berhasil dihapus.");
+      if (lesson.resource_path && isStorageObjectPath(lesson.resource_path)) {
+        const { error: storageError } = await supabase.storage
+          .from(LEARNING_RESOURCE_BUCKET)
+          .remove([lesson.resource_path]);
+        if (storageError) {
+          setSuccess("Materi berhasil dihapus, tetapi file lama belum berhasil dibersihkan dari Storage.");
+        } else {
+          setSuccess("Materi berhasil dihapus.");
+        }
+      } else {
+        setSuccess("Materi berhasil dihapus.");
+      }
       await loadContent();
     } catch (err) {
       setError(
@@ -1987,11 +2097,11 @@ export default function MateriManager({
                               </div>
 
                               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-violet-700 shadow-sm">
-                                {lesson.video_url ? (
-                                  <Video size={19} />
-                                ) : (
-                                  <FileText size={19} />
-                                )}
+                                {getLessonContentKind(lesson.video_provider) === "video" ? <Video size={19} />
+                                  : getLessonContentKind(lesson.video_provider) === "link" ? <Link2 size={19} />
+                                  : getLessonContentKind(lesson.video_provider) === "pdf" ? <FileText size={19} />
+                                  : getLessonContentKind(lesson.video_provider) === "info" ? <MessageSquare size={19} />
+                                  : <BookOpen size={19} />}
                               </div>
 
                               <div className="min-w-0">
@@ -2005,6 +2115,9 @@ export default function MateriManager({
                                   <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold ${statusStyle(lesson.status)}`}>
                                     {statusLabel(lesson.status)}
                                   </span>
+                                  <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[10px] font-bold text-violet-700">
+                                    {lessonContentKindLabel(getLessonContentKind(lesson.video_provider))}
+                                  </span>
 
                                   {lesson.is_preview && (
                                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-700">
@@ -2014,8 +2127,7 @@ export default function MateriManager({
                                   )}
 
                                   <span className="inline-flex items-center gap-1 text-[10px] text-slate-400">
-                                    <Clock3 size={11} />
-                                    {lesson.duration_minutes ?? 0} menit
+                                    {getLessonContentKind(lesson.video_provider) === "video" ? <><Clock3 size={11} />{lesson.duration_minutes ?? 0} menit</> : lessonContentKindLabel(getLessonContentKind(lesson.video_provider))}
                                   </span>
 
                                   <span className="text-[10px] text-slate-400">
@@ -2331,131 +2443,94 @@ export default function MateriManager({
                 />
               </div>
 
-              {/* Content */}
-
+              {/* Jenis materi */}
               <div>
-                <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
-                  Isi Materi / Catatan Pembelajaran
-                </label>
-
-                <textarea
-                  rows={5}
-                  value={lessonForm.content}
-                  onChange={(e) =>
-                    setLessonForm({
-                      ...lessonForm,
-                      content: e.target.value,
-                    })
-                  }
-                  placeholder="Tuliskan penjelasan, ringkasan, atau materi pembelajaran di sini..."
-                  className="min-h-[132px] w-full resize-y rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm font-normal leading-6 text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
-                />
-
-                <p className="mt-1 text-xs font-normal text-slate-400">
-                  Materi disimpan sebagai teks pada database.
-                </p>
+                <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">Jenis Materi *</label>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {([
+                    { value: "video", label: "Video Pembelajaran", description: "YouTube, Vimeo, atau video langsung", icon: Video },
+                    { value: "text", label: "Materi Teks", description: "Artikel atau penjelasan pembelajaran", icon: BookOpen },
+                    { value: "link", label: "Link Eksternal", description: "WhatsApp, website, Google Drive", icon: Link2 },
+                    { value: "pdf", label: "Upload PDF", description: "Modul, panduan, atau bahan bacaan", icon: FileText },
+                    { value: "info", label: "Informasi", description: "Pengumuman atau catatan kelas", icon: MessageSquare },
+                  ] as const).map((item) => {
+                    const Icon = item.icon;
+                    const active = lessonForm.content_type === item.value;
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => setLessonForm({ ...lessonForm, content_type: item.value })}
+                        className={`flex min-h-[76px] items-start gap-3 rounded-xl border p-3 text-left transition ${active ? "border-violet-400 bg-violet-50 ring-2 ring-violet-100" : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40"}`}
+                      >
+                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${active ? "bg-violet-700 text-white" : "bg-slate-100 text-slate-600"}`}><Icon size={17} /></span>
+                        <span className="min-w-0"><span className="block text-xs font-bold text-slate-800">{item.label}</span><span className="mt-1 block text-[10px] leading-4 text-slate-500">{item.description}</span></span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Video */}
-
-              <div className="rounded-2xl border border-slate-100 p-4">
-
-                <div className="mb-4 flex items-center gap-2">
-                  <Video size={19} className="text-violet-700" />
-                  <h4 className="text-sm font-bold text-slate-800">
-                    Video Pembelajaran
-                  </h4>
-                </div>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
-                      Penyedia Video
+              {lessonForm.content_type === "video" && (
+                <div className="rounded-2xl border border-slate-100 p-4">
+                  <div className="mb-4 flex items-center gap-2"><Video size={18} className="text-violet-700" /><h4 className="text-sm font-bold text-slate-800">Pengaturan Video</h4></div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block text-sm font-medium text-slate-700">Penyedia Video
+                      <select value={lessonForm.video_provider} onChange={(e) => setLessonForm({ ...lessonForm, video_provider: e.target.value })} className="mt-1.5 h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200">
+                        <option value="youtube">YouTube</option><option value="vimeo">Vimeo</option><option value="external">Video Eksternal / MP4</option>
+                      </select>
                     </label>
-
-                    <select
-                      value={lessonForm.video_provider}
-                      onChange={(e) =>
-                        setLessonForm({
-                          ...lessonForm,
-                          video_provider: e.target.value,
-                        })
-                      }
-                      className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
-                    >
-                      <option value="youtube">YouTube</option>
-                      <option value="vimeo">Vimeo</option>
-                      <option value="external">Link Eksternal</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
-                      Durasi (Menit)
+                    <label className="block text-sm font-medium text-slate-700">Durasi (Menit)
+                      <input type="number" min="0" step="1" value={lessonForm.duration_minutes} onChange={(e) => setLessonForm({ ...lessonForm, duration_minutes: e.target.value })} className="mt-1.5 h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200" />
                     </label>
-
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={lessonForm.duration_minutes}
-                      onChange={(e) =>
-                        setLessonForm({
-                          ...lessonForm,
-                          duration_minutes: e.target.value,
-                        })
-                      }
-                      className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
-                    />
                   </div>
-
-                </div>
-
-                <div className="mt-4">
-                  <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
-                    URL Video
+                  <label className="mt-4 block text-sm font-medium text-slate-700">URL Video *
+                    <input required type="url" value={lessonForm.video_url} onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })} placeholder="https://www.youtube.com/watch?v=..." className="mt-1.5 h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200" />
                   </label>
-
-                  <input
-                    type="url"
-                    value={lessonForm.video_url}
-                    onChange={(e) =>
-                      setLessonForm({
-                        ...lessonForm,
-                        video_url: e.target.value,
-                      })
-                    }
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
-                  />
+                  <label className="mt-4 block text-sm font-medium text-slate-700">Deskripsi video (opsional)
+                    <textarea rows={3} value={lessonForm.content} onChange={(e) => setLessonForm({ ...lessonForm, content: e.target.value })} placeholder="Tambahkan ringkasan singkat video..." className="mt-1.5 min-h-[90px] w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm leading-6 text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200" />
+                  </label>
                 </div>
+              )}
 
-              </div>
-
-              {/* Resource */}
-
-              <div>
-                <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
-                  Link / Path Materi Tambahan
+              {lessonForm.content_type === "text" && (
+                <label className="block text-sm font-medium leading-5 text-slate-700">Isi Materi Teks *
+                  <textarea required rows={7} value={lessonForm.content} onChange={(e) => setLessonForm({ ...lessonForm, content: e.target.value })} placeholder="Tuliskan materi, penjelasan, langkah-langkah, atau panduan pembelajaran..." className="mt-1.5 min-h-[190px] w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm leading-7 text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200" />
                 </label>
+              )}
 
-                <input
-                  value={lessonForm.resource_path}
-                  onChange={(e) =>
-                    setLessonForm({
-                      ...lessonForm,
-                      resource_path: e.target.value,
-                    })
-                  }
-                  placeholder="URL file atau path Supabase Storage"
-                  className="h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25"
-                />
+              {lessonForm.content_type === "info" && (
+                <div className="rounded-2xl border border-sky-100 bg-sky-50/60 p-4">
+                  <label className="block text-sm font-medium leading-5 text-slate-700">Isi Informasi / Pengumuman *
+                    <textarea required rows={5} value={lessonForm.content} onChange={(e) => setLessonForm({ ...lessonForm, content: e.target.value })} placeholder="Tuliskan informasi penting yang perlu diketahui peserta..." className="mt-1.5 min-h-[140px] w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-sm leading-7 text-[#1B1730] outline-none focus:ring-2 focus:ring-sky-200" />
+                  </label>
+                  <p className="mt-2 text-[11px] leading-5 text-sky-800">Informasi akan ditampilkan sebagai kartu pengumuman khusus di halaman belajar peserta.</p>
+                </div>
+              )}
 
-                <p className="mt-1 text-xs font-normal text-slate-400">
-                  Isi dengan URL file atau path penyimpanan yang sudah tersedia.
-                </p>
-              </div>
+              {lessonForm.content_type === "link" && (
+                <div className="rounded-2xl border border-slate-100 p-4">
+                  <label className="block text-sm font-medium leading-5 text-slate-700">URL Tujuan *
+                    <input required type="url" value={lessonForm.video_url} onChange={(e) => setLessonForm({ ...lessonForm, video_url: e.target.value })} placeholder="https://chat.whatsapp.com/..." className="mt-1.5 h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200" />
+                  </label>
+                  <label className="mt-4 block text-sm font-medium leading-5 text-slate-700">Keterangan (opsional)
+                    <textarea rows={3} value={lessonForm.content} onChange={(e) => setLessonForm({ ...lessonForm, content: e.target.value })} placeholder="Jelaskan tujuan tautan ini kepada peserta..." className="mt-1.5 min-h-[90px] w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm leading-6 text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200" />
+                  </label>
+                </div>
+              )}
+
+              {lessonForm.content_type === "pdf" && (
+                <div className="rounded-2xl border border-slate-100 p-4">
+                  <label className="block text-sm font-medium leading-5 text-slate-700">Upload Dokumen PDF *
+                    <input type="file" accept=".pdf,application/pdf" onChange={(event) => setSelectedLessonPdf(event.target.files?.[0] ?? null)} className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-violet-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-violet-800" />
+                  </label>
+                  <p className="mt-2 text-[11px] text-slate-500">Format PDF, maksimal 20 MB.</p>
+                  {(selectedLessonPdf?.name || existingLessonPdfName) && <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">{selectedLessonPdf?.name ?? `File tersimpan: ${existingLessonPdfName}`}</p>}
+                  <label className="mt-4 block text-sm font-medium leading-5 text-slate-700">Keterangan dokumen (opsional)
+                    <textarea rows={3} value={lessonForm.content} onChange={(e) => setLessonForm({ ...lessonForm, content: e.target.value })} placeholder="Jelaskan isi atau tujuan dokumen..." className="mt-1.5 min-h-[90px] w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm leading-6 text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200" />
+                  </label>
+                </div>
+              )}
 
               {/* Status */}
 

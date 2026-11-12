@@ -20,6 +20,7 @@ import {
   File,
   FileText,
   Eye,
+  ExternalLink,
   Image as ImageIcon,
   Layers3,
   Link2,
@@ -53,6 +54,8 @@ type Section = {
   position: number;
   created_at: string;
 };
+
+type LessonContentKind = "video" | "text" | "link" | "pdf" | "info";
 
 type Lesson = {
   id: string;
@@ -122,6 +125,28 @@ function createEntityId() {
     const value = character === "x" ? random : (random & 0x3) | 0x8;
     return value.toString(16);
   });
+}
+
+function getLessonContentKind(provider: string | null | undefined): LessonContentKind {
+  const value = (provider ?? "").toLowerCase();
+  return (["text", "link", "pdf", "info"] as const).includes(value as never)
+    ? (value as LessonContentKind)
+    : "video";
+}
+
+function lessonContentKindLabel(kind: LessonContentKind) {
+  const labels: Record<LessonContentKind, string> = {
+    video: "Video Pembelajaran",
+    text: "Materi Teks",
+    link: "Link Eksternal",
+    pdf: "Dokumen PDF",
+    info: "Informasi",
+  };
+  return labels[kind];
+}
+
+function sanitizeLessonFileName(fileName: string) {
+  return fileName.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "").toLowerCase() || "materi.pdf";
 }
 
 const contentTypes: { value: ContentType; label: string }[] = [
@@ -228,10 +253,13 @@ export default function MentorContentManager({
   const [activeSectionId, setActiveSectionId] = useState("");
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonDescription, setLessonDescription] = useState("");
+  const [lessonContentType, setLessonContentType] = useState<LessonContentKind>("video");
   const [videoProvider, setVideoProvider] = useState("youtube");
   const [videoUrl, setVideoUrl] = useState("");
   const [duration, setDuration] = useState("0");
   const [isPreview, setIsPreview] = useState(false);
+  const [selectedLessonPdf, setSelectedLessonPdf] = useState<File | null>(null);
+  const [existingLessonPdfName, setExistingLessonPdfName] = useState("");
 
   const [activeLessonId, setActiveLessonId] = useState("");
   const [contentEditor, setContentEditor] = useState(false);
@@ -421,10 +449,14 @@ export default function MentorContentManager({
     setPreviewPayload(payload);
     setPreviewLessonId(payload.lessons[0]?.id ?? "");
     setPreviewUrls({});
-    const paths = Array.from(new Set(payload.lessons.flatMap((lesson) => lesson.contents
-      .map((content) => content.resource_path)
-      .filter((path): path is string => Boolean(path) && !/^https?:\/\//i.test(path!)))));
-    if (paths.length === 0) return;
+    const paths = Array.from(new Set(payload.lessons.flatMap((lesson) => [
+      lesson.resource_path,
+      ...lesson.contents.map((content) => content.resource_path),
+    ].filter((path): path is string => Boolean(path) && !/^https?:\/\//i.test(path!)))));
+    if (paths.length === 0) {
+      setPreviewLoading(false);
+      return;
+    }
     setPreviewLoading(true);
     try {
       const signed = await Promise.all(paths.map(async (path) => {
@@ -530,44 +562,101 @@ export default function MentorContentManager({
   }
 
   function openLesson(sectionId: string, lesson?: Lesson) {
+    const kind = getLessonContentKind(lesson?.video_provider);
     setActiveSectionId(sectionId);
     setEditingLesson(lesson?.id ?? null);
     setLessonTitle(lesson?.title ?? "");
     setLessonDescription(lesson?.content ?? "");
-    setVideoProvider(lesson?.video_provider ?? "youtube");
+    setLessonContentType(kind);
+    setVideoProvider(kind === "video" ? (lesson?.video_provider ?? "youtube") : "youtube");
     setVideoUrl(lesson?.video_url ?? "");
     setDuration(String(lesson?.duration_minutes ?? 0));
     setIsPreview(Boolean(lesson?.is_preview));
+    setSelectedLessonPdf(null);
+    setExistingLessonPdfName(kind === "pdf" ? (lesson?.resource_path?.split("/").filter(Boolean).pop() ?? "File PDF tersimpan") : "");
+    setError("");
     setLessonEditor(true);
   }
 
   async function saveLesson(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!lessonTitle.trim() || !activeSectionId) return;
+    const title = lessonTitle.trim();
+    const body = lessonDescription.trim();
+    const url = videoUrl.trim();
+    const kind = lessonContentType;
+    if (!title || !activeSectionId) return;
     const section = sections.find((item) => item.id === activeSectionId);
     const draft = draftMap.get(activeSectionId);
     if (!section || draft?.status === "pending" || draft?.is_deleted) return;
+    if (["text", "info"].includes(kind) && !body) {
+      setError(kind === "info" ? "Isi informasi wajib diisi." : "Isi materi teks wajib diisi.");
+      return;
+    }
+    if (["video", "link"].includes(kind) && !url) {
+      setError(kind === "link" ? "URL tujuan wajib diisi." : "URL video wajib diisi.");
+      return;
+    }
     const minutes = Number(duration);
-    if (!Number.isSafeInteger(minutes) || minutes < 0) {
+    if (kind === "video" && (!Number.isSafeInteger(minutes) || minutes < 0)) {
       setError("Durasi materi harus berupa angka bulat 0 atau lebih.");
       return;
+    }
+    const old = lessons.find((item) => item.id === editingLesson);
+    const oldKind = getLessonContentKind(old?.video_provider);
+    if (kind === "pdf" && !selectedLessonPdf && !(oldKind === "pdf" && old?.resource_path)) {
+      setError("Pilih dokumen PDF terlebih dahulu.");
+      return;
+    }
+    if (selectedLessonPdf) {
+      const extension = selectedLessonPdf.name.split(".").pop()?.toLowerCase();
+      if (extension !== "pdf" || (selectedLessonPdf.type && !["application/pdf", "application/octet-stream"].includes(selectedLessonPdf.type))) {
+        setError("File harus berformat PDF.");
+        return;
+      }
+      if (selectedLessonPdf.size > 20 * 1024 * 1024) {
+        setError("Ukuran PDF maksimal 20 MB.");
+        return;
+      }
     }
 
     setSaving(true);
     setError("");
     setNotice("");
+    let newlyUploadedPath: string | null = null;
     try {
-      const old = lessons.find((item) => item.id === editingLesson);
+      const lessonId = editingLesson ?? createEntityId();
       const sectionLessons = lessons.filter((item) => item.section_id === activeSectionId);
+      let resourcePath: string | null = null;
+      if (kind === "pdf") {
+        resourcePath = oldKind === "pdf" ? (old?.resource_path ?? null) : null;
+        if (selectedLessonPdf) {
+          const safeName = sanitizeLessonFileName(selectedLessonPdf.name);
+          const path = `courses/${courseId}/lessons/${lessonId}/${createEntityId()}-${safeName}`;
+          const { error: uploadError } = await supabase.storage
+            .from("learning-resources")
+            .upload(path, selectedLessonPdf, {
+              cacheControl: "3600",
+              contentType: "application/pdf",
+              upsert: false,
+            });
+          if (uploadError) throw new Error(`Gagal mengunggah PDF: ${uploadError.message}`);
+          newlyUploadedPath = path;
+          resourcePath = path;
+        }
+      } else if (kind === "video" && oldKind === "video") {
+        // File media lama pada Materi Inti tetap dipertahankan agar materi terdahulu tidak rusak.
+        resourcePath = old?.resource_path ?? null;
+      }
+
       const lesson: Lesson = {
-        id: editingLesson ?? createEntityId(),
+        id: lessonId,
         section_id: activeSectionId,
-        title: lessonTitle.trim(),
-        content: lessonDescription.trim() || null,
-        video_provider: videoProvider,
-        video_url: videoUrl.trim() || null,
-        resource_path: old?.resource_path ?? null,
-        duration_minutes: minutes,
+        title,
+        content: body || null,
+        video_provider: kind === "video" ? videoProvider : kind,
+        video_url: ["video", "link"].includes(kind) ? url || null : null,
+        resource_path: resourcePath,
+        duration_minutes: kind === "video" ? minutes : 0,
         is_preview: isPreview,
         status: old?.status ?? "draft",
         position: old?.position ?? Math.max(-1, ...sectionLessons.map((item) => item.position)) + 1,
@@ -580,38 +669,14 @@ export default function MentorContentManager({
       await persistDraft(section, nextLessons, contents);
       setLessons(sortByPosition(nextLessons));
       setLessonEditor(false);
+      setSelectedLessonPdf(null);
+      setExistingLessonPdfName("");
       setNotice("Materi Inti tersimpan di draft Bab. Kamu bisa lanjut menambah Materi Inti dan Mini Materi lainnya.");
       await loadData();
     } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function deleteLesson(lesson: Lesson) {
-    const section = sections.find((item) => item.id === lesson.section_id);
-    const draft = draftMap.get(lesson.section_id);
-    if (!section || draft?.status === "pending" || draft?.is_deleted) return;
-    const confirmed = await confirmDialog({
-      title: "Hapus Materi Inti?",
-      message: `Hapus Materi Inti \"${lesson.title}\" dari draft Bab? Perubahan baru masuk kurikulum resmi setelah Bab disetujui Admin.`,
-      confirmLabel: "Ya, hapus materi",
-      variant: "danger",
-    });
-    if (!confirmed) return;
-    setSaving(true);
-    setError("");
-    try {
-      const nextLessons = lessons.filter((item) => item.id !== lesson.id);
-      const nextContents = contents.filter((item) => item.lesson_id !== lesson.id);
-      await persistDraft(section, nextLessons, nextContents);
-      setLessons(nextLessons);
-      setContents(nextContents);
-      if (activeLessonId === lesson.id) setActiveLessonId("");
-      setNotice("Materi Inti dihapus dari draft Bab.");
-      await loadData();
-    } catch (err) {
+      if (newlyUploadedPath) {
+        await supabase.storage.from("learning-resources").remove([newlyUploadedPath]);
+      }
       setError(errorMessage(err));
     } finally {
       setSaving(false);
@@ -994,15 +1059,16 @@ export default function MentorContentManager({
                       <div key={lesson.id} className="p-4 sm:p-5">
                         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                           <div className="flex min-w-0 items-start gap-3">
-                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600"><BookOpen size={16} /></div>
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">{getLessonContentKind(lesson.video_provider) === "video" ? <Video size={16} /> : getLessonContentKind(lesson.video_provider) === "link" ? <Link2 size={16} /> : getLessonContentKind(lesson.video_provider) === "pdf" ? <FileText size={16} /> : getLessonContentKind(lesson.video_provider) === "info" ? <AlertCircle size={16} /> : <BookOpen size={16} />}</div>
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-[9px] font-bold text-slate-400">Materi {lessonIndex + 1}</span>
                                 <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold ${lesson.status === "published" ? "bg-emerald-50 text-emerald-700" : "bg-violet-50 text-violet-700"}`}>{lesson.status === "published" ? "Terbit saat ini" : "Draft Mentor"}</span>
+                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[8px] font-bold text-slate-600">{lessonContentKindLabel(getLessonContentKind(lesson.video_provider))}</span>
                               </div>
                               <h4 className="mt-1 text-xs font-extrabold text-slate-900">{lesson.title}</h4>
                               {lesson.content && <p className="mt-1 line-clamp-2 text-[10px] leading-5 text-slate-500">{lesson.content}</p>}
-                              <p className="mt-1 text-[9px] text-slate-400">{lesson.duration_minutes ? `${lesson.duration_minutes} menit` : "Durasi fleksibel"} · {lessonContents.length} Mini Materi</p>
+                              <p className="mt-1 text-[9px] text-slate-400">{getLessonContentKind(lesson.video_provider) === "video" ? (lesson.duration_minutes ? `${lesson.duration_minutes} menit` : "Durasi fleksibel") : lessonContentKindLabel(getLessonContentKind(lesson.video_provider))} · {lessonContents.length} Mini Materi</p>
                             </div>
                           </div>
                           <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
@@ -1070,7 +1136,7 @@ export default function MentorContentManager({
                   <div className="mt-3 space-y-2">
                     {previewPayload.lessons.map((lesson, index) => (
                       <button key={lesson.id} type="button" onClick={() => setPreviewLessonId(lesson.id)} className={`w-full rounded-xl border p-3 text-left transition ${activeLesson?.id === lesson.id ? "border-[#260047] bg-[#F7F3FA]" : "border-slate-100 bg-white hover:bg-slate-50"}`}>
-                        <span className="text-[9px] font-bold text-slate-400">Materi {index + 1}</span><span className="mt-1 block text-[11px] font-bold text-slate-800">{lesson.title}</span><span className="mt-1 block text-[9px] text-slate-400">{lesson.contents.length} Mini Materi</span>
+                        <span className="text-[9px] font-bold text-slate-400">Materi {index + 1} · {lessonContentKindLabel(getLessonContentKind(lesson.video_provider))}</span><span className="mt-1 block text-[11px] font-bold text-slate-800">{lesson.title}</span><span className="mt-1 block text-[9px] text-slate-400">{lesson.contents.length} Mini Materi</span>
                       </button>
                     ))}
                     {previewPayload.lessons.length === 0 && <p className="rounded-xl bg-slate-50 p-3 text-[10px] text-slate-400">Belum ada Materi Inti pada Bab ini.</p>}
@@ -1080,12 +1146,33 @@ export default function MentorContentManager({
                   {previewLoading && <div className="mb-3 rounded-xl bg-amber-50 p-3 text-[10px] text-amber-800">Menyiapkan tautan file untuk pratinjau...</div>}
                   {!activeLesson ? <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center text-xs text-slate-400">Pilih materi untuk melihat tampilannya.</div> : (
                     <article className="mx-auto max-w-3xl space-y-4">
-                      <div className="rounded-[20px] bg-white p-4 shadow-sm sm:p-6"><p className="text-[9px] font-extrabold uppercase tracking-[.16em] text-[#09483F]">{previewPayload.section.title}</p><h4 className="mt-2 text-xl font-extrabold leading-tight text-slate-900">{activeLesson.title}</h4>{activeLesson.content && <p className="mt-3 whitespace-pre-wrap text-xs leading-7 text-slate-600">{activeLesson.content}</p>}{activeLesson.duration_minutes ? <p className="mt-3 text-[9px] text-slate-400">Durasi {activeLesson.duration_minutes} menit</p> : null}</div>
-                      {activeLesson.video_url && (
-                        <div className="overflow-hidden rounded-[20px] bg-black shadow-sm">
-                          {getPreviewEmbedUrl(activeLesson.video_url, activeLesson.video_provider ?? "youtube") ? <iframe src={getPreviewEmbedUrl(activeLesson.video_url, activeLesson.video_provider ?? "youtube") ?? undefined} title={activeLesson.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="aspect-video w-full" /> : <a href={activeLesson.video_url} target="_blank" rel="noreferrer" className="block p-5 text-center text-xs font-bold text-white">Buka video / media pembelajaran</a>}
-                        </div>
-                      )}
+                      {(() => {
+                        const kind = getLessonContentKind(activeLesson.video_provider);
+                        const lessonFileUrl = activeLesson.resource_path
+                          ? (previewUrls[activeLesson.resource_path] ?? (/^https?:\/\//i.test(activeLesson.resource_path) ? activeLesson.resource_path : null))
+                          : null;
+                        const videoUrl = activeLesson.video_url || activeLesson.resource_path;
+                        const videoEmbed = kind === "video" ? getPreviewEmbedUrl(videoUrl, activeLesson.video_provider ?? "youtube") : null;
+                        return (
+                          <>
+                            <div className="rounded-[20px] bg-white p-4 shadow-sm sm:p-6">
+                              <p className="text-[9px] font-extrabold uppercase tracking-[.16em] text-[#09483F]">{previewPayload.section.title} · {lessonContentKindLabel(kind)}</p>
+                              <h4 className="mt-2 text-xl font-extrabold leading-tight text-slate-900">{activeLesson.title}</h4>
+                              {activeLesson.content && kind !== "text" && kind !== "info" && <p className="mt-3 whitespace-pre-wrap text-xs leading-7 text-slate-600">{activeLesson.content}</p>}
+                              {kind === "video" && activeLesson.duration_minutes ? <p className="mt-3 text-[9px] text-slate-400">Durasi {activeLesson.duration_minutes} menit</p> : null}
+                            </div>
+                            {kind === "video" && videoUrl && (
+                              <div className="overflow-hidden rounded-[20px] bg-black shadow-sm">
+                                {videoEmbed ? <iframe src={videoEmbed} title={activeLesson.title} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen className="aspect-video w-full" /> : <a href={videoUrl} target="_blank" rel="noreferrer" className="block p-5 text-center text-xs font-bold text-white">Buka video / media pembelajaran</a>}
+                              </div>
+                            )}
+                            {kind === "text" && <div className="whitespace-pre-wrap rounded-[20px] border border-slate-100 bg-white p-5 text-sm leading-8 text-slate-700 shadow-sm">{activeLesson.content}</div>}
+                            {kind === "info" && <div className="rounded-[20px] border border-sky-100 bg-sky-50 p-5 text-sm leading-7 text-sky-950"><p className="mb-2 text-xs font-extrabold uppercase tracking-wider text-sky-800">Informasi Pembelajaran</p><div className="whitespace-pre-wrap">{activeLesson.content}</div></div>}
+                            {kind === "link" && activeLesson.video_url && <div className="rounded-[20px] border border-violet-100 bg-white p-6 text-center shadow-sm"><Link2 className="mx-auto text-violet-700" size={26} /><p className="mt-3 text-sm font-bold text-slate-900">Tautan Eksternal</p>{activeLesson.content && <p className="mt-2 whitespace-pre-wrap text-xs leading-6 text-slate-500">{activeLesson.content}</p>}<a href={activeLesson.video_url} target="_blank" rel="noreferrer" className="mt-4 inline-flex rounded-xl bg-[#260047] px-5 py-3 text-xs font-bold text-white">Buka Tautan <ExternalLink size={13} className="ml-2" /></a></div>}
+                            {kind === "pdf" && <div className="overflow-hidden rounded-[20px] border border-slate-100 bg-white p-4 shadow-sm">{lessonFileUrl ? <><iframe src={lessonFileUrl} title={activeLesson.title} className="h-[520px] w-full rounded-xl border border-slate-100" /><a href={lessonFileUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-xl bg-[#260047] px-4 py-2.5 text-xs font-bold text-white">Buka / Unduh PDF <ExternalLink size={13} className="ml-2" /></a></> : <p className="text-xs text-amber-700">File PDF belum dapat dimuat. Periksa file Storage.</p>}</div>}
+                          </>
+                        );
+                      })()}
                       <div className="space-y-3">
                         {activeLesson.contents.map((content, index) => {
                           const fileUrl = content.resource_path ? (previewUrls[content.resource_path] ?? (/^https?:\/\//i.test(content.resource_path) ? content.resource_path : null)) : content.media_url;
@@ -1133,27 +1220,326 @@ export default function MentorContentManager({
       )}
 
       {lessonEditor && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-sm">
-          <form onSubmit={saveLesson} className="my-5 w-full max-w-[560px] rounded-2xl bg-white p-5 shadow-2xl sm:p-6">
-            <div className="flex items-start justify-between gap-3">
-              <div><p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-700">Chapter draft</p><h3 className="mt-1 text-lg font-extrabold text-slate-900">{editingLesson ? "Edit Materi Inti" : "Tambah Materi Inti"}</h3></div>
-              <button type="button" onClick={() => setLessonEditor(false)} className="flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button>
-            </div>
-            <div className="mt-5 space-y-4">
-              <label className={labelClass}>Judul Materi *<input required maxLength={180} value={lessonTitle} onChange={(event) => setLessonTitle(event.target.value)} className={inputClass} /></label>
-              <label className={labelClass}>Ringkasan / Deskripsi<textarea rows={3} value={lessonDescription} onChange={(event) => setLessonDescription(event.target.value)} className="mt-1.5 min-h-[112px] w-full rounded-xl border border-slate-200 px-3.5 py-3 text-sm font-normal leading-6 outline-none placeholder:text-sm placeholder:font-normal placeholder:text-slate-400 focus:border-violet-500" /></label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className={labelClass}>Penyedia video<select value={videoProvider} onChange={(event) => setVideoProvider(event.target.value)} className={inputClass}><option value="youtube">YouTube</option><option value="vimeo">Vimeo</option><option value="external">Eksternal</option></select></label>
-                <label className={labelClass}>Durasi (menit)<input type="number" min="0" step="1" value={duration} onChange={(event) => setDuration(event.target.value)} className={inputClass} /></label>
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-3 backdrop-blur-md sm:p-6"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 10000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflowY: "auto",
+            backgroundColor: "rgba(2, 6, 23, 0.60)",
+            backdropFilter: "blur(10px)",
+            padding: "12px",
+          }}
+        >
+          <div
+            className="my-auto flex w-full max-w-[560px] flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+            style={{
+              width: "min(560px, calc(100vw - 24px))",
+              maxWidth: "560px",
+              maxHeight: "calc(100dvh - 24px)",
+            }}
+          >
+            <div className="flex shrink-0 items-center justify-between bg-[#6D28D9] px-5 py-4 text-white sm:px-6">
+              <div>
+                <h3 className="text-lg font-bold">
+                  {editingLesson ? "Edit Materi" : "Tambah Materi Baru"}
+                </h3>
+                <p className="mt-1 text-xs text-violet-50">
+                  Lengkapi informasi materi pembelajaran.
+                </p>
               </div>
-              <label className={labelClass}>URL video / media<input type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} className={inputClass} placeholder="https://" /></label>
-              <label className="flex items-center gap-2 text-sm font-medium text-slate-600"><input type="checkbox" checked={isPreview} onChange={(event) => setIsPreview(event.target.checked)} className="rounded border-slate-300 text-violet-700 focus:ring-violet-600" /> Jadikan materi pratinjau</label>
-              <p className="rounded-xl bg-violet-50 p-3 text-xs font-normal leading-5 text-violet-800">Materi Inti menjadi bagian dari draft Bab. Simpan beberapa materi sekaligus, lalu ajukan Bab ketika seluruh isinya siap.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!saving) {
+                    setLessonEditor(false);
+                    setSelectedLessonPdf(null);
+                    setError("");
+                  }
+                }}
+                disabled={saving}
+                aria-label="Tutup formulir materi"
+                className="rounded-xl bg-white/15 p-2 text-white hover:bg-white/25 disabled:opacity-50"
+              >
+                <X size={19} />
+              </button>
             </div>
-            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setLessonEditor(false)} className="h-11 rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600">Batal</button><button disabled={saving} className="h-11 rounded-xl bg-violet-700 px-5 text-sm font-semibold text-white disabled:opacity-50">{saving ? "Menyimpan..." : "Simpan Materi"}</button></div>
-          </form>
+
+            <form
+              onSubmit={saveLesson}
+              className="min-h-0 space-y-5 overflow-y-auto p-4 sm:p-6"
+              style={{ maxHeight: "calc(100dvh - 112px)" }}
+            >
+              {error && (
+                <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">
+                  {error}
+                </div>
+              )}
+
+              <div>
+                <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
+                  Judul Materi *
+                </label>
+                <input
+                  required
+                  maxLength={180}
+                  value={lessonTitle}
+                  onChange={(event) => setLessonTitle(event.target.value)}
+                  placeholder="Contoh: Pengenalan Desain Grafis"
+                  className="h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-normal text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:border-violet-500 focus:bg-white focus:ring-2 focus:ring-violet-500/10"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium leading-5 text-slate-700">
+                  Jenis Materi *
+                </label>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {([
+                    { value: "video", label: "Video Pembelajaran", description: "YouTube, Vimeo, atau video langsung", icon: Video },
+                    { value: "text", label: "Materi Teks", description: "Artikel atau penjelasan pembelajaran", icon: BookOpen },
+                    { value: "link", label: "Link Eksternal", description: "WhatsApp, website, Google Drive", icon: Link2 },
+                    { value: "pdf", label: "Upload PDF", description: "Modul, panduan, atau bahan bacaan", icon: FileText },
+                    { value: "info", label: "Informasi", description: "Pengumuman atau catatan kelas", icon: AlertCircle },
+                  ] as const).map((item) => {
+                    const Icon = item.icon;
+                    const active = lessonContentType === item.value;
+                    return (
+                      <button
+                        key={item.value}
+                        type="button"
+                        onClick={() => {
+                          setLessonContentType(item.value);
+                          setError("");
+                        }}
+                        className={`flex min-h-[76px] items-start gap-3 rounded-xl border p-3 text-left transition ${
+                          active
+                            ? "border-violet-400 bg-violet-50 ring-2 ring-violet-100"
+                            : "border-slate-200 bg-white hover:border-violet-200 hover:bg-violet-50/40"
+                        }`}
+                      >
+                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${active ? "bg-violet-700 text-white" : "bg-slate-100 text-slate-600"}`}>
+                          <Icon size={17} />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-xs font-bold text-slate-800">{item.label}</span>
+                          <span className="mt-1 block text-[10px] leading-4 text-slate-500">{item.description}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {lessonContentType === "video" && (
+                <div className="rounded-2xl border border-slate-100 p-4">
+                  <div className="mb-4 flex items-center gap-2">
+                    <Video size={18} className="text-violet-700" />
+                    <h4 className="text-sm font-bold text-slate-800">Pengaturan Video</h4>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block text-sm font-medium text-slate-700">
+                      Penyedia Video
+                      <select
+                        value={videoProvider}
+                        onChange={(event) => setVideoProvider(event.target.value)}
+                        className="mt-1.5 h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200"
+                      >
+                        <option value="youtube">YouTube</option>
+                        <option value="vimeo">Vimeo</option>
+                        <option value="external">Video Eksternal / MP4</option>
+                      </select>
+                    </label>
+                    <label className="block text-sm font-medium text-slate-700">
+                      Durasi (Menit)
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={duration}
+                        onChange={(event) => setDuration(event.target.value)}
+                        className="mt-1.5 h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200"
+                      />
+                    </label>
+                  </div>
+                  <label className="mt-4 block text-sm font-medium text-slate-700">
+                    URL Video *
+                    <input
+                      required
+                      type="url"
+                      value={videoUrl}
+                      onChange={(event) => setVideoUrl(event.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      className="mt-1.5 h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200"
+                    />
+                  </label>
+                  <label className="mt-4 block text-sm font-medium text-slate-700">
+                    Deskripsi video (opsional)
+                    <textarea
+                      rows={3}
+                      value={lessonDescription}
+                      onChange={(event) => setLessonDescription(event.target.value)}
+                      placeholder="Tambahkan ringkasan singkat video..."
+                      className="mt-1.5 min-h-[90px] w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm leading-6 text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200"
+                    />
+                  </label>
+                </div>
+              )}
+
+              {lessonContentType === "text" && (
+                <label className="block text-sm font-medium leading-5 text-slate-700">
+                  Isi Materi Teks *
+                  <textarea
+                    required
+                    rows={7}
+                    value={lessonDescription}
+                    onChange={(event) => setLessonDescription(event.target.value)}
+                    placeholder="Tuliskan materi, penjelasan, langkah-langkah, atau panduan pembelajaran..."
+                    className="mt-1.5 min-h-[190px] w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm leading-7 text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200"
+                  />
+                </label>
+              )}
+
+              {lessonContentType === "info" && (
+                <div className="rounded-2xl border border-sky-100 bg-sky-50/60 p-4">
+                  <label className="block text-sm font-medium leading-5 text-slate-700">
+                    Isi Informasi / Pengumuman *
+                    <textarea
+                      required
+                      rows={5}
+                      value={lessonDescription}
+                      onChange={(event) => setLessonDescription(event.target.value)}
+                      placeholder="Tuliskan informasi penting yang perlu diketahui peserta..."
+                      className="mt-1.5 min-h-[140px] w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-sm leading-7 text-[#1B1730] outline-none focus:ring-2 focus:ring-sky-200"
+                    />
+                  </label>
+                  <p className="mt-2 text-[11px] leading-5 text-sky-800">
+                    Informasi akan ditampilkan sebagai kartu pengumuman khusus di halaman belajar peserta.
+                  </p>
+                </div>
+              )}
+
+              {lessonContentType === "link" && (
+                <div className="rounded-2xl border border-slate-100 p-4">
+                  <label className="block text-sm font-medium leading-5 text-slate-700">
+                    URL Tujuan *
+                    <input
+                      required
+                      type="url"
+                      value={videoUrl}
+                      onChange={(event) => setVideoUrl(event.target.value)}
+                      placeholder="https://chat.whatsapp.com/..."
+                      className="mt-1.5 h-12 w-full rounded-xl border-0 bg-[#F7F6FC] px-4 text-sm text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200"
+                    />
+                  </label>
+                  <label className="mt-4 block text-sm font-medium leading-5 text-slate-700">
+                    Keterangan (opsional)
+                    <textarea
+                      rows={3}
+                      value={lessonDescription}
+                      onChange={(event) => setLessonDescription(event.target.value)}
+                      placeholder="Jelaskan tujuan tautan ini kepada peserta..."
+                      className="mt-1.5 min-h-[90px] w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm leading-6 text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200"
+                    />
+                  </label>
+                </div>
+              )}
+
+              {lessonContentType === "pdf" && (
+                <div className="rounded-2xl border border-slate-100 p-4">
+                  <label className="block text-sm font-medium leading-5 text-slate-700">
+                    Upload Dokumen PDF *
+                    <input
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      onChange={(event) => setSelectedLessonPdf(event.target.files?.[0] ?? null)}
+                      className="mt-1.5 block w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-violet-50 file:px-3 file:py-2 file:text-xs file:font-semibold file:text-violet-800"
+                    />
+                  </label>
+                  <p className="mt-2 text-[11px] text-slate-500">Format PDF, maksimal 20 MB.</p>
+                  {(selectedLessonPdf?.name || existingLessonPdfName) && (
+                    <p className="mt-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+                      {selectedLessonPdf?.name ?? `File tersimpan: ${existingLessonPdfName}`}
+                    </p>
+                  )}
+                  <label className="mt-4 block text-sm font-medium leading-5 text-slate-700">
+                    Keterangan dokumen (opsional)
+                    <textarea
+                      rows={3}
+                      value={lessonDescription}
+                      onChange={(event) => setLessonDescription(event.target.value)}
+                      placeholder="Jelaskan isi atau tujuan dokumen..."
+                      className="mt-1.5 min-h-[90px] w-full rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm leading-6 text-[#1B1730] outline-none focus:ring-2 focus:ring-violet-200"
+                    />
+                  </label>
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3.5">
+                  <p className="text-xs font-semibold text-slate-700">Status Publikasi</p>
+                  <p className="mt-1 text-sm font-bold text-violet-800">Draft Mentor</p>
+                  <p className="mt-1 text-[10px] leading-4 text-slate-500">Materi baru akan ditinjau Admin sebelum tampil untuk peserta.</p>
+                </div>
+                <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3.5">
+                  <input
+                    type="checkbox"
+                    checked={isPreview}
+                    onChange={(event) => setIsPreview(event.target.checked)}
+                    className="h-4 w-4 accent-violet-700"
+                  />
+                  <span className="flex items-center gap-2 text-sm font-medium text-violet-800">
+                    <Eye size={16} />
+                    Materi Preview
+                  </span>
+                </label>
+              </div>
+
+              <div className="rounded-xl border border-violet-100 bg-violet-50 p-4">
+                <div className="flex gap-3">
+                  <AlertCircle size={20} className="shrink-0 text-violet-700" />
+                  <div>
+                    <p className="text-xs font-bold text-violet-900">Pengaturan Draft Mentor</p>
+                    <p className="mt-1 text-xs font-normal leading-5 text-violet-700">
+                      Perubahan disimpan sebagai draft Bab. Materi belum terlihat oleh peserta sampai Bab disetujui dan dipublikasikan oleh Admin.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!saving) {
+                      setLessonEditor(false);
+                      setSelectedLessonPdf(null);
+                      setError("");
+                    }
+                  }}
+                  disabled={saving}
+                  className="h-11 w-full rounded-xl border border-slate-200 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-5 text-sm font-semibold text-white shadow-lg shadow-violet-700/20 disabled:opacity-60 sm:w-auto"
+                >
+                  {saving ? <RefreshCw size={17} className="animate-spin" /> : <CheckCircle2 size={17} />}
+                  {saving ? "Menyimpan..." : editingLesson ? "Simpan Perubahan" : "Tambah Materi"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
+
 
       {contentEditor && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-sm">

@@ -56,6 +56,23 @@ function numberValue(source: JsonRecord | null | undefined, key: string) {
   const value = source?.[key];
   return typeof value === "number" ? value : Number(value ?? 0);
 }
+function lessonKind(source: JsonRecord | null | undefined) {
+  const provider = textValue(source, "video_provider").toLowerCase();
+  if (["text", "link", "pdf", "info"].includes(provider)) return provider;
+  return "video";
+}
+
+function lessonKindLabel(source: JsonRecord | null | undefined) {
+  const kind = lessonKind(source);
+  const labels: Record<string, string> = {
+    video: "Video Pembelajaran",
+    text: "Materi Teks",
+    link: "Link Eksternal",
+    pdf: "Dokumen PDF",
+    info: "Informasi",
+  };
+  return labels[kind] ?? "Materi Pembelajaran";
+}
 
 function dateLabel(value: string) {
   const date = new Date(value);
@@ -162,9 +179,13 @@ function ChapterPreview({
             {activeLesson && <>
               <p className="text-[9px] font-extrabold uppercase tracking-[.14em] text-emerald-700">{title} · Materi {safeLessonIndex + 1}</p>
               <h6 className="mt-2 text-base font-extrabold text-slate-900">{textValue(activeLesson, "title") || "Materi Inti"}</h6>
-              <p className="mt-2 whitespace-pre-wrap text-[10px] leading-6 text-slate-600">{textValue(activeLesson, "content") || "Tidak ada ringkasan materi."}</p>
-              {textValue(activeLesson, "video_url") && <a href={textValue(activeLesson, "video_url")} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-bold text-violet-700 hover:underline"><PlayCircle size={12} />Buka video Materi Inti</a>}
-              {textValue(activeLesson, "resource_path") && <div className="mt-2"><ResourceLink path={textValue(activeLesson, "resource_path")} urls={urls} label="Buka file Materi Inti" /></div>}
+              <p className="mt-1 text-[9px] font-bold text-violet-700">{lessonKindLabel(activeLesson)}</p>
+              {textValue(activeLesson, "content") && lessonKind(activeLesson) !== "info" && <p className="mt-2 whitespace-pre-wrap text-[10px] leading-6 text-slate-600">{textValue(activeLesson, "content")}</p>}
+              {lessonKind(activeLesson) === "info" && <div className="mt-3 whitespace-pre-wrap rounded-xl border border-sky-100 bg-sky-50 p-3 text-[10px] leading-6 text-sky-950">{textValue(activeLesson, "content")}</div>}
+              {lessonKind(activeLesson) === "video" && textValue(activeLesson, "video_url") && <a href={textValue(activeLesson, "video_url")} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-bold text-violet-700 hover:underline"><PlayCircle size={12} />Buka video Materi Inti</a>}
+              {lessonKind(activeLesson) === "link" && textValue(activeLesson, "video_url") && <a href={textValue(activeLesson, "video_url")} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-bold text-violet-700 hover:underline"><Link2 size={12} />Buka tautan eksternal</a>}
+              {lessonKind(activeLesson) === "pdf" && textValue(activeLesson, "resource_path") && <div className="mt-2"><ResourceLink path={textValue(activeLesson, "resource_path")} urls={urls} label="Buka dokumen PDF" /></div>}
+              {lessonKind(activeLesson) === "video" && textValue(activeLesson, "resource_path") && <div className="mt-2"><ResourceLink path={textValue(activeLesson, "resource_path")} urls={urls} label="Buka file video Materi Inti" /></div>}
               <div className="mt-4 space-y-2">
                 {(Array.isArray(activeLesson.contents) ? activeLesson.contents : []).map((content, contentIndex) => <MiniContentPreview key={textValue(content, "id") || contentIndex} item={content} urls={urls} />)}
                 {(!Array.isArray(activeLesson.contents) || activeLesson.contents.length === 0) && <p className="rounded-xl border border-dashed border-slate-200 p-5 text-center text-[10px] text-slate-400">Belum ada Mini Materi.</p>}
@@ -191,10 +212,13 @@ function ChapterPreview({
                   <div className="min-w-0 flex-1">
                     <p className="text-[9px] font-bold text-slate-400">Materi Inti {index + 1}</p>
                     <h6 className="mt-0.5 text-[11px] font-extrabold text-slate-900">{lessonTitle}</h6>
-                    <p className="mt-1 whitespace-pre-wrap text-[10px] leading-5 text-slate-600">{textValue(lesson, "content") || "Tidak ada ringkasan materi."}</p>
-                    <p className="mt-1 text-[9px] text-slate-400">{numberValue(lesson, "duration_minutes") > 0 ? `${numberValue(lesson, "duration_minutes")} menit` : "Durasi fleksibel"} · {contentList.length} Mini Materi</p>
-                    {lessonVideo && <a href={lessonVideo} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 break-all text-[10px] font-bold text-violet-700 hover:underline"><PlayCircle size={12} />Buka video Materi Inti</a>}
-                    {lessonResource && <div className="mt-2"><ResourceLink path={lessonResource} urls={urls} label="Buka file Materi Inti" /></div>}
+                    <p className="mt-1 text-[9px] font-bold text-violet-700">{lessonKindLabel(lesson)}</p>
+                    {textValue(lesson, "content") && <p className="mt-1 whitespace-pre-wrap text-[10px] leading-5 text-slate-600">{textValue(lesson, "content")}</p>}
+                    <p className="mt-1 text-[9px] text-slate-400">{lessonKind(lesson) === "video" && numberValue(lesson, "duration_minutes") > 0 ? `${numberValue(lesson, "duration_minutes")} menit` : lessonKindLabel(lesson)} · {contentList.length} Mini Materi</p>
+                    {lessonKind(lesson) === "video" && lessonVideo && <a href={lessonVideo} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 break-all text-[10px] font-bold text-violet-700 hover:underline"><PlayCircle size={12} />Buka video Materi Inti</a>}
+                    {lessonKind(lesson) === "link" && lessonVideo && <a href={lessonVideo} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1.5 break-all text-[10px] font-bold text-violet-700 hover:underline"><Link2 size={12} />Buka tautan eksternal</a>}
+                    {lessonResource && lessonKind(lesson) === "pdf" && <div className="mt-2"><ResourceLink path={lessonResource} urls={urls} label="Buka dokumen PDF" /></div>}
+                    {lessonResource && lessonKind(lesson) === "video" && <div className="mt-2"><ResourceLink path={lessonResource} urls={urls} label="Buka file video Materi Inti" /></div>}
                   </div>
                 </div>
                 {contentList.length > 0 && <div className="mt-3 space-y-2 border-l-2 border-violet-100 pl-3">{contentList.map((content, contentIndex) => <MiniContentPreview key={textValue(content, "id") || contentIndex} item={content} urls={urls} />)}</div>}
