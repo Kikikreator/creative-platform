@@ -17,6 +17,27 @@ function standardFont(family: string, bold: boolean) {
   return bold ? StandardFonts.HelveticaBold : StandardFonts.Helvetica;
 }
 
+function certificateDownloadFilename(fullName: string) {
+  const normalized = String(fullName || "Peserta")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\u0000-\u001f\u007f<>:"/\\|?*]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/[. ]+$/g, "") || "Peserta";
+
+  const fallbackName = normalized.replace(/[^A-Za-z0-9_-]+/g, "_").replace(/^_+|_+$/g, "") || "Peserta";
+  const filename = `Sertifikat_kelulusan-${normalized}.pdf`;
+  const encodedFilename = encodeURIComponent(filename).replace(/['()*]/g, (character) =>
+    `%${character.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+
+  return {
+    fallback: `Sertifikat_kelulusan-${fallbackName}.pdf`,
+    encoded: encodedFilename,
+  };
+}
+
 async function buildLegacyPdf(certificate: any, issuer: any) {
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Sertifikat ${certificate.full_name_snapshot} - ${certificate.course_title_snapshot}`);
@@ -147,12 +168,12 @@ export async function GET(request: Request, { params }: RouteContext) {
     pdfBytes = await pdf.save();
   }
 
-  const safeNumber = String(certificate.certificate_number).replace(/[^A-Za-z0-9-]/g, "-");
+  const downloadFilename = certificateDownloadFilename(certificate.full_name_snapshot);
   return new Response(new Uint8Array(pdfBytes), {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="Sertifikat-${safeNumber}.pdf"`,
+      "Content-Disposition": `attachment; filename="${downloadFilename.fallback}"; filename*=UTF-8''${downloadFilename.encoded}`,
       "Cache-Control": "private, no-store, max-age=0",
     },
   });

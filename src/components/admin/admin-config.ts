@@ -6,13 +6,13 @@ import {
   BookOpen,
   BookOpenCheck,
   ClipboardList,
+  ClipboardCheck,
   CreditCard,
   FileCheck2,
   GraduationCap,
   LayoutDashboard,
   Percent,
   Settings,
-  ShieldCheck,
   UserRound,
   UserPlus,
   Users,
@@ -62,6 +62,11 @@ export const adminNavigation: AdminNavSection[] = [
         icon: ClipboardList,
       },
       {
+        title: "Pemeriksaan Tugas",
+        href: "/admin/pemeriksaan-tugas",
+        icon: ClipboardCheck,
+      },
+      {
         title: "Review Publikasi Mentor",
         href: "/admin/mentor/publikasi",
         icon: FileCheck2,
@@ -90,11 +95,6 @@ export const adminNavigation: AdminNavSection[] = [
         title: "Review Profil Mentor",
         href: "/admin/mentor/profil",
         icon: UserRound,
-      },
-      {
-        title: "Hak Akses Member",
-        href: "/admin/akses",
-        icon: ShieldCheck,
       },
       {
         title: "Akses Alumni",
@@ -190,6 +190,14 @@ export function getAdminPageMeta(pathname: string) {
     };
   }
 
+  if (pathname.startsWith("/admin/pemeriksaan-tugas")) {
+    return {
+      title: "Pemeriksaan Tugas",
+      description:
+        "Periksa pengumpulan tugas peserta dari seluruh kelas sebagai pemeriksa cadangan.",
+    };
+  }
+
   if (pathname.startsWith("/admin/sertifikat")) {
     return {
       title: "Sertifikat & Kelulusan",
@@ -225,13 +233,6 @@ export function getAdminPageMeta(pathname: string) {
     return {
       title: "Akses Alumni",
       description: "Verifikasi peserta lama dan aktifkan akses kelas gratis.",
-    };
-  }
-
-  if (pathname.startsWith("/admin/akses")) {
-    return {
-      title: "Hak Akses Member",
-      description: "Kelola kepemilikan kelas dan hak akses peserta.",
     };
   }
 

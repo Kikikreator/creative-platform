@@ -86,6 +86,7 @@ async function AdminContent({ children }: AdminContentProps) {
   return (
     <AdminShell
       user={{
+        id: user.id,
         name: displayName,
         email: user.email ?? "",
       }}

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   AlertCircle,
   ArrowRight,
+  Award,
   CalendarClock,
   CheckCircle2,
   ClipboardList,
@@ -125,6 +126,9 @@ export default function MentorTaskManager({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState(initialError ?? "");
   const [notice, setNotice] = useState("");
+  const [finalTaskModalOpen, setFinalTaskModalOpen] = useState(false);
+  const [pendingFinalTaskId, setPendingFinalTaskId] = useState("");
+  const [savingFinalTask, setSavingFinalTask] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm);
@@ -156,13 +160,16 @@ export default function MentorTaskManager({
       ]);
       if (sectionResult.error) throw sectionResult.error;
       if (taskResult.error) throw taskResult.error;
-      // Mentor hanya membaca penetapan Tugas Akhir dari pengaturan Admin.
-      // Jika akses pengaturan tidak tersedia, pengelolaan tugas tetap berjalan.
+      // Penetapan Tugas Akhir dibaca dari pengaturan sertifikat kelas.
+      // Hak ubahnya divalidasi kembali oleh RPC berdasarkan penugasan Mentor/Admin.
       if (settingsResult.error) {
         setFinalTaskId(null);
         setSettingsWarning(`Penanda Tugas Akhir tidak dapat dimuat: ${settingsResult.error.message}`);
+      } else if (!settingsResult.data) {
+        setFinalTaskId(null);
+        setSettingsWarning("Pengaturan sertifikat kelas belum dibuat. Minta Admin menyimpan pengaturan sertifikat terlebih dahulu.");
       } else {
-        setFinalTaskId(settingsResult.data?.final_task_id ?? null);
+        setFinalTaskId(settingsResult.data.final_task_id ?? null);
         setSettingsWarning("");
       }
       const nextSections = (sectionResult.data ?? []) as Section[];
@@ -314,6 +321,44 @@ export default function MentorTaskManager({
     }
   }
 
+  function openFinalTaskModal() {
+    setPendingFinalTaskId(finalTaskId ?? "");
+    setFinalTaskModalOpen(true);
+    setError("");
+    setNotice("");
+  }
+
+  async function saveFinalTaskSelection() {
+    if (!courseId) return;
+    const chosenTask = tasks.find((task) => task.id === pendingFinalTaskId) ?? null;
+    if (pendingFinalTaskId && (!chosenTask || chosenTask.status !== "published" || !chosenTask.is_required)) {
+      setError("Tugas Akhir harus berupa tugas wajib yang sudah dipublikasikan pada kelas ini.");
+      return;
+    }
+
+    setSavingFinalTask(true);
+    setError("");
+    setNotice("");
+    const { error: saveError } = await (supabase as any).rpc("mentor_set_course_final_task", {
+      p_course_id: courseId,
+      p_final_task_id: pendingFinalTaskId || null,
+    });
+    if (saveError) {
+      setError(saveError.message || "Tugas Akhir gagal disimpan.");
+      setSavingFinalTask(false);
+      return;
+    }
+
+    setFinalTaskId(pendingFinalTaskId || null);
+    setFinalTaskModalOpen(false);
+    setNotice(
+      pendingFinalTaskId
+        ? `Tugas Akhir kelas berhasil ditetapkan: ${chosenTask?.title ?? "tugas terpilih"}.`
+        : "Penetapan Tugas Akhir berhasil dikosongkan."
+    );
+    setSavingFinalTask(false);
+  }
+
   const published = tasks.filter((task) => task.status === "published").length;
   const draft = tasks.length - published;
 
@@ -354,18 +399,57 @@ export default function MentorTaskManager({
         </div>
       </section>
 
-      <section className="flex flex-col gap-2 rounded-2xl border border-violet-100 bg-violet-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+      <section className="flex flex-col gap-3 rounded-2xl border border-violet-100 bg-violet-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="text-[10px] font-extrabold uppercase tracking-wider text-violet-700">Penanda Tugas Akhir</p>
           {selectedFinalTask ? (
-            <p className="mt-1 text-xs font-semibold text-violet-950">Tugas Akhir yang ditetapkan Admin: {selectedFinalTask.title}</p>
+            <p className="mt-1 text-xs font-semibold text-violet-950">Tugas Akhir kelas ini: {selectedFinalTask.title}</p>
           ) : (
-            <p className="mt-1 text-xs text-slate-600">Admin belum menetapkan Tugas Akhir untuk kelas ini.</p>
+            <p className="mt-1 text-xs text-slate-600">Belum ada Tugas Akhir yang ditetapkan untuk kelas ini.</p>
           )}
+          <p className="mt-1 text-[10px] text-slate-500">Admin dan Mentor yang ditugaskan dapat menentukan satu tugas wajib yang sudah dipublikasikan.</p>
           {settingsWarning && <p className="mt-1 text-[10px] text-rose-700">{settingsWarning}</p>}
         </div>
-        <span className="inline-flex h-8 shrink-0 items-center rounded-lg bg-white px-3 text-[10px] font-bold text-violet-700">Ditentukan Admin</span>
+        <button type="button" onClick={openFinalTaskModal} disabled={!courseId || Boolean(settingsWarning) || loading} className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-3 text-[10px] font-bold text-violet-800 shadow-sm ring-1 ring-violet-100 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50">
+          <Award size={14} /> Atur Tugas Akhir
+        </button>
       </section>
+
+      {finalTaskModalOpen && (
+        <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/55 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !savingFinalTask) setFinalTaskModalOpen(false); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="mentor-final-task-title" className="w-full max-w-xl rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-700">Pengaturan kelulusan</p>
+                <h3 id="mentor-final-task-title" className="mt-1 text-lg font-extrabold text-slate-900">Tentukan Tugas Akhir</h3>
+                <p className="mt-1 text-xs leading-5 text-slate-500">{selectedCourse?.title ?? "Kelas terpilih"}</p>
+              </div>
+              <button type="button" onClick={() => setFinalTaskModalOpen(false)} disabled={savingFinalTask} aria-label="Tutup" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 disabled:opacity-50"><X size={15} /></button>
+            </div>
+            <div className="mt-5">
+              <label className={labelClass}>Pilih tugas akhir
+                <select value={pendingFinalTaskId} onChange={(event) => setPendingFinalTaskId(event.target.value)} className={inputClass}>
+                  <option value="">Belum ditetapkan</option>
+                  {tasks.filter((task) => task.status === "published" && task.is_required).map((task) => {
+                    const section = sections.find((item) => item.id === task.section_id);
+                    return <option key={task.id} value={task.id}>{task.title}{section ? ` · ${section.title}` : ""} · Maks. {task.max_score}</option>;
+                  })}
+                </select>
+              </label>
+              <p className="mt-2 text-[10px] leading-5 text-slate-500">Hanya tugas wajib yang sudah dipublikasikan yang dapat dipilih. Tugas lain tetap dihitung sebagai tugas Bab.</p>
+              {tasks.filter((task) => task.status === "published" && task.is_required).length === 0 && (
+                <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">Belum ada tugas wajib yang dipublikasikan. Buat dan publikasikan tugas terlebih dahulu.</p>
+              )}
+            </div>
+            <div className="mt-6 flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setFinalTaskModalOpen(false)} disabled={savingFinalTask} className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-bold text-slate-600">Batal</button>
+              <button type="button" onClick={() => void saveFinalTaskSelection()} disabled={savingFinalTask || tasks.filter((task) => task.status === "published" && task.is_required).length === 0} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-700 px-5 text-xs font-bold text-white disabled:opacity-50">
+                <Save size={14} /> {savingFinalTask ? "Menyimpan..." : "Simpan Tugas Akhir"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {formOpen && (
         <section className="rounded-[22px] border border-violet-100 bg-white p-4 shadow-sm sm:p-6">

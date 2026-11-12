@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   Award,
@@ -146,15 +146,54 @@ export default function CourseCertificatePanel({
     void loadStatus();
   }, [loadStatus, refreshKey]);
 
-  // Tampilkan popup otomatis saat seluruh persyaratan awal sudah terpenuhi.
-  // Jika peserta menutup popup, tombol pengajuan pada kartu tetap dapat membukanya kembali.
+  const learningRequirementsComplete = Boolean(
+    status &&
+      status.lessons_complete &&
+      status.chapter_tasks_complete &&
+      status.final_task_required &&
+      status.final_task_id &&
+      status.final_task_passed
+  );
+
+  // Popup otomatis muncul ketika progres belajar lengkap. Jika Admin belum mengaktifkan
+  // sertifikat, popup menjelaskan langkah konfigurasi dan tidak menawarkan pengajuan palsu.
+  // Setelah ditutup, peserta tetap dapat melihat status dan membuka pengajuan dari kartu.
+  const autoEligibilityPopupShown = useRef(false);
   useEffect(() => {
-    if (!loading && status?.enabled && status.can_request_approval) {
-      setShowEligibilityModal(true);
-    } else {
-      setShowEligibilityModal(false);
+    if (loading) return;
+
+    const shouldShowCompletionInfo = Boolean(
+      status &&
+        (status.can_request_approval ||
+          (!status.enabled && learningRequirementsComplete))
+    );
+
+    if (shouldShowCompletionInfo) {
+      if (!autoEligibilityPopupShown.current) {
+        setShowEligibilityModal(true);
+        autoEligibilityPopupShown.current = true;
+      }
+      return;
     }
-  }, [loading, status?.enabled, status?.can_request_approval]);
+
+    autoEligibilityPopupShown.current = false;
+    setShowEligibilityModal(false);
+  }, [
+    loading,
+    status?.enabled,
+    status?.can_request_approval,
+    learningRequirementsComplete,
+  ]);
+
+  // Perbarui status saat peserta kembali ke tab ini, misalnya setelah Mentor menilai tugas
+  // atau menyetujui kelulusan dari perangkat/tab lain.
+  useEffect(() => {
+    const refreshWhenFocused = () => {
+      if (document.visibilityState === "visible") void loadStatus();
+    };
+    window.addEventListener("focus", refreshWhenFocused);
+    return () => window.removeEventListener("focus", refreshWhenFocused);
+  }, [loadStatus]);
 
   async function requestMentorApproval() {
     setBusy(true);
@@ -230,16 +269,135 @@ export default function CourseCertificatePanel({
   const mentorApproved = status?.mentor_approval_status === "approved";
   const reviewValidationMessage = getReviewValidationMessage(reviewText);
 
-  let buttonLabel = "Dapatkan Sertifikat";
-  let buttonDisabled = true;
-  let buttonAction: (() => void) | undefined;
+  // Syarat pembelajaran dihitung terpisah dari persetujuan akhir Mentor.
+  // Menilai/lulus Tugas Akhir belum sama dengan menyetujui kelulusan kelas.
+
+  const requirementRows = status
+    ? [
+        {
+          label: "Penerbitan sertifikat diaktifkan Admin",
+          done: status.enabled,
+          detail: status.enabled ? "Aktif" : "Belum aktif",
+        },
+        {
+          label: "Seluruh materi utama",
+          done: status.lessons_complete,
+          detail: `${status.completed_lessons}/${status.total_lessons} selesai`,
+        },
+        {
+          label: "Seluruh tugas Bab wajib",
+          done: status.chapter_tasks_complete,
+          detail: `${status.chapter_tasks_passed}/${status.chapter_tasks_total} lulus`,
+        },
+        {
+          label: status.final_task_title
+            ? `Tugas Akhir: ${status.final_task_title}`
+            : "Tugas Akhir ditetapkan Admin",
+          done: Boolean(status.final_task_required && status.final_task_id && status.final_task_passed),
+          detail: status.final_task_passed
+            ? "Lulus penilaian Mentor"
+            : status.final_task_required
+              ? "Belum lulus"
+              : "Belum ditetapkan",
+        },
+        {
+          label: "Kelayakan pengajuan menurut sistem",
+          done: status.eligible_for_mentor_review,
+          detail: status.eligible_for_mentor_review ? "Memenuhi syarat" : "Belum memenuhi",
+        },
+        {
+          label: "Persetujuan kelulusan Mentor",
+          done: status.mentor_approval_status === "approved",
+          detail:
+            status.mentor_approval_status === "approved"
+              ? "Disetujui"
+              : status.mentor_approval_status === "pending"
+                ? "Menunggu pemeriksaan"
+                : status.mentor_approval_status === "revision_requested"
+                  ? "Perlu perbaikan"
+                  : "Belum diajukan",
+        },
+        {
+          label: "Template sertifikat",
+          done: status.template_ready,
+          detail: status.template_ready ? "Siap" : "Belum tersedia",
+        },
+        {
+          label: "Rating dan ulasan",
+          done: status.review_submitted,
+          detail: status.review_submitted ? "Sudah dikirim" : "Belum diisi",
+        },
+      ]
+    : [];
+
+  let statusHeading = "Status kelulusan belum dapat diperiksa";
+  let statusDescription = "Perbarui status untuk membaca kembali progres dan persyaratan kelas.";
+  if (status) {
+    if (certificateIssued) {
+      statusHeading = "Sertifikat sudah diterbitkan";
+      statusDescription = "Seluruh proses selesai. Sertifikatmu sudah tersedia untuk diunduh.";
+    } else if (!status.enabled) {
+      statusHeading = learningRequirementsComplete
+        ? "Progres belajarmu lengkap, tetapi sertifikat belum diaktifkan"
+        : "Penerbitan sertifikat belum diaktifkan Admin";
+      statusDescription =
+        "Admin perlu mengaktifkan penerbitan sertifikat pada menu Sertifikat & Kelulusan. Memilih Tugas Akhir saja belum mengaktifkan fitur sertifikat.";
+    } else if (canRequestApproval) {
+      statusHeading = "Kamu memenuhi syarat untuk mengajukan kelulusan";
+      statusDescription =
+        "Materi, tugas Bab, dan Tugas Akhir sudah memenuhi ketentuan. Ajukan pemeriksaan akhir agar Mentor dapat menyetujui kelulusan kelas.";
+    } else if (approvalPending) {
+      statusHeading = "Pengajuan kelulusan sedang diperiksa Mentor";
+      statusDescription =
+        "Pengajuan sudah diterima. Tunggu keputusan Mentor; tombol rating dan ulasan akan terbuka setelah disetujui.";
+    } else if (revisionRequested) {
+      statusHeading = "Ada perbaikan yang diminta Mentor";
+      statusDescription =
+        status.mentor_feedback ||
+        "Periksa catatan Mentor, lakukan perbaikan, lalu ajukan ulang persetujuan kelulusan.";
+    } else if (canOpenCertificateStep) {
+      statusHeading = "Kelulusan disetujui Mentor";
+      statusDescription =
+        "Satu langkah terakhir: isi rating dan ulasan yang jujur. Setelah valid, sertifikat akan diterbitkan.";
+    } else if (mentorApproved && status.review_submitted && !certificateIssued) {
+      statusHeading = "Rating dan ulasan sudah dikirim, tetapi sertifikat belum tercatat";
+      statusDescription =
+        "Perbarui status. Jika sertifikat tetap belum muncul, Admin perlu memeriksa proses penerbitan di database; jangan mengirim ulasan berulang kali.";
+    } else if (learningRequirementsComplete && status.mentor_approval_status === "not_requested") {
+      statusHeading = "Progres belajar lengkap, tetapi pengajuan belum terbuka";
+      statusDescription =
+        "Perbarui status. Jika tetap seperti ini, periksa pengaturan sertifikat dan hasil pemeriksaan persyaratan di database.";
+    } else if (mentorApproved && !status.template_ready) {
+      statusHeading = "Kelulusan disetujui, template sertifikat belum siap";
+      statusDescription =
+        "Admin perlu menyiapkan dan menyimpan desain sertifikat sebelum formulir rating dan penerbitan dibuka.";
+    } else if (!learningRequirementsComplete) {
+      statusHeading = "Masih ada persyaratan kelulusan";
+      statusDescription =
+        "Periksa daftar di bawah. Semua materi utama, tugas Bab wajib, dan Tugas Akhir harus selesai serta lulus sebelum pengajuan ke Mentor.";
+    }
+  }
+
+  let buttonLabel = "Periksa status kelulusan";
+  let buttonDisabled = false;
+  let buttonAction: (() => void) | undefined = () => void loadStatus();
 
   if (loading) {
     buttonLabel = "Memeriksa...";
-  } else if (!status || !status.enabled) {
-    buttonLabel = "Dapatkan Sertifikat";
+    buttonDisabled = true;
+    buttonAction = undefined;
+  } else if (!status) {
+    buttonLabel = "Status belum tersedia";
+    buttonDisabled = true;
+    buttonAction = undefined;
   } else if (certificateIssued) {
     buttonLabel = "Unduh Sertifikat";
+    buttonDisabled = true;
+    buttonAction = undefined;
+  } else if (!status.enabled) {
+    buttonLabel = "Sertifikat belum diaktifkan";
+    buttonDisabled = true;
+    buttonAction = undefined;
   } else if (canRequestApproval) {
     buttonLabel = revisionRequested
       ? "Ajukan Ulang Sertifikat kepada Mentor"
@@ -248,15 +406,23 @@ export default function CourseCertificatePanel({
     buttonAction = () => setShowEligibilityModal(true);
   } else if (approvalPending) {
     buttonLabel = "Menunggu Persetujuan Mentor";
+    buttonDisabled = true;
+    buttonAction = undefined;
   } else if (canOpenCertificateStep) {
-    buttonLabel = "Dapatkan Sertifikat";
-    buttonDisabled = false;
+    buttonLabel = "Isi Rating & Ulasan untuk Sertifikat";
+    buttonDisabled = busy;
     buttonAction = () => {
       setError("");
       setShowReviewForm(true);
     };
   } else if (mentorApproved && !status.template_ready) {
-    buttonLabel = "Menyiapkan Sertifikat";
+    buttonLabel = "Template Sertifikat Belum Siap";
+    buttonDisabled = true;
+    buttonAction = undefined;
+  } else if (!learningRequirementsComplete) {
+    buttonLabel = "Persyaratan Belum Lengkap";
+    buttonDisabled = true;
+    buttonAction = undefined;
   }
 
   return (
@@ -373,7 +539,82 @@ export default function CourseCertificatePanel({
         )}
       </div>
 
-      {!loading && canRequestApproval && showEligibilityModal && (
+      {!loading && status && (
+        <div className="mt-5 rounded-xl border border-[#EEE9F4] bg-[#FBFAFD] p-4 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-[9px] font-extrabold uppercase tracking-[.16em] text-[#8B7CA3]">
+                Status kelulusan kelas
+              </p>
+              <h3 className="mt-1 text-sm font-extrabold text-[#302647]">
+                {statusHeading}
+              </h3>
+              <p className="mt-1 max-w-3xl text-[11px] leading-5 text-[#746D7B]">
+                {statusDescription}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void loadStatus()}
+              disabled={loading || busy}
+              className="inline-flex h-9 shrink-0 items-center justify-center gap-2 self-start rounded-lg border border-[#E7DFF4] bg-white px-3 text-[10px] font-bold text-[#51476B] transition hover:bg-[#F5F1FA] disabled:opacity-50"
+            >
+              <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+              Perbarui status
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            {requirementRows.map((item) => (
+              <div
+                key={item.label}
+                className="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-white px-3 py-2.5"
+              >
+                <span className="flex min-w-0 items-start gap-2 text-[10px] leading-4 text-[#51476B]">
+                  <span className={`mt-0.5 shrink-0 font-black ${item.done ? "text-emerald-600" : "text-amber-600"}`}>
+                    {item.done ? "✓" : "•"}
+                  </span>
+                  <span className="break-words">{item.label}</span>
+                </span>
+                <strong className={`shrink-0 text-right text-[9px] ${item.done ? "text-emerald-700" : "text-amber-700"}`}>
+                  {item.detail}
+                </strong>
+              </div>
+            ))}
+          </div>
+
+          {status.enabled && canRequestApproval && !showEligibilityModal && (
+            <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-[10px] leading-5 text-emerald-800">
+              Kamu sudah memenuhi syarat awal. Jika popup sebelumnya ditutup, tekan tombol
+              <strong> Ajukan Sertifikat kepada Mentor </strong>
+              pada kartu di atas untuk membuka informasi kelulusan dan mengirim pengajuan.
+            </p>
+          )}
+
+          {!status.enabled && learningRequirementsComplete && (
+            <div className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[10px] leading-5 text-amber-800">
+              Materi dan tugasmu sudah selesai, tetapi Admin belum mengaktifkan penerbitan
+              sertifikat untuk kelas ini. Admin perlu mengaktifkan opsi
+              <strong> Aktifkan penerbitan otomatis </strong>
+              di menu Sertifikat & Kelulusan lalu menyimpan pengaturan.
+              {!showEligibilityModal && (
+                <button
+                  type="button"
+                  onClick={() => setShowEligibilityModal(true)}
+                  className="ml-2 font-extrabold underline underline-offset-2"
+                >
+                  Lihat informasi kelulusan
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!loading &&
+        status &&
+        showEligibilityModal &&
+        (canRequestApproval || (!status.enabled && learningRequirementsComplete)) && (
         <div
           className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-4"
           role="presentation"
@@ -400,7 +641,9 @@ export default function CourseCertificatePanel({
                     id="certificate-eligibility-title"
                     className="mt-1 text-lg font-extrabold text-[#260047]"
                   >
-                    Selamat, kamu memenuhi syarat kelulusan!
+                    {status.enabled
+                      ? "Selamat, kamu memenuhi syarat kelulusan!"
+                      : "Progres belajarmu sudah lengkap!"}
                   </h3>
                 </div>
               </div>
@@ -416,7 +659,9 @@ export default function CourseCertificatePanel({
             </div>
 
             <p className="mt-4 text-xs leading-6 text-[#746D7B]">
-              Sistem telah memeriksa progres belajarmu. Kamu telah menyelesaikan seluruh materi, mengerjakan tugas wajib, dan lulus Tugas Akhir yang sudah dinilai Mentor. Langkah berikutnya adalah mengajukan sertifikat untuk mendapatkan pemeriksaan dan persetujuan akhir dari Mentor.
+              {status.enabled
+                ? "Sistem telah memeriksa progres belajarmu. Kamu telah menyelesaikan seluruh materi, mengerjakan tugas wajib, dan lulus Tugas Akhir yang sudah dinilai Mentor. Langkah berikutnya adalah mengajukan sertifikat untuk mendapatkan pemeriksaan dan persetujuan akhir dari Mentor."
+                : "Sistem telah membaca bahwa seluruh materi utama, tugas Bab wajib, dan Tugas Akhir sudah kamu selesaikan. Namun, penerbitan sertifikat untuk kelas ini belum diaktifkan Admin. Pengajuan belum bisa dikirim sampai Admin mengaktifkan penerbitan sertifikat di menu Sertifikat & Kelulusan."}
             </p>
 
             <div className="mt-5 space-y-3 rounded-xl bg-[#F8F6FC] p-4">
@@ -448,7 +693,9 @@ export default function CourseCertificatePanel({
             )}
 
             <p className="mt-4 text-xs leading-5 text-[#746D7B]">
-              Persetujuan belum otomatis diberikan. Mentor akan menerima ringkasan hasil belajarmu dan menentukan persetujuan akhir.
+              {status.enabled
+                ? "Pengajuan ini akan masuk ke halaman Persetujuan Kelulusan milik Mentor. Sertifikat belum diterbitkan sampai Mentor menyetujui dan kamu mengirim rating serta ulasan."
+                : "Langkah berikutnya: minta Admin mengaktifkan penerbitan sertifikat dan memastikan template sertifikat sudah disimpan. Setelah itu, tombol pengajuan akan aktif di kartu ini."}
             </p>
 
             <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -458,17 +705,19 @@ export default function CourseCertificatePanel({
                 onClick={() => setShowEligibilityModal(false)}
                 className="inline-flex h-11 items-center justify-center rounded-xl border border-[#E7DFF4] px-5 text-xs font-bold text-[#51476B] transition hover:bg-[#F8F6FC] disabled:opacity-40"
               >
-                Nanti
+                Tutup
               </button>
-              <button
-                type="button"
-                onClick={() => void requestMentorApproval()}
-                disabled={busy}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#260047] px-5 text-xs font-extrabold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {busy ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
-                {busy ? "Mengirim pengajuan..." : revisionRequested ? "Ajukan Ulang kepada Mentor" : "Ajukan Sertifikat kepada Mentor"}
-              </button>
+              {canRequestApproval && (
+                <button
+                  type="button"
+                  onClick={() => void requestMentorApproval()}
+                  disabled={busy}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#260047] px-5 text-xs font-extrabold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {busy ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
+                  {busy ? "Mengirim pengajuan..." : revisionRequested ? "Ajukan Ulang kepada Mentor" : "Ajukan Sertifikat kepada Mentor"}
+                </button>
+              )}
             </div>
           </div>
         </div>

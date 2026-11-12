@@ -234,6 +234,7 @@ export default async function DetailKelasPage({ params }: PageProps) {
     promotionMentorResult,
     curriculumResult,
     reviewResult,
+    reviewNamesResult,
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.rpc("get_public_course_mentor_profiles", {
@@ -246,6 +247,9 @@ export default async function DetailKelasPage({ params }: PageProps) {
       p_course_id: course.id,
     }),
     supabase.rpc("get_public_course_review_summary", {
+      p_course_id: course.id,
+    }),
+    (supabase as any).rpc("get_public_course_review_names", {
       p_course_id: course.id,
     }),
   ]);
@@ -399,9 +403,48 @@ export default async function DetailKelasPage({ params }: PageProps) {
   const totalReviews = Number(reviewSummary.total_reviews ?? 0);
   const averageRating = Number(reviewSummary.average_rating ?? 0);
   const ratingDistribution = reviewSummary.distribution ?? emptyReviewSummary.distribution;
-  const reviews = Array.isArray(reviewSummary.reviews)
-    ? reviewSummary.reviews
-    : [];
+  type PublicReviewNameRow = {
+    review_id: string;
+    rating: number;
+    review_text: string;
+    submitted_at: string | null;
+    display_name: string | null;
+  };
+  const reviewNameRows = (reviewNamesResult.data ?? []) as PublicReviewNameRow[];
+  const reviewIdentityKey = (rating: number, reviewText: string, submittedAt: string | null) => {
+    const timestamp = submittedAt ? new Date(submittedAt).getTime() : "";
+    return `${Number(rating)}|${reviewText.trim()}|${timestamp}`;
+  };
+  const reviewNameById = new Map<string, string>(
+    reviewNameRows
+      .filter((item) => Boolean(item.display_name?.trim()))
+      .map((item) => [item.review_id, item.display_name!.trim()] as const)
+  );
+  // Cocokkan juga berdasarkan isi dan waktu ulasan jika RPC ringkasan
+  // mengemas ID ulasan dengan format berbeda dari ID tabel aslinya.
+  const reviewNameByIdentity = new Map<string, string>(
+    reviewNameRows
+      .filter((item) => Boolean(item.display_name?.trim()))
+      .map((item) => [
+        reviewIdentityKey(item.rating, item.review_text, item.submitted_at),
+        item.display_name!.trim(),
+      ] as const)
+  );
+  if (reviewNamesResult.error) {
+    console.error("Gagal memuat nama peserta pemberi ulasan:", reviewNamesResult.error.message);
+  }
+  const reviews = (Array.isArray(reviewSummary.reviews) ? reviewSummary.reviews : []).map((review) => {
+    const matchedName =
+      reviewNameById.get(review.id) ||
+      reviewNameByIdentity.get(reviewIdentityKey(review.rating, review.review_text, review.submitted_at));
+    return {
+      ...review,
+      // Jangan tampilkan label generik seolah-olah itu nama peserta.
+      display_name: review.source === "participant"
+        ? (matchedName || "Nama peserta belum dilengkapi")
+        : (review.display_name || "Ulasan"),
+    };
+  });
 
   const allPublishedLessons = curriculum.flatMap((section) => section.lessons ?? []);
   const totalLessons = allPublishedLessons.length;
@@ -1061,13 +1104,16 @@ export default async function DetailKelasPage({ params }: PageProps) {
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                         <div className="flex min-w-0 items-center gap-2.5 sm:w-48 sm:shrink-0">
                           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F0EBF3] text-[10px] font-extrabold text-[#260047]">
-                            {review.source === "manual"
-                              ? (review.display_name || "Ulasan").split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase()
-                              : "PT"}
+                            {(review.display_name || "Peserta")
+                              .split(/\s+/)
+                              .slice(0, 2)
+                              .map((part) => part[0])
+                              .join("")
+                              .toUpperCase()}
                           </div>
                           <div className="min-w-0">
                             <p className="text-[10px] font-extrabold text-[#51465D]">
-                              {review.display_name || "Peserta Terverifikasi"}
+                              {review.display_name || "Peserta"}
                             </p>
                             {review.show_date !== false && review.source !== "manual" && review.submitted_at && (
                               <p className="mt-0.5 text-[8px] text-[#A49BAA]">

@@ -539,7 +539,9 @@ export default function TaskManager({
     setFinalTaskId(pendingFinalTaskId || null);
     setFinalTaskModalOpen(false);
     setSuccess(pendingFinalTaskId
-      ? `Tugas Akhir berhasil ditetapkan: ${chosenTask?.title ?? "tugas terpilih"}.`
+      ? current?.enabled
+        ? `Tugas Akhir berhasil ditetapkan: ${chosenTask?.title ?? "tugas terpilih"}.`
+        : `Tugas Akhir berhasil ditetapkan: ${chosenTask?.title ?? "tugas terpilih"}. Catatan: penerbitan sertifikat masih nonaktif. Aktifkan di menu Sertifikat & Kelulusan agar peserta dapat mengajukan sertifikat.`
       : "Penetapan Tugas Akhir berhasil dikosongkan.");
     setSavingFinalTask(false);
   }
@@ -561,6 +563,9 @@ export default function TaskManager({
               </select>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Link href="/admin/pemeriksaan-tugas" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 text-[12px] font-semibold text-violet-700 transition hover:bg-violet-100">
+                <ClipboardList size={15} /> Periksa Pengumpulan
+              </Link>
               <Link href="/admin/materi" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-[12px] font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800">
                 <Layers3 size={15} /> Atur Bab & Materi
               </Link>

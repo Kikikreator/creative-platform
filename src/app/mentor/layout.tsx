@@ -66,6 +66,7 @@ async function MentorContent({ children }: { children: ReactNode }) {
   return (
     <MentorShell
       user={{
+        id: user.id,
         name,
         email: user.email ?? "",
         avatarUrl: profile?.avatar_url ?? null,

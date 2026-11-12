@@ -254,9 +254,18 @@ body { background: #fff !important; color: var(--kcc-text); }
   background-color: var(--kcc-purple) !important;
   color: #fff !important;
 }
-:is([class*="from-violet-700"], [class*="from-violet-800"], [class*="from-purple-700"], [class*="from-[#5B21B6"]], [class*="from-[#6D28D9"]], [class*="from-[#342254"]]) {
+
+:is(
+  [class*="from-violet-700"],
+  [class*="from-violet-800"],
+  [class*="from-purple-700"],
+  [class*="from-[#5B21B6]"],
+  [class*="from-[#6D28D9]"],
+  [class*="from-[#342254]"]
+) {
   background-image: linear-gradient(135deg, #260047 0%, #09483F 100%) !important;
 }
+
 :is([class~="bg-[#5B21B6]"], [class~="bg-[#6D28D9]"], [class~="bg-[#4C1D95]"]) {
   background-color: #260047 !important;
   color: #fff !important;

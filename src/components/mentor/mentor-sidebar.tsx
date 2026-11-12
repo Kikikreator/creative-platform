@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { ChevronLeft, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import LogoutButton from "@/components/auth/logout-button";
 import { mentorNavigation } from "./mentor-config";
+import { useSidebarNotifications } from "@/components/notifications/use-sidebar-notifications";
 
 type Props = {
   open: boolean;
@@ -14,6 +15,7 @@ type Props = {
   onClose: () => void;
   onOpen: () => void;
   onToggleCollapsed: () => void;
+  userId: string;
 };
 
 const mobileItems = [
@@ -27,8 +29,17 @@ function isActivePath(pathname: string, href: string) {
   return href === "/mentor" ? pathname === "/mentor" : pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export default function MentorSidebar({ open, collapsed, onClose, onOpen, onToggleCollapsed }: Props) {
+function NotificationBadge({ count, collapsed = false }: { count: number; collapsed?: boolean }) {
+  if (count <= 0) return null;
+  if (collapsed) {
+    return <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-[#260047]" aria-label={`${count} notifikasi`} />;
+  }
+  return <span className="ml-auto inline-flex h-[19px] min-w-[19px] shrink-0 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[9px] font-extrabold leading-none text-white shadow-sm" aria-label={`${count} notifikasi`}>{count > 99 ? "99+" : count}</span>;
+}
+
+export default function MentorSidebar({ open, collapsed, onClose, onOpen, onToggleCollapsed, userId }: Props) {
   const pathname = usePathname();
+  const notificationCounts = useSidebarNotifications(userId, pathname);
 
   return (
     <>
@@ -58,9 +69,9 @@ export default function MentorSidebar({ open, collapsed, onClose, onOpen, onTogg
                 {section.items.map((item) => {
                   const active = isActivePath(pathname, item.href);
                   const Icon = item.icon;
-                  return <Link key={item.href} href={item.href} title={collapsed ? item.title : undefined} onClick={onClose} className={`group flex min-h-[44px] items-center gap-3 rounded-[14px] px-3 text-[11px] font-medium leading-[1.35] transition-all duration-200 ${collapsed ? "justify-center px-2" : ""} ${active ? "bg-white/15 text-white shadow-[inset_3px_0_0_#09483F]" : "text-white/70 hover:bg-white/10 hover:text-white"}`}>
-                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] transition ${active ? "bg-white/15 text-white" : "text-white/55 group-hover:bg-white/10 group-hover:text-white"}`}><Icon size={16} strokeWidth={1.9} /></span>
-                    {!collapsed && <span className="kcc-sidebar-menu-label min-w-0 flex-1 whitespace-normal break-words leading-[1.35]">{item.title}</span>}
+                  return <Link key={item.href} href={item.href} title={collapsed ? `${item.title}${notificationCounts[item.href] ? ` · ${notificationCounts[item.href]} notifikasi` : ""}` : undefined} onClick={onClose} className={`group flex min-h-[44px] items-center gap-3 rounded-[14px] px-3 text-[11px] font-medium leading-[1.35] transition-all duration-200 ${collapsed ? "justify-center px-2" : ""} ${active ? "bg-white/15 text-white shadow-[inset_3px_0_0_#09483F]" : "text-white/70 hover:bg-white/10 hover:text-white"}`}>
+                    <span className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] transition ${active ? "bg-white/15 text-white" : "text-white/55 group-hover:bg-white/10 group-hover:text-white"}`}><Icon size={16} strokeWidth={1.9} />{collapsed && <NotificationBadge count={notificationCounts[item.href] ?? 0} collapsed />}</span>
+                    {!collapsed && <><span className="kcc-sidebar-menu-label min-w-0 flex-1 whitespace-normal break-words leading-[1.35]">{item.title}</span><NotificationBadge count={notificationCounts[item.href] ?? 0} /></>}
                   </Link>;
                 })}
               </div>
@@ -77,7 +88,7 @@ export default function MentorSidebar({ open, collapsed, onClose, onOpen, onTogg
           const nav = mentorNavigation.flatMap((section) => section.items).find((entry) => entry.href === item.href)!;
           const Icon = nav.icon;
           const active = isActivePath(pathname, item.href);
-          return <Link key={item.href} href={item.href} onClick={onClose} className={`kcc-sidebar-mobile-link flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium ${active ? "text-[#260047]" : "text-[#77717D]"}`}><span className={`flex h-8 w-9 items-center justify-center rounded-xl ${active ? "bg-[#F2EFF5]" : ""}`}><Icon size={18} /></span>{item.title}</Link>;
+          return <Link key={item.href} href={item.href} onClick={onClose} className={`kcc-sidebar-mobile-link flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium ${active ? "text-[#260047]" : "text-[#77717D]"}`}><span className={`relative flex h-8 w-9 items-center justify-center rounded-xl ${active ? "bg-[#F2EFF5]" : ""}`}><Icon size={18} /><NotificationBadge count={notificationCounts[item.href] ?? 0} collapsed /></span>{item.title}</Link>;
         })}
         <button type="button" onClick={onOpen} className="kcc-sidebar-mobile-action flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium text-[#77717D]" aria-label="Menu lainnya"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><Menu size={18} /></span>Menu</button>
       </nav>
