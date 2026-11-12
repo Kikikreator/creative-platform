@@ -62,6 +62,29 @@ type CourseTask = {
   updated_at: string;
 };
 
+type CertificateSettingsRow = {
+  course_id: string;
+  enabled: boolean;
+  passing_score: number | string;
+  final_task_id: string | null;
+  issuer_name: string | null;
+  issuer_title: string | null;
+  signature_name: string | null;
+  template_path: string | null;
+  template_mime_type: string | null;
+  template_width: number | null;
+  template_height: number | null;
+  name_box_x: number | string | null;
+  name_box_y: number | string | null;
+  name_box_width: number | string | null;
+  name_box_height: number | string | null;
+  name_font_min_size: number | string | null;
+  name_font_max_size: number | string | null;
+  name_font_color: string | null;
+  name_font_bold: boolean | null;
+  name_font_family: string | null;
+};
+
 type TaskFormState = {
   title: string;
   description: string;
@@ -160,6 +183,12 @@ export default function TaskManager({
   const [sections, setSections] = useState<SectionRow[]>([]);
   const [lessons, setLessons] = useState<LessonRow[]>([]);
   const [tasks, setTasks] = useState<CourseTask[]>([]);
+  const [finalTaskId, setFinalTaskId] = useState<string | null>(null);
+  const [certificateSettings, setCertificateSettings] = useState<CertificateSettingsRow | null>(null);
+  const [settingsWarning, setSettingsWarning] = useState("");
+  const [finalTaskModalOpen, setFinalTaskModalOpen] = useState(false);
+  const [pendingFinalTaskId, setPendingFinalTaskId] = useState("");
+  const [savingFinalTask, setSavingFinalTask] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -170,6 +199,9 @@ export default function TaskManager({
   const [form, setForm] = useState<TaskFormState>(emptyForm);
 
   const selectedCourse = courses.find((course) => course.id === selectedCourseId) ?? null;
+  const selectedFinalTask = tasks.find((task) => task.id === finalTaskId) ?? null;
+  const publishedRequiredTasks = tasks.filter((task) => task.status === "published" && task.is_required);
+  const selectedFinalTaskIsValid = Boolean(selectedFinalTask && selectedFinalTask.status === "published" && selectedFinalTask.is_required);
   const selectedSectionLessons = useMemo(
     () => lessons
       .filter((lesson) => lesson.section_id === form.section_id)
@@ -182,6 +214,10 @@ export default function TaskManager({
       setSections([]);
       setLessons([]);
       setTasks([]);
+      setFinalTaskId(null);
+      setCertificateSettings(null);
+      setSettingsWarning("");
+      setFinalTaskModalOpen(false);
       setLoading(false);
       return;
     }
@@ -191,7 +227,7 @@ export default function TaskManager({
     setSuccess("");
 
     try {
-      const [sectionResult, taskResult] = await Promise.all([
+      const [sectionResult, taskResult, settingsResult] = await Promise.all([
         supabase
           .from("course_sections")
           .select("id, course_id, title, position")
@@ -202,10 +238,28 @@ export default function TaskManager({
           .select("*")
           .eq("course_id", selectedCourseId)
           .order("created_at", { ascending: false }),
+        (supabase as any)
+          .from("course_certificate_settings")
+          .select("*")
+          .eq("course_id", selectedCourseId)
+          .maybeSingle(),
       ]);
 
       if (sectionResult.error) throw sectionResult.error;
       if (taskResult.error) throw taskResult.error;
+
+      // Pengaturan sertifikat hanya dipakai untuk penanda visual.
+      // Jika belum tersedia, daftar tugas tetap dapat dimuat.
+      if (settingsResult.error) {
+        setFinalTaskId(null);
+        setCertificateSettings(null);
+        setSettingsWarning(`Pengaturan sertifikat tidak dapat dimuat: ${settingsResult.error.message}`);
+      } else {
+        const loadedSettings = (settingsResult.data ?? null) as CertificateSettingsRow | null;
+        setCertificateSettings(loadedSettings);
+        setFinalTaskId(loadedSettings?.final_task_id ?? null);
+        setSettingsWarning("");
+      }
 
       const loadedSections = (sectionResult.data ?? []) as SectionRow[];
       setSections(loadedSections);
@@ -228,6 +282,8 @@ export default function TaskManager({
       setSections([]);
       setLessons([]);
       setTasks([]);
+      setFinalTaskId(null);
+      setCertificateSettings(null);
     } finally {
       setLoading(false);
     }
@@ -400,6 +456,94 @@ export default function TaskManager({
     }
   }
 
+  function openFinalTaskModal() {
+    setPendingFinalTaskId(finalTaskId ?? "");
+    setFinalTaskModalOpen(true);
+    setError("");
+    setSuccess("");
+  }
+
+  async function saveFinalTaskSelection() {
+    if (!selectedCourseId) return;
+    if (settingsWarning) {
+      setError("Pengaturan sertifikat belum berhasil dimuat. Muat ulang halaman sebelum mengubah Tugas Akhir.");
+      return;
+    }
+
+    const chosenTask = tasks.find((task) => task.id === pendingFinalTaskId) ?? null;
+    if (pendingFinalTaskId && (!chosenTask || chosenTask.status !== "published" || !chosenTask.is_required)) {
+      setError("Tugas Akhir harus berupa tugas wajib yang sudah dipublikasikan pada kelas ini.");
+      return;
+    }
+    if (certificateSettings?.enabled && !pendingFinalTaskId) {
+      setError("Sertifikat kelas sedang aktif. Pilih Tugas Akhir sebelum menyimpan perubahan.");
+      return;
+    }
+
+    setSavingFinalTask(true);
+    setError("");
+    setSuccess("");
+    const current = certificateSettings;
+    const { error: saveError } = await (supabase as any).rpc("admin_save_course_certificate_template_settings", {
+      p_course_id: selectedCourseId,
+      p_enabled: current?.enabled ?? false,
+      p_passing_score: Number(current?.passing_score ?? 75),
+      p_final_task_id: pendingFinalTaskId || null,
+      p_issuer_name: current?.issuer_name?.trim() || "Kiki Creator Class",
+      p_issuer_title: current?.issuer_title?.trim() || "Penyelenggara",
+      p_signature_name: current?.signature_name?.trim() || null,
+      p_template_path: current?.template_path ?? null,
+      p_template_mime_type: current?.template_mime_type ?? null,
+      p_template_width: current?.template_width == null ? null : Number(current.template_width),
+      p_template_height: current?.template_height == null ? null : Number(current.template_height),
+      p_name_box_x: Number(current?.name_box_x ?? 0.22),
+      p_name_box_y: Number(current?.name_box_y ?? 0.39),
+      p_name_box_width: Number(current?.name_box_width ?? 0.56),
+      p_name_box_height: Number(current?.name_box_height ?? 0.15),
+      p_name_font_min_size: Number(current?.name_font_min_size ?? 16),
+      p_name_font_max_size: Number(current?.name_font_max_size ?? 42),
+      p_name_font_color: current?.name_font_color || "#30204A",
+      p_name_font_bold: current?.name_font_bold ?? true,
+      p_name_font_family: current?.name_font_family || "Helvetica",
+    });
+
+    if (saveError) {
+      setError(saveError.message || "Tugas Akhir gagal disimpan.");
+      setSavingFinalTask(false);
+      return;
+    }
+
+    const updatedSettings: CertificateSettingsRow = {
+      course_id: selectedCourseId,
+      enabled: current?.enabled ?? false,
+      passing_score: current?.passing_score ?? 75,
+      final_task_id: pendingFinalTaskId || null,
+      issuer_name: current?.issuer_name || "Kiki Creator Class",
+      issuer_title: current?.issuer_title || "Penyelenggara",
+      signature_name: current?.signature_name ?? null,
+      template_path: current?.template_path ?? null,
+      template_mime_type: current?.template_mime_type ?? null,
+      template_width: current?.template_width ?? null,
+      template_height: current?.template_height ?? null,
+      name_box_x: current?.name_box_x ?? 0.22,
+      name_box_y: current?.name_box_y ?? 0.39,
+      name_box_width: current?.name_box_width ?? 0.56,
+      name_box_height: current?.name_box_height ?? 0.15,
+      name_font_min_size: current?.name_font_min_size ?? 16,
+      name_font_max_size: current?.name_font_max_size ?? 42,
+      name_font_color: current?.name_font_color || "#30204A",
+      name_font_bold: current?.name_font_bold ?? true,
+      name_font_family: current?.name_font_family || "Helvetica",
+    };
+    setCertificateSettings(updatedSettings);
+    setFinalTaskId(pendingFinalTaskId || null);
+    setFinalTaskModalOpen(false);
+    setSuccess(pendingFinalTaskId
+      ? `Tugas Akhir berhasil ditetapkan: ${chosenTask?.title ?? "tugas terpilih"}.`
+      : "Penetapan Tugas Akhir berhasil dikosongkan.");
+    setSavingFinalTask(false);
+  }
+
   const publishedCount = tasks.filter((task) => task.status === "published").length;
   const draftCount = tasks.length - publishedCount;
   return (
@@ -559,6 +703,59 @@ export default function TaskManager({
               <button type="button" onClick={() => void loadData()} disabled={loading} className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-200 px-4 text-[12px] font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50"><RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Muat ulang</button>
             </div>
 
+            <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-violet-100 bg-violet-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-violet-700">Penetapan Tugas Akhir</p>
+                {selectedFinalTask && selectedFinalTaskIsValid ? (
+                  <p className="mt-1 text-xs font-semibold text-violet-950">Tugas Akhir kelas ini: {selectedFinalTask.title}</p>
+                ) : finalTaskId ? (
+                  <p className="mt-1 text-xs text-amber-800">Tugas yang sebelumnya dipilih tidak lagi berstatus wajib dan dipublikasikan. Pilih ulang Tugas Akhir.</p>
+                ) : (
+                  <p className="mt-1 text-xs text-slate-600">Belum ada Tugas Akhir. Klik tombol di samping untuk memilih tugas wajib yang sudah dipublikasikan.</p>
+                )}
+                {settingsWarning && <p className="mt-1 text-[10px] text-rose-700">{settingsWarning}</p>}
+              </div>
+              <button type="button" onClick={openFinalTaskModal} disabled={Boolean(settingsWarning) || !selectedCourseId} className="inline-flex h-9 shrink-0 items-center justify-center rounded-xl border border-violet-200 bg-white px-3 text-[10px] font-bold text-violet-800 hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50">{selectedFinalTaskIsValid ? "Ubah Tugas Akhir" : "Pilih Tugas Akhir"}</button>
+            </div>
+
+            {finalTaskModalOpen && (
+              <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/50 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !savingFinalTask) setFinalTaskModalOpen(false); }}>
+                <section role="dialog" aria-modal="true" aria-labelledby="final-task-dialog-title" className="w-full max-w-xl rounded-3xl bg-white p-5 shadow-2xl sm:p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-violet-700">Pengaturan kelas</p>
+                      <h3 id="final-task-dialog-title" className="mt-1 text-lg font-bold text-slate-900">Pilih Tugas Akhir</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{selectedCourse?.title}. Pilih satu tugas wajib yang sudah dipublikasikan. Tugas ini akan menjadi syarat terakhir sebelum peserta mengajukan persetujuan kelulusan.</p>
+                    </div>
+                    <button type="button" onClick={() => setFinalTaskModalOpen(false)} disabled={savingFinalTask} aria-label="Tutup" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-50"><X size={16} /></button>
+                  </div>
+
+                  {publishedRequiredTasks.length > 0 ? (
+                    <div className="mt-5 space-y-2">
+                      <label htmlFor="final-task-choice" className="block text-xs font-bold text-slate-700">Tugas yang ditetapkan</label>
+                      <select id="final-task-choice" value={pendingFinalTaskId} onChange={(event) => setPendingFinalTaskId(event.target.value)} className={inputClass()}>
+                        <option value="">Belum ditentukan</option>
+                        {publishedRequiredTasks.map((task) => {
+                          const section = sections.find((item) => item.id === task.section_id);
+                          return <option key={task.id} value={task.id}>{task.title}{section ? ` · ${section.title}` : ""} · Maks. {task.max_score}</option>;
+                        })}
+                      </select>
+                      <p className="text-[10px] leading-5 text-slate-500">Tugas draft atau tugas yang tidak wajib tidak dapat dipilih. Tugas wajib lainnya tetap dihitung sebagai Tugas Bab.</p>
+                    </div>
+                  ) : (
+                    <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900">Belum ada tugas wajib yang dipublikasikan pada kelas ini. Buat tugas di halaman ini, centang <strong>Tugas wajib</strong>, lalu ubah statusnya menjadi <strong>Dipublikasikan</strong>.</div>
+                  )}
+
+                  <div className="mt-5 rounded-xl bg-violet-50 px-4 py-3 text-[10px] leading-5 text-violet-900">Perubahan ini hanya mengubah penetapan Tugas Akhir. Pengaturan template sertifikat, nama penerbit, posisi nama, dan nilai minimum yang sudah ada akan tetap dipertahankan.</div>
+                  {error && <p className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p>}
+                  <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <button type="button" onClick={() => setFinalTaskModalOpen(false)} disabled={savingFinalTask} className="h-10 rounded-xl border border-slate-200 px-4 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Batal</button>
+                    <button type="button" onClick={() => void saveFinalTaskSelection()} disabled={savingFinalTask || publishedRequiredTasks.length === 0 || (certificateSettings?.enabled === true && !pendingFinalTaskId)} className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-violet-800 px-5 text-xs font-bold text-white hover:bg-violet-900 disabled:cursor-not-allowed disabled:opacity-50">{savingFinalTask ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}{savingFinalTask ? "Menyimpan..." : "Simpan Tugas Akhir"}</button>
+                  </div>
+                </section>
+              </div>
+            )}
+
             {loading ? (
               <div className="flex min-h-56 flex-col items-center justify-center text-center text-slate-500"><RefreshCw size={25} className="animate-spin text-violet-600" /><p className="mt-3 text-sm font-semibold">Memuat daftar tugas...</p></div>
             ) : courses.length === 0 ? (
@@ -588,7 +785,7 @@ export default function TaskManager({
                               <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700"><FileText size={19} /></div>
                                 <div className="min-w-0 flex-1">
-                                  <div className="flex flex-wrap items-center gap-2"><h4 className="text-sm font-bold text-slate-900">{task.title}</h4><span className={`rounded-full px-2 py-1 text-[9px] font-bold ${task.status === "published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{task.status === "published" ? "Dipublikasikan" : "Draft"}</span></div>
+                                  <div className="flex flex-wrap items-center gap-2"><h4 className="text-sm font-bold text-slate-900">{task.title}</h4>{task.id === finalTaskId && <span className="rounded-full bg-violet-100 px-2 py-1 text-[9px] font-extrabold tracking-wide text-violet-800">TUGAS AKHIR</span>}<span className={`rounded-full px-2 py-1 text-[9px] font-bold ${task.status === "published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{task.status === "published" ? "Dipublikasikan" : "Draft"}</span></div>
                                   <p className="mt-1 text-xs leading-5 text-slate-500">{task.description || task.instructions}</p>
                                   <div className="mt-2 flex flex-wrap gap-1.5"><span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">{placementLabel(task.placement)}{anchor ? ` · ${anchor.title}` : ""}</span><span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">{submissionLabel(task.submission_type)}</span><span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">Maks. {task.max_score}</span><span className="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600"><CalendarClock size={11} className="mr-1 inline" />{formatDate(task.due_at)}</span></div>
                                 </div>

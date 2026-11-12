@@ -110,6 +110,7 @@ export default function AlumniAccessManager({
   const [evidenceUrls, setEvidenceUrls] = useState<Record<string, string>>({});
   const [evidenceLoadingId, setEvidenceLoadingId] = useState<string | null>(null);
   const [evidenceError, setEvidenceError] = useState<{ id: string; message: string } | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<AlumniAccessRequestRow | null>(null);
 
   const courseMap = useMemo(
     () => new Map(courses.map((course) => [course.id, course.title])),
@@ -379,8 +380,22 @@ export default function AlumniAccessManager({
               const busy = savingId === row.id;
 
               return (
-                <article key={row.id} className="p-4 sm:p-5">
-                  <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <article
+                  key={row.id}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Lihat detail pengajuan alumni ${row.full_name}`}
+                  onClick={() => setSelectedRequest(row)}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget) return;
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedRequest(row);
+                    }
+                  }}
+                  className="cursor-pointer p-4 transition-colors hover:bg-[#FCFAFD] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#6B3B88] sm:px-5 sm:py-4"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h4 className="text-sm font-semibold text-[#30243A]">{row.full_name}</h4>
@@ -388,66 +403,13 @@ export default function AlumniAccessManager({
                           <StatusIcon size={12} /> {status.label}
                         </span>
                       </div>
-                      <div className="mt-2 flex flex-col gap-1.5 text-xs text-[#766D7D] sm:flex-row sm:flex-wrap sm:gap-x-4">
-                        <span className="inline-flex items-center gap-1.5 break-all"><Mail size={13} /> {row.email}</span>
-                        <span className="inline-flex items-center gap-1.5"><MessageCircle size={13} /> {row.whatsapp_number}</span>
-                      </div>
-                      <div className="mt-3 rounded-xl bg-[#FAF8FB] p-3">
-                        <p className="text-xs font-semibold text-[#51465D]">{courseTitle}</p>
-                        {row.previous_platform?.trim() && (
-                          <p className="mt-1 text-[11px] text-[#8E8494]">
-                            Platform sebelumnya: {row.previous_platform}
-                          </p>
-                        )}
-                        {row.proof_note && (
-                          <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-[#62576D]">
-                            Keterangan bukti: {row.proof_note}
-                          </p>
-                        )}
-                        {row.evidence_path && (
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            {evidenceUrls[row.id] ? (
-                              <a
-                                href={evidenceUrls[row.id]}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[#DED4E6] bg-white px-3 text-[11px] font-semibold text-[#40334B] hover:bg-[#F7F3FA]"
-                              >
-                                <FileImage size={13} /> Buka foto bukti
-                              </a>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => prepareEvidenceLink(row)}
-                                disabled={evidenceLoadingId === row.id}
-                                className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-[#DED4E6] bg-white px-3 text-[11px] font-semibold text-[#40334B] hover:bg-[#F7F3FA] disabled:opacity-60"
-                              >
-                                <FileImage size={13} />
-                                {evidenceLoadingId === row.id ? "Menyiapkan tautan..." : "Lihat foto bukti"}
-                              </button>
-                            )}
-                            {evidenceError?.id === row.id && (
-                              <span role="alert" className="text-[11px] text-rose-600">
-                                {evidenceError.message}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {!row.proof_note && !row.evidence_path && (
-                          <p className="mt-1 text-[11px] text-[#8E8494]">
-                            Tidak ada bukti yang dilampirkan.
-                          </p>
-                        )}
-                      </div>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[#A097A7]">
-                        <span>Diajukan: {formatDate(row.created_at)}</span>
-                        {row.reviewed_at && <span>Ditinjau: {formatDate(row.reviewed_at)}</span>}
-                        {row.expires_at && row.status === "approved" && <span>Batas aktivasi: {formatDate(row.expires_at)}</span>}
-                        {row.claimed_at && <span>Diaktifkan: {formatDate(row.claimed_at)}</span>}
-                      </div>
+                      <p className="mt-1.5 text-xs font-medium text-[#62576D]">{courseTitle}</p>
+                      <p className="mt-1 text-[10px] text-[#A097A7]">
+                        Diajukan {formatDate(row.created_at)} <span className="mx-1">·</span> Klik untuk melihat detail
+                      </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 xl:max-w-[280px] xl:justify-end">
+                    <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end" onClick={(event) => event.stopPropagation()}>
                       {row.status === "pending" && (
                         <>
                           <button
@@ -493,9 +455,149 @@ export default function AlumniAccessManager({
         )}
       </section>
 
-      <div className="rounded-xl border border-[#EAE5ED] bg-[#FCFBFD] px-4 py-3 text-xs leading-5 text-[#827889]">
-        <strong className="font-semibold text-[#51465D]">Catatan:</strong> Persetujuan tidak mengirim email otomatis. Setelah menyetujui, gunakan tombol “Salin pesan undangan” untuk mengirim tautan pribadi melalui WhatsApp. Peserta membuat akun dari tautan tersebut menggunakan email aktif miliknya, lalu mengaktifkan akses gratis. Sistem tidak mengirim email verifikasi; Admin dapat menghubungi peserta melalui WhatsApp bila perlu konfirmasi.
-      </div>
+      {selectedRequest && (() => {
+        const row = selectedRequest;
+        const status = statusMeta(row);
+        const StatusIcon = status.icon;
+        const courseTitle = courseMap.get(row.course_id) ?? "Kelas tidak ditemukan";
+        return (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#160A20]/55 p-3 backdrop-blur-[2px] sm:p-6"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setSelectedRequest(null);
+            }}
+          >
+            <section
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="alumni-detail-title"
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setSelectedRequest(null);
+              }}
+              className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            >
+              <header className="flex items-start justify-between gap-4 border-b border-[#F0ECF2] px-5 py-4 sm:px-6">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[.18em] text-[#8D8294]">Detail peserta alumni</p>
+                  <h2 id="alumni-detail-title" className="mt-1 break-words text-lg font-semibold text-[#30243A]">{row.full_name}</h2>
+                  <span className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-medium ${status.className}`}>
+                    <StatusIcon size={12} /> {status.label}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRequest(null)}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#EAE5ED] text-[#766D7D] transition hover:bg-[#FAF8FB]"
+                  aria-label="Tutup detail peserta"
+                >
+                  <X size={17} />
+                </button>
+              </header>
+
+              <div className="overflow-y-auto px-5 py-5 sm:px-6">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl bg-[#FAF8FB] p-3">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Email</p>
+                    <p className="mt-1 break-all text-sm font-medium text-[#40334B]">{row.email || "—"}</p>
+                  </div>
+                  <div className="rounded-xl bg-[#FAF8FB] p-3">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">WhatsApp</p>
+                    <p className="mt-1 text-sm font-medium text-[#40334B]">{row.whatsapp_number || "—"}</p>
+                  </div>
+                  <div className="rounded-xl bg-[#FAF8FB] p-3 sm:col-span-2">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Kelas yang diajukan</p>
+                    <p className="mt-1 text-sm font-semibold text-[#40334B]">{courseTitle}</p>
+                  </div>
+                  <div className="rounded-xl bg-[#FAF8FB] p-3 sm:col-span-2">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Platform sebelumnya</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-[#40334B]">{row.previous_platform?.trim() || "Tidak dicantumkan"}</p>
+                  </div>
+                  <div className="rounded-xl bg-[#FAF8FB] p-3 sm:col-span-2">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Keterangan bukti</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-[#40334B]">{row.proof_note?.trim() || "Tidak ada keterangan."}</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-xl border border-[#EAE5ED] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h3 className="text-xs font-semibold text-[#40334B]">Bukti keikutsertaan</h3>
+                      <p className="mt-1 text-[11px] text-[#948B9B]">{row.evidence_path ? "Peserta melampirkan file bukti." : "Tidak ada file bukti yang dilampirkan."}</p>
+                    </div>
+                    {row.evidence_path && (
+                      evidenceUrls[row.id] ? (
+                        <a
+                          href={evidenceUrls[row.id]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(event) => event.stopPropagation()}
+                          className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#DED4E6] px-3 text-xs font-semibold text-[#40334B] hover:bg-[#FAF8FB]"
+                        >
+                          <FileImage size={14} /> Buka foto bukti
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => prepareEvidenceLink(row)}
+                          disabled={evidenceLoadingId === row.id}
+                          className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-[#DED4E6] px-3 text-xs font-semibold text-[#40334B] hover:bg-[#FAF8FB] disabled:opacity-60"
+                        >
+                          <FileImage size={14} />
+                          {evidenceLoadingId === row.id ? "Menyiapkan tautan..." : "Lihat foto bukti"}
+                        </button>
+                      )
+                    )}
+                  </div>
+                  {evidenceError?.id === row.id && (
+                    <p role="alert" className="mt-2 text-xs text-rose-600">{evidenceError.message}</p>
+                  )}
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-[#F0ECF2] p-3">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Waktu pengajuan</p>
+                    <p className="mt-1 text-xs text-[#40334B]">{formatDate(row.created_at)}</p>
+                  </div>
+                  <div className="rounded-xl border border-[#F0ECF2] p-3">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Waktu ditinjau</p>
+                    <p className="mt-1 text-xs text-[#40334B]">{formatDate(row.reviewed_at)}</p>
+                  </div>
+                  <div className="rounded-xl border border-[#F0ECF2] p-3">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Batas aktivasi</p>
+                    <p className="mt-1 text-xs text-[#40334B]">{formatDate(row.expires_at)}</p>
+                  </div>
+                  <div className="rounded-xl border border-[#F0ECF2] p-3">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Waktu aktivasi</p>
+                    <p className="mt-1 text-xs text-[#40334B]">{formatDate(row.claimed_at)}</p>
+                  </div>
+                </div>
+
+                {(row.admin_note || row.reviewed_by || row.claimed_by) && (
+                  <div className="mt-4 rounded-xl bg-[#FAF8FB] p-4">
+                    <h3 className="text-xs font-semibold text-[#40334B]">Catatan administrasi</h3>
+                    {row.admin_note && <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-[#62576D]">{row.admin_note}</p>}
+                    {row.reviewed_by && <p className="mt-2 break-all text-[11px] text-[#817688]">Ditinjau oleh: {row.reviewed_by}</p>}
+                    {row.claimed_by && <p className="mt-1 break-all text-[11px] text-[#817688]">Akun pengaktif: {row.claimed_by}</p>}
+                  </div>
+                )}
+              </div>
+
+              <footer className="flex justify-end border-t border-[#F0ECF2] px-5 py-3 sm:px-6">
+                <button
+                  type="button"
+                  onClick={() => setSelectedRequest(null)}
+                  className="inline-flex min-h-9 items-center rounded-xl bg-[#260047] px-4 text-xs font-semibold text-white transition hover:bg-[#3A0A5E]"
+                >
+                  Tutup
+                </button>
+              </footer>
+            </section>
+          </div>
+        );
+      })()}
+
+      
     </div>
   );
 }

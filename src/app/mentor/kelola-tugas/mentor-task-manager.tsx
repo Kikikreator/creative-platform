@@ -118,6 +118,8 @@ export default function MentorTaskManager({
   const [sections, setSections] = useState<Section[]>([]);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [finalTaskId, setFinalTaskId] = useState<string | null>(null);
+  const [settingsWarning, setSettingsWarning] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -128,6 +130,7 @@ export default function MentorTaskManager({
   const [form, setForm] = useState<FormState>(emptyForm);
 
   const selectedCourse = courses.find((item) => item.id === courseId) ?? null;
+  const selectedFinalTask = tasks.find((task) => task.id === finalTaskId) ?? null;
   const sectionLessons = useMemo(
     () => lessons.filter((lesson) => lesson.section_id === form.section_id).sort((a, b) => (a.position ?? 0) - (b.position ?? 0)),
     [lessons, form.section_id]
@@ -138,18 +141,30 @@ export default function MentorTaskManager({
       setSections([]);
       setLessons([]);
       setTasks([]);
+      setFinalTaskId(null);
+      setSettingsWarning("");
       setLoading(false);
       return;
     }
     setLoading(true);
     setError("");
     try {
-      const [sectionResult, taskResult] = await Promise.all([
+      const [sectionResult, taskResult, settingsResult] = await Promise.all([
         supabase.from("course_sections").select("id, course_id, title, position").eq("course_id", courseId).order("position"),
         supabase.from("course_tasks").select("*").eq("course_id", courseId).order("created_at", { ascending: false }),
+        (supabase as any).from("course_certificate_settings").select("final_task_id").eq("course_id", courseId).maybeSingle(),
       ]);
       if (sectionResult.error) throw sectionResult.error;
       if (taskResult.error) throw taskResult.error;
+      // Mentor hanya membaca penetapan Tugas Akhir dari pengaturan Admin.
+      // Jika akses pengaturan tidak tersedia, pengelolaan tugas tetap berjalan.
+      if (settingsResult.error) {
+        setFinalTaskId(null);
+        setSettingsWarning(`Penanda Tugas Akhir tidak dapat dimuat: ${settingsResult.error.message}`);
+      } else {
+        setFinalTaskId(settingsResult.data?.final_task_id ?? null);
+        setSettingsWarning("");
+      }
       const nextSections = (sectionResult.data ?? []) as Section[];
       setSections(nextSections);
       setTasks((taskResult.data ?? []) as Task[]);
@@ -169,6 +184,7 @@ export default function MentorTaskManager({
       setSections([]);
       setLessons([]);
       setTasks([]);
+      setFinalTaskId(null);
     } finally {
       setLoading(false);
     }
@@ -338,6 +354,19 @@ export default function MentorTaskManager({
         </div>
       </section>
 
+      <section className="flex flex-col gap-2 rounded-2xl border border-violet-100 bg-violet-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-[10px] font-extrabold uppercase tracking-wider text-violet-700">Penanda Tugas Akhir</p>
+          {selectedFinalTask ? (
+            <p className="mt-1 text-xs font-semibold text-violet-950">Tugas Akhir yang ditetapkan Admin: {selectedFinalTask.title}</p>
+          ) : (
+            <p className="mt-1 text-xs text-slate-600">Admin belum menetapkan Tugas Akhir untuk kelas ini.</p>
+          )}
+          {settingsWarning && <p className="mt-1 text-[10px] text-rose-700">{settingsWarning}</p>}
+        </div>
+        <span className="inline-flex h-8 shrink-0 items-center rounded-lg bg-white px-3 text-[10px] font-bold text-violet-700">Ditentukan Admin</span>
+      </section>
+
       {formOpen && (
         <section className="rounded-[22px] border border-violet-100 bg-white p-4 shadow-sm sm:p-6">
           <div className="flex items-start justify-between gap-3">
@@ -389,7 +418,7 @@ export default function MentorTaskManager({
                 <div className="flex min-w-0 items-start gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700"><ClipboardList size={18} /></span>
                   <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2"><h4 className="text-xs font-extrabold text-slate-900">{task.title}</h4><span className={`rounded-full px-2 py-0.5 text-[8px] font-bold ${task.status === "published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{task.status === "published" ? "Dipublikasikan" : "Draft"}</span></div>
+                    <div className="flex flex-wrap items-center gap-2"><h4 className="text-xs font-extrabold text-slate-900">{task.title}</h4>{task.id === finalTaskId && <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[8px] font-extrabold tracking-wide text-violet-800">TUGAS AKHIR</span>}<span className={`rounded-full px-2 py-0.5 text-[8px] font-bold ${task.status === "published" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{task.status === "published" ? "Dipublikasikan" : "Draft"}</span></div>
                     <p className="mt-1 line-clamp-2 text-[10px] text-slate-500">{task.description || task.instructions}</p>
                     <p className="mt-1 text-[9px] text-slate-400">Maks. {task.max_score} poin · {formatDate(task.due_at)}</p>
                   </div>

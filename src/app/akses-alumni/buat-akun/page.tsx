@@ -43,6 +43,17 @@ export default function AlumniCreateAccountPage() {
     [requestId],
   );
 
+  // Samakan validasi frontend dengan kebijakan Supabase:
+  // minimal 8 karakter, huruf kecil, huruf kapital, dan angka.
+  const passwordRequirements = [
+    { label: "Minimal 8 karakter", valid: password.length >= 8 },
+    { label: "Mengandung huruf kecil (a–z)", valid: /[a-z]/.test(password) },
+    { label: "Mengandung huruf kapital (A–Z)", valid: /[A-Z]/.test(password) },
+    { label: "Mengandung angka (0–9)", valid: /[0-9]/.test(password) },
+  ];
+  const passwordIsValid = passwordRequirements.every((item) => item.valid);
+  const passwordsMatch = password.length > 0 && password === confirmPassword;
+
   useEffect(() => {
     let active = true;
     const id = new URLSearchParams(window.location.search).get("request") ?? "";
@@ -102,12 +113,14 @@ export default function AlumniCreateAccountPage() {
     setExistingAccount(false);
     setAccountCreated(false);
 
-    if (password.length < 8) {
-      setSubmitError("Password minimal 8 karakter.");
-      return;
-    }
     if (password.length > 72) {
       setSubmitError("Password maksimal 72 karakter.");
+      return;
+    }
+    if (!passwordIsValid) {
+      setSubmitError(
+        "Password belum memenuhi ketentuan: minimal 8 karakter serta mengandung huruf kecil, huruf kapital, dan angka.",
+      );
       return;
     }
     if (password !== confirmPassword) {
@@ -236,7 +249,20 @@ export default function AlumniCreateAccountPage() {
                     <input id="alumni-password" type={showPassword ? "text" : "password"} required minLength={8} maxLength={72} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Minimal 8 karakter" className="min-w-0 flex-1 bg-transparent text-sm text-[#30243A] outline-none placeholder:text-[#756B7C]" />
                     <button type="button" onClick={() => setShowPassword((value) => !value)} className="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#756B7C]" aria-label={showPassword ? "Sembunyikan password" : "Lihat password"}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                   </div>
-                  <p className="mt-1 text-[11px] text-[#756B7C]">Gunakan password minimal 8 karakter dan jangan bagikan kepada orang lain.</p>
+                  <div className="mt-2 rounded-lg bg-[#FAF8FC] p-3">
+                    <p className="mb-2 text-[11px] font-medium text-[#51465D]">Ketentuan password:</p>
+                    <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                      {passwordRequirements.map((item) => (
+                        <li key={item.label} className={`flex items-center gap-2 text-[11px] ${item.valid ? "text-emerald-700" : "text-[#756B7C]"}`}>
+                          <span aria-hidden="true" className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${item.valid ? "bg-emerald-100 text-emerald-700" : "bg-[#EEEAF1] text-[#756B7C]"}`}>
+                            {item.valid ? "✓" : "·"}
+                          </span>
+                          {item.label}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-[10px] leading-4 text-[#756B7C]">Contoh format: KikiBelajar2026. Gunakan password pribadi dan jangan bagikan kepada orang lain.</p>
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="alumni-confirm-password" className="text-xs font-medium text-[#51465D]">Ulangi password <span className="text-rose-500">*</span></label>
@@ -244,6 +270,11 @@ export default function AlumniCreateAccountPage() {
                     <input id="alumni-confirm-password" type={showConfirmPassword ? "text" : "password"} required minLength={8} maxLength={72} autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Masukkan ulang password" className="min-w-0 flex-1 bg-transparent text-sm text-[#30243A] outline-none placeholder:text-[#756B7C]" />
                     <button type="button" onClick={() => setShowConfirmPassword((value) => !value)} className="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#756B7C]" aria-label={showConfirmPassword ? "Sembunyikan password" : "Lihat password"}>{showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
                   </div>
+                  {confirmPassword.length > 0 && (
+                    <p className={`mt-1.5 text-[11px] ${passwordsMatch ? "text-emerald-700" : "text-rose-600"}`} role="status">
+                      {passwordsMatch ? "Password sudah sama." : "Password belum sama."}
+                    </p>
+                  )}
                 </div>
 
                 <label className="flex items-start gap-2.5 rounded-xl border border-[#E7E0EB] bg-[#FCFAFD] p-3.5 text-xs leading-5 text-[#51465D]">

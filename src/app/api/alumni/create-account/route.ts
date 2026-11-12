@@ -60,8 +60,24 @@ export async function POST(request: Request) {
     if (!UUID_PATTERN.test(requestId)) {
       return json({ success: false, message: "Tautan pengajuan tidak valid. Buka kembali tautan pribadi dari Admin." }, 400);
     }
-    if (password.length < 8 || password.length > 72) {
-      return json({ success: false, message: "Password harus berisi 8 sampai 72 karakter." }, 400);
+    if (password.length > 72) {
+      return json({ success: false, code: "PASSWORD_TOO_LONG", message: "Password maksimal 72 karakter." }, 400);
+    }
+
+    // Server-side validation must mirror Supabase Authentication > Email
+    // > Password requirements (lowercase, uppercase letters and digits).
+    const passwordRequirementsMet =
+      password.length >= 8 &&
+      /[a-z]/.test(password) &&
+      /[A-Z]/.test(password) &&
+      /[0-9]/.test(password);
+
+    if (!passwordRequirementsMet) {
+      return json({
+        success: false,
+        code: "PASSWORD_POLICY",
+        message: "Password belum memenuhi ketentuan. Gunakan minimal 8 karakter yang mengandung setidaknya 1 huruf kecil, 1 huruf kapital, dan 1 angka.",
+      }, 400);
     }
     if (!emailOwnershipConfirmed) {
       return json({ success: false, message: "Centang pernyataan bahwa email tersebut aktif dan milikmu." }, 400);
@@ -206,8 +222,23 @@ export async function POST(request: Request) {
         }, 409);
       }
 
-      console.error("Alumni Auth user creation failed:", message);
-      return json({ success: false, message: "Supabase belum berhasil membuat akun. Periksa konfigurasi server atau hubungi Admin." }, 500);
+      console.error("Alumni Auth user creation failed:", {
+        message,
+        code: createError?.code ?? null,
+        status: createError?.status ?? null,
+      });
+
+      // Keep the user-facing error helpful if the Supabase password policy
+      // is changed later and no longer matches this application's validation.
+      if (lower.includes("password should contain") || lower.includes("password") && lower.includes("weak")) {
+        return json({
+          success: false,
+          code: "PASSWORD_POLICY",
+          message: "Password belum memenuhi kebijakan keamanan. Gunakan minimal 8 karakter dengan huruf kecil, huruf kapital, dan angka.",
+        }, 400);
+      }
+
+      return json({ success: false, message: "Akun belum berhasil dibuat karena ada kendala pada layanan autentikasi. Silakan coba kembali atau hubungi Admin." }, 500);
     }
 
     const userId = created.user.id;
