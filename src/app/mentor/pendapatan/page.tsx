@@ -5,6 +5,7 @@ import MentorEarningsDashboard, {
   type MentorAgreementRow,
   type MentorWithdrawalRow,
   type MentorCourseLabel,
+  type MentorWithdrawalQuota,
 } from "./mentor-earnings-dashboard";
 
 export default async function MentorEarningsPage() {
@@ -22,6 +23,7 @@ export default async function MentorEarningsPage() {
     withdrawalsResult,
     profileResult,
     mentorProfileResult,
+    withdrawalQuotaResult,
   ] = await Promise.all([
     supabase
       .from("mentor_course_earnings")
@@ -50,6 +52,7 @@ export default async function MentorEarningsPage() {
       .select("headline, expertise")
       .eq("user_id", user.id)
       .maybeSingle(),
+    supabase.rpc("get_my_mentor_withdrawal_quota"),
   ]);
 
   const courseIds = Array.from(new Set([
@@ -73,6 +76,7 @@ export default async function MentorEarningsPage() {
     withdrawalsResult.error?.message,
     profileResult.error?.message,
     mentorProfileResult.error?.message,
+    withdrawalQuotaResult.error?.message,
     coursesResult.error?.message,
     memberProfilesResult.error?.message,
   ].filter(Boolean);
@@ -88,6 +92,7 @@ export default async function MentorEarningsPage() {
       })) as MentorEarningRow[]}
       agreements={(agreementsResult.data ?? []) as MentorAgreementRow[]}
       withdrawals={(withdrawalsResult.data ?? []) as MentorWithdrawalRow[]}
+      withdrawalQuota={(withdrawalQuotaResult.data ?? null) as MentorWithdrawalQuota | null}
       courses={(coursesResult.data ?? []) as MentorCourseLabel[]}
       initialError={errors.join(" · ") || null}
     />

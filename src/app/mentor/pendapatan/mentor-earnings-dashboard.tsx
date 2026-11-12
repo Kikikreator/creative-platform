@@ -62,6 +62,13 @@ export type MentorWithdrawalRow = {
 
 export type MentorCourseLabel = { id: string; title: string };
 
+export type MentorWithdrawalQuota = {
+  limit: number;
+  used: number;
+  remaining: number;
+  reset_at: string;
+};
+
 type Props = {
   mentorName: string;
   mentorHeadline: string | null;
@@ -69,6 +76,7 @@ type Props = {
   earnings: MentorEarningRow[];
   agreements: MentorAgreementRow[];
   withdrawals: MentorWithdrawalRow[];
+  withdrawalQuota: MentorWithdrawalQuota | null;
   courses: MentorCourseLabel[];
   initialError: string | null;
 };
@@ -120,6 +128,7 @@ export default function MentorEarningsDashboard({
   earnings,
   agreements,
   withdrawals,
+  withdrawalQuota,
   courses,
   initialError,
 }: Props) {
@@ -180,6 +189,55 @@ export default function MentorEarningsDashboard({
   );
   const mentorRole = mentorHeadline?.trim() || "Mentor/Pengajar Kiki Creator Class";
   const expertiseLabel = (mentorExpertise ?? []).filter(Boolean).join(" · ");
+  const quotaLimit = Math.max(1, Number(withdrawalQuota?.limit) || 3);
+  const quotaUsed = Math.max(0, Number(withdrawalQuota?.used) || 0);
+  const quotaRemaining = Math.max(0, Number(withdrawalQuota?.remaining) || 0);
+  const quotaResetDate = withdrawalQuota?.reset_at
+    ? new Intl.DateTimeFormat("id-ID", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        timeZone: "Asia/Jakarta",
+      }).format(new Date(withdrawalQuota.reset_at))
+    : null;
+
+  // Saat Mentor kembali ke tab ini, ambil ulang status pengajuan dan kuota.
+  // Jangan refresh saat modal sedang terbuka agar isian yang belum dikirim tidak hilang.
+  useEffect(() => {
+    function refreshOnFocus() {
+      if (!isWithdrawalOpen && !selectedWithdrawal) router.refresh();
+    }
+
+    window.addEventListener("focus", refreshOnFocus);
+    return () => window.removeEventListener("focus", refreshOnFocus);
+  }, [router, isWithdrawalOpen, selectedWithdrawal]);
+
+  useEffect(() => {
+    // Aktifkan ulang kuota tepat saat periode bulan baru dimulai,
+    // meskipun halaman Pendapatan tetap terbuka di browser.
+    const resetTime = withdrawalQuota?.reset_at
+      ? new Date(withdrawalQuota.reset_at).getTime()
+      : Number.NaN;
+    if (!Number.isFinite(resetTime)) return;
+
+    let timer: number | undefined;
+    function refreshAtReset() {
+      const remaining = resetTime - Date.now();
+      if (remaining <= 0) {
+        router.refresh();
+        return;
+      }
+      timer = window.setTimeout(
+        refreshAtReset,
+        Math.min(remaining + 1000, 2_147_000_000),
+      );
+    }
+
+    refreshAtReset();
+    return () => {
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, [router, withdrawalQuota?.reset_at]);
 
   useEffect(() => {
     if (!isWithdrawalOpen && !selectedWithdrawal) return;
@@ -197,6 +255,7 @@ export default function MentorEarningsDashboard({
   }, [isWithdrawalOpen, selectedWithdrawal, submitting]);
 
   function openWithdrawal() {
+    if (!withdrawalQuota || quotaRemaining <= 0) return;
     setFormError("");
     setSuccess("");
     setIsWithdrawalOpen(true);
@@ -213,7 +272,11 @@ export default function MentorEarningsDashboard({
 
     let validationError = "";
 
-    if (fullName.trim().length < 3) {
+    if (!withdrawalQuota) {
+      validationError = "Informasi kuota penarikan belum tersedia. Muat ulang halaman terlebih dahulu.";
+    } else if (quotaRemaining <= 0) {
+      validationError = "Kuota penarikan bulan ini sudah habis. Silakan ajukan kembali pada awal bulan berikutnya.";
+    } else if (fullName.trim().length < 3) {
       validationError = "Nama pemilik rekening minimal 3 karakter.";
     } else if (bankName.trim().length < 2) {
       validationError = "Masukkan nama bank atau e-wallet.";
@@ -266,11 +329,13 @@ export default function MentorEarningsDashboard({
 
       router.refresh();
     } catch (err) {
-      setFormError(
-        err instanceof Error
-          ? err.message
-          : "Pengajuan penarikan gagal dikirim.",
-      );
+      const message = err instanceof Error
+        ? err.message
+        : "Pengajuan penarikan gagal dikirim.";
+      setFormError(message);
+      if (message.toLowerCase().includes("kuota penarikan")) {
+        router.refresh();
+      }
     } finally {
       setSubmitting(false);
     }
@@ -329,7 +394,14 @@ export default function MentorEarningsDashboard({
             <button
               type="button"
               onClick={openWithdrawal}
-              disabled={availableTotal <= 0}
+              disabled={availableTotal <= 0 || !withdrawalQuota || quotaRemaining <= 0}
+              title={
+                !withdrawalQuota
+                  ? "Informasi kuota belum tersedia"
+                  : quotaRemaining <= 0
+                    ? `Kuota penarikan habis. Aktif kembali ${quotaResetDate ?? "bulan depan"}.`
+                    : undefined
+              }
               className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-xs font-extrabold text-[#260047] shadow-lg shadow-black/10 transition hover:bg-[#F1EAF7] focus:outline-none focus:ring-2 focus:ring-white/70 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ArrowDownToLine size={16} />
@@ -341,6 +413,61 @@ export default function MentorEarningsDashboard({
 
         </div>
 
+      </section>
+
+      {/* KUOTA PENARIKAN BULANAN */}
+
+      <section
+        className={`rounded-[22px] border p-5 shadow-[0_8px_24px_rgba(38,0,71,.045)] sm:p-6 ${
+          !withdrawalQuota
+            ? "border-amber-200 bg-amber-50/70"
+            : quotaRemaining <= 0
+              ? "border-rose-200 bg-rose-50/70"
+              : "border-violet-100 bg-white"
+        }`}
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-[#6D5A80]">
+              Kuota penarikan bulanan
+            </p>
+            {withdrawalQuota ? (
+              <>
+                <p className="mt-2 text-lg font-extrabold text-[#260047]">
+                  {quotaUsed} dari {quotaLimit} kali pengajuan digunakan
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  {quotaRemaining > 0
+                    ? `Kamu masih memiliki ${quotaRemaining} kesempatan penarikan bulan ini.`
+                    : `Kuota bulan ini sudah habis. Kuota akan kembali pada ${quotaResetDate ?? "tanggal 1 bulan berikutnya"}.`}
+                </p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Kuota diperbarui otomatis setiap tanggal 1. Jika pengajuan ditolak Admin, satu kuota akan dikembalikan.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-2 text-sm font-bold text-amber-900">Kuota belum dapat dimuat</p>
+                <p className="mt-1 text-xs leading-5 text-amber-800">
+                  Muat ulang halaman. Tombol penarikan dinonaktifkan sampai informasi kuota berhasil dimuat.
+                </p>
+              </>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2" aria-label={withdrawalQuota ? `${quotaUsed} dari ${quotaLimit} kuota digunakan` : "Kuota belum tersedia"}>
+            {Array.from({ length: Math.min(3, quotaLimit) }, (_, index) => (
+              <span
+                key={index}
+                className={`h-3.5 w-9 rounded-full ${
+                  index < quotaUsed
+                    ? quotaRemaining <= 0 ? "bg-rose-500" : "bg-[#260047]"
+                    : "bg-slate-200"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
       </section>
 
       {initialError && (
@@ -1113,6 +1240,8 @@ export default function MentorEarningsDashboard({
                   disabled={
                     submitting ||
                     availableTotal <= 0 ||
+                    !withdrawalQuota ||
+                    quotaRemaining <= 0 ||
                     !fullName.trim() ||
                     !bankName.trim() ||
                     !accountNumber ||

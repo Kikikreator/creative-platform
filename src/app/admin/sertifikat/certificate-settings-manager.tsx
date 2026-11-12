@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type PointerEve
 import { createClient } from "@/lib/supabase/client";
 import { fitCertificateName } from "@/lib/certificates/name-layout";
 import {
-  CheckCircle2, CircleAlert, FileImage, ImagePlus, LoaderCircle, Move, Save,
+  AlignCenter, AlignLeft, AlignRight, CheckCircle2, CircleAlert, FileImage, ImagePlus, LoaderCircle, Move, Save,
   UploadCloud,
 } from "lucide-react";
 
@@ -14,6 +14,7 @@ const labelClass = "block text-xs font-bold text-[#51476B]";
 const defaultBox = { x: 0.22, y: 0.39, width: 0.56, height: 0.15 };
 
 type NameBox = { x: number; y: number; width: number; height: number };
+type NameAlignment = "left" | "center" | "right";
 type DragState = { mode: "move" | "resize"; startX: number; startY: number; initial: NameBox };
 export type CertificateCourse = { id: string; title: string; slug: string; status: string };
 export type CertificateTask = { id: string; course_id: string; title: string; status: string; is_required: boolean; max_score: number | string };
@@ -23,6 +24,7 @@ export type CertificateSetting = {
   template_path: string | null; template_mime_type: string | null; template_width: number | null; template_height: number | null;
   name_box_x: number | string | null; name_box_y: number | string | null; name_box_width: number | string | null; name_box_height: number | string | null;
   name_font_min_size: number | string | null; name_font_max_size: number | string | null; name_font_color: string | null; name_font_bold: boolean | null; name_font_family: string | null;
+  name_text_align: NameAlignment | null;
 };
 type IssuedCertificate = { id: string; course_id: string; issued_at: string; revoked_at: string | null };
 
@@ -71,6 +73,7 @@ export default function CertificateSettingsManager({ courses, tasks, settings, i
   const [fontColor, setFontColor] = useState(setting?.name_font_color ?? "#30204A");
   const [fontBold, setFontBold] = useState(setting?.name_font_bold ?? true);
   const [fontFamily, setFontFamily] = useState(setting?.name_font_family ?? "Helvetica");
+  const [nameAlignment, setNameAlignment] = useState<NameAlignment>(setting?.name_text_align ?? "center");
   const [previewName, setPreviewName] = useState("Nama Peserta");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -129,6 +132,7 @@ export default function CertificateSettingsManager({ courses, tasks, settings, i
     setFontColor(next?.name_font_color ?? "#30204A");
     setFontBold(next?.name_font_bold ?? true);
     setFontFamily(next?.name_font_family ?? "Helvetica");
+    setNameAlignment(next?.name_text_align ?? "center");
     setPreviewName("Nama Peserta");
     setError(""); setNotice("");
     setTemplateUrl("");
@@ -239,8 +243,28 @@ export default function CertificateSettingsManager({ courses, tasks, settings, i
       p_name_font_bold: fontBold,
       p_name_font_family: fontFamily,
     });
-    if (saveError) setError(saveError.message);
-    else { setNotice("Pengaturan sertifikat dan posisi nama berhasil disimpan."); window.location.reload(); }
+
+    if (saveError) {
+      setError(saveError.message);
+      setSaving(false);
+      return;
+    }
+
+    // Disimpan melalui RPC terpisah agar fungsi penyimpanan template yang lama
+    // tetap kompatibel dan tidak perlu diubah tanda tangannya.
+    const { error: alignmentError } = await (supabase as any).rpc("admin_save_course_certificate_name_alignment", {
+      p_course_id: courseId,
+      p_name_text_align: nameAlignment,
+    });
+
+    if (alignmentError) {
+      setError(`Pengaturan sertifikat utama tersimpan, tetapi perataan nama gagal disimpan: ${alignmentError.message}`);
+      setSaving(false);
+      return;
+    }
+
+    setNotice("Pengaturan sertifikat, posisi, dan perataan nama berhasil disimpan.");
+    window.location.reload();
     setSaving(false);
   }
 
@@ -318,8 +342,21 @@ export default function CertificateSettingsManager({ courses, tasks, settings, i
                 <div ref={previewRef} className="relative mx-auto w-full max-w-[900px] touch-none select-none overflow-hidden rounded-lg bg-white shadow-[0_14px_34px_rgba(38,24,64,.15)]" style={{ aspectRatio: `${templateWidth} / ${templateHeight}` }} onPointerMove={moveBox} onPointerUp={() => setDragState(null)} onPointerCancel={() => setDragState(null)}>
                   <img src={templateUrl} alt="Preview desain sertifikat" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full object-fill"/>
                   <div onPointerDown={(event) => startDrag(event, "move")} className="absolute flex cursor-move items-center justify-center overflow-visible rounded-md border-2 border-dashed border-violet-600 bg-violet-500/10 shadow-[0_0_0_9999px_rgba(20,12,38,.035)]" style={{ left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.width * 100}%`, height: `${box.height * 100}%`, touchAction: "none" }}>
-                    <div className="pointer-events-none flex h-full w-full flex-col items-center justify-center overflow-hidden px-1 text-center" style={{ color: fontColor, fontFamily: cssFontFamily(fontFamily), fontWeight: fontBold ? 700 : 400, fontSize: `${previewLayout?.fontSize ?? 18}px`, lineHeight: `${previewLayout?.lineHeight ?? 21}px` }}>
-                      {(previewLayout?.lines ?? [previewName || "Nama Peserta"]).map((line, index) => <span key={`${index}-${line}`} className="block max-w-full whitespace-nowrap">{line}</span>)}
+                    <div
+                      className="pointer-events-none flex h-full w-full flex-col justify-center overflow-hidden px-1"
+                      style={{
+                        color: fontColor,
+                        fontFamily: cssFontFamily(fontFamily),
+                        fontWeight: fontBold ? 700 : 400,
+                        fontSize: `${previewLayout?.fontSize ?? 18}px`,
+                        lineHeight: `${previewLayout?.lineHeight ?? 21}px`,
+                        // Setiap baris harus selebar area nama agar text-align
+                        // benar-benar menggeser teks ke kiri/tengah/kanan.
+                        alignItems: "stretch",
+                        textAlign: nameAlignment,
+                      }}
+                    >
+                      {(previewLayout?.lines ?? [previewName || "Nama Peserta"]).map((line, index) => <span key={`${index}-${line}`} className="block w-full max-w-full whitespace-nowrap">{line}</span>)}
                     </div>
                     <span className="pointer-events-none absolute -top-6 left-0 inline-flex items-center gap-1 rounded-md bg-violet-700 px-2 py-1 text-[9px] font-bold text-white shadow"><Move size={10}/> AREA NAMA</span>
                     <button type="button" aria-label="Ubah ukuran kotak nama" onPointerDown={(event) => startDrag(event, "resize")} className="absolute -bottom-2 -right-2 h-5 w-5 cursor-nwse-resize rounded-full border-2 border-white bg-violet-700 shadow-lg"/>
@@ -331,6 +368,28 @@ export default function CertificateSettingsManager({ courses, tasks, settings, i
                 <div className="flex items-end"><p className="text-[10px] leading-5 text-[#938BA5]">Preview memakai perhitungan ukuran yang sama dengan PDF. Coba nama pendek, sedang, dan panjang sebelum menyimpan.</p></div>
                 <label className={labelClass}>Warna nama<input type="color" value={fontColor} onChange={(event) => setFontColor(event.target.value)} className="mt-1.5 h-11 w-full cursor-pointer rounded-xl bg-[#F7F6FB] p-1.5 ring-1 ring-inset ring-[#ECE8F4]"/></label>
                 <label className={labelClass}>Jenis font<select value={fontFamily} onChange={(event) => setFontFamily(event.target.value)} className={inputClass}><option value="Helvetica">Sans-serif (Helvetica)</option><option value="TimesRoman">Serif (Times Roman)</option><option value="Courier">Monospace (Courier)</option></select></label>
+                <div className="sm:col-span-2">
+                  <span className={labelClass}>Perataan nama peserta</span>
+                  <div className="mt-1.5 grid grid-cols-3 gap-2 rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-inset ring-[#ECE8F4]">
+                    {([
+                      { value: "left", label: "Rata kiri", Icon: AlignLeft },
+                      { value: "center", label: "Rata tengah", Icon: AlignCenter },
+                      { value: "right", label: "Rata kanan", Icon: AlignRight },
+                    ] as const).map(({ value, label, Icon }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setNameAlignment(value)}
+                        aria-pressed={nameAlignment === value}
+                        className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-2 text-xs font-semibold transition ${nameAlignment === value ? "bg-violet-700 text-white shadow-sm" : "text-[#625875] hover:bg-violet-50 hover:text-violet-800"}`}
+                      >
+                        <Icon size={15} />
+                        <span>{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-[10px] leading-5 text-[#938BA5]">Perataan diterapkan pada nama di dalam area yang sudah kamu atur pada preview.</p>
+                </div>
                 <label className={labelClass}>Ukuran minimum (pt)<input type="number" min="8" max="120" value={minFontSize} onChange={(event) => setMinFontSize(Number(event.target.value))} className={inputClass}/></label>
                 <label className={labelClass}>Ukuran maksimum (pt)<input type="number" min="8" max="120" value={maxFontSize} onChange={(event) => setMaxFontSize(Number(event.target.value))} className={inputClass}/></label>
                 <label className="flex items-center gap-3 rounded-xl bg-white px-3 py-3 text-xs font-bold text-[#51476B] shadow-sm sm:col-span-2"><input type="checkbox" checked={fontBold} onChange={(event) => setFontBold(event.target.checked)} className="h-4 w-4 accent-violet-600"/> Gunakan huruf tebal</label>

@@ -22,7 +22,7 @@ export default async function AdminCertificateSettingsPage() {
   const [courseResult, taskResult, settingResult, certificateResult] = await Promise.all([
     db.from("courses").select("id, title, slug, status").order("title", { ascending: true }),
     db.from("course_tasks").select("id, course_id, title, status, is_required, max_score").order("created_at", { ascending: false }),
-    db.from("course_certificate_settings").select("course_id, enabled, passing_score, final_task_id, issuer_name, issuer_title, signature_name, updated_at, template_path, template_mime_type, template_width, template_height, name_box_x, name_box_y, name_box_width, name_box_height, name_font_min_size, name_font_max_size, name_font_color, name_font_bold, name_font_family"),
+    db.from("course_certificate_settings").select("course_id, enabled, passing_score, final_task_id, issuer_name, issuer_title, signature_name, updated_at, template_path, template_mime_type, template_width, template_height, name_box_x, name_box_y, name_box_width, name_box_height, name_font_min_size, name_font_max_size, name_font_color, name_font_bold, name_font_family, name_text_align"),
     db.from("course_certificates").select("id, course_id, issued_at, revoked_at"),
   ]);
 
