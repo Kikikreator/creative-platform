@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Send,
   Star,
+  X,
 } from "lucide-react";
 
 type CertificateStatus = {
@@ -47,6 +48,43 @@ type CertificateStatus = {
     course_title: string;
   };
 };
+
+
+const REVIEW_TOPIC_PATTERN =
+  /\b(?:kelas|kursus|materi|mentor|tugas|belajar|pembelajaran|penjelasan|praktik|latihan|video|modul|desain|aplikasi|instruktur|pelatihan|pengalaman|proyek|project|kemampuan|keterampilan|pemahaman|metode|tutorial|bimbingan|contoh|pembahasan|platform|software|ilmu|fitur|editing|grafis|animasi|fotografi|konten|bisnis|marketing|keuangan|pemrograman|coding|website|hasil|proses|waktu|akses|peserta|coreldraw|photoshop|illustrator|canva|figma|premiere|capcut|excel|powerpoint|akuntansi|pemasaran)\b/i;
+
+function getReviewValidationMessage(rawText: string): string {
+  const text = rawText.trim().replace(/\s+/g, " ");
+
+  if (!text) return "Tuliskan pengalamanmu mengikuti kelas.";
+  if (text.length < 80) {
+    return `Ulasan minimal 80 karakter. Saat ini ${text.length} karakter.`;
+  }
+
+  const words = text.match(/[\p{L}\p{N}]+/gu) ?? [];
+  if (words.length < 12) {
+    return `Ulasan minimal 12 kata. Saat ini ${words.length} kata.`;
+  }
+
+  const uniqueWords = new Set(words.map((word) => word.toLocaleLowerCase("id-ID")));
+  if (uniqueWords.size < 8) {
+    return "Ulasan terlalu banyak mengulang kata. Gunakan kalimat sendiri untuk menceritakan pengalaman belajar.";
+  }
+
+  if (!/[.!?]$/.test(text)) {
+    return "Akhiri ulasan dengan tanda titik, tanda tanya, atau tanda seru agar menjadi kalimat utuh.";
+  }
+
+  if (/[.!?]\s+[\p{L}\p{N}]/u.test(text)) {
+    return "Tuliskan ulasan dalam satu kalimat utuh, bukan beberapa kalimat terpisah.";
+  }
+
+  if (!REVIEW_TOPIC_PATTERN.test(text)) {
+    return "Ulasan harus membahas pengalaman mengikuti kelas, misalnya materi, tugas, praktik, mentor, atau kemampuan yang diperoleh.";
+  }
+
+  return "";
+}
 
 const primaryButtonClass =
   "inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#260047] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:bg-[#EAE7EF] disabled:text-[#A49BAA] disabled:shadow-none md:w-auto";
@@ -128,7 +166,17 @@ export default function CourseCertificatePanel({
   }
 
   async function submitReview() {
-    if (rating < 1 || reviewText.trim().length < 10) return;
+    const validationMessage = getReviewValidationMessage(reviewText);
+
+    if (rating < 1) {
+      setError("Pilih rating antara 1 sampai 5 bintang.");
+      return;
+    }
+
+    if (validationMessage) {
+      setError(validationMessage);
+      return;
+    }
 
     setBusy(true);
     setError("");
@@ -146,8 +194,10 @@ export default function CourseCertificatePanel({
     if (actionError) {
       setError(actionError.message);
     } else {
-      setNotice("Terima kasih! Sertifikatmu berhasil diterbitkan.");
+      setNotice("Terima kasih! Ulasan diterima dan sertifikatmu berhasil diterbitkan.");
       setShowReviewForm(false);
+      setRating(0);
+      setReviewText("");
       await loadStatus();
     }
 
@@ -166,6 +216,7 @@ export default function CourseCertificatePanel({
   const revisionRequested =
     status?.mentor_approval_status === "revision_requested";
   const mentorApproved = status?.mentor_approval_status === "approved";
+  const reviewValidationMessage = getReviewValidationMessage(reviewText);
 
   let buttonLabel = "Dapatkan Sertifikat";
   let buttonDisabled = true;
@@ -188,7 +239,10 @@ export default function CourseCertificatePanel({
   } else if (canOpenCertificateStep) {
     buttonLabel = "Dapatkan Sertifikat";
     buttonDisabled = false;
-    buttonAction = () => setShowReviewForm((current) => !current);
+    buttonAction = () => {
+      setError("");
+      setShowReviewForm(true);
+    };
   } else if (mentorApproved && !status.template_ready) {
     buttonLabel = "Menyiapkan Sertifikat";
   }
@@ -308,75 +362,146 @@ export default function CourseCertificatePanel({
       </div>
 
       {!loading && canOpenCertificateStep && showReviewForm && (
-        <div className="mt-5 border-t border-[#EEEAF2] pt-5">
-          <div className="flex items-center gap-2">
-            <MessageSquareText size={17} className="text-[#260047]" />
-            <h3 className="text-sm font-extrabold text-[#302647]">
-              Satu langkah lagi: rating dan ulasan
-            </h3>
-          </div>
-
-          <p className="mt-2 text-xs leading-5 text-[#817991]">
-            Kelulusanmu sudah disetujui Mentor. Berikan penilaian jujur tentang
-            kelas ini untuk menerbitkan sertifikat. Rating rendah tidak akan
-            menghalangi penerbitan sertifikat.
-          </p>
-
-          <div className="mt-4 flex items-center gap-2" aria-label="Pilih rating">
-            <span className="mr-1 text-[10px] font-bold text-[#655A7B]">
-              Rating
-            </span>
-            {[1, 2, 3, 4, 5].map((value) => (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !busy) {
+              setShowReviewForm(false);
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="certificate-review-title"
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-7"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <MessageSquareText size={19} className="text-[#260047]" />
+                  <h3
+                    id="certificate-review-title"
+                    className="text-base font-extrabold text-[#260047]"
+                  >
+                    Rating dan Ulasan Kelas
+                  </h3>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-[#746D7B]">
+                  Kelulusanmu telah disetujui Mentor. Isi rating dan ulasan
+                  berdasarkan pengalaman belajarmu untuk menerbitkan sertifikat.
+                </p>
+              </div>
               <button
-                key={value}
                 type="button"
-                onClick={() => setRating(value)}
-                aria-label={`${value} bintang`}
-                className="rounded-lg p-1 transition hover:bg-[#F8F6FC]"
+                aria-label="Tutup formulir ulasan"
+                disabled={busy}
+                onClick={() => setShowReviewForm(false)}
+                className="rounded-lg p-2 text-[#746D7B] transition hover:bg-[#F5F2F8] disabled:opacity-40"
               >
-                <Star
-                  size={25}
-                  className={
-                    value <= rating
-                      ? "fill-amber-400 text-amber-400"
-                      : "text-[#C8BED8]"
-                  }
-                />
+                <X size={18} />
               </button>
-            ))}
-          </div>
+            </div>
 
-          <label className="mt-3 block text-xs font-bold text-[#51476B]">
-            Ulasan kelas
-            <textarea
-              value={reviewText}
-              onChange={(event) => setReviewText(event.target.value)}
-              rows={4}
-              maxLength={3000}
-              className="mt-2 w-full rounded-xl border border-[#E7DFF4] bg-white px-3 py-3 text-xs leading-5 text-[#28213D] outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
-              placeholder="Ceritakan pengalaman belajar, hal yang bermanfaat, atau saran perbaikan..."
-            />
-          </label>
+            <div className="mt-5 rounded-xl bg-[#F8F6FC] p-3">
+              <p className="text-xs font-bold text-[#302647]">
+                Ketentuan ulasan
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-[11px] leading-5 text-[#746D7B]">
+                <li>Minimal 80 karakter dan 12 kata.</li>
+                <li>Ditulis dalam satu kalimat utuh.</li>
+                <li>Menggambarkan pengalaman mengikuti kelas.</li>
+                <li>Hindari pengulangan kata atau ulasan singkat seperti “bagus”.</li>
+              </ul>
+              <p className="mt-2 text-[11px] leading-5 text-[#746D7B]">
+                Berikan rating sesuai pengalaman sebenarnya. Rating rendah
+                tetap diterima dan tidak menghalangi penerbitan sertifikat.
+              </p>
+            </div>
 
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-[10px] text-[#9A91AA]">
-              Minimal 10 karakter · {reviewText.trim().length}/3000
-            </p>
-            <button
-              type="button"
-              onClick={() => void submitReview()}
-              disabled={
-                busy || rating === 0 || reviewText.trim().length < 10
-              }
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#260047] px-5 text-xs font-extrabold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {busy ? (
-                <RefreshCw size={14} className="animate-spin" />
-              ) : (
-                <Award size={15} />
-              )}
-              Kirim & buka sertifikat
-            </button>
+            <div className="mt-5 flex items-center gap-2" aria-label="Pilih rating">
+              <span className="mr-1 text-xs font-bold text-[#51476B]">
+                Rating
+              </span>
+              {[1, 2, 3, 4, 5].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setRating(value)}
+                  aria-label={`${value} bintang`}
+                  className="rounded-lg p-1 transition hover:bg-[#F8F6FC]"
+                >
+                  <Star
+                    size={27}
+                    className={
+                      value <= rating
+                        ? "fill-amber-400 text-amber-400"
+                        : "text-[#C8BED8]"
+                    }
+                  />
+                </button>
+              ))}
+            </div>
+
+            <label className="mt-4 block text-xs font-bold text-[#51476B]">
+              Ceritakan pengalaman belajarmu
+              <textarea
+                value={reviewText}
+                onChange={(event) => {
+                  setReviewText(event.target.value);
+                  setError("");
+                }}
+                rows={5}
+                maxLength={3000}
+                className="mt-2 w-full rounded-xl border border-[#E7DFF4] bg-white px-3 py-3 text-xs leading-5 text-[#28213D] outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-100"
+                placeholder="Ceritakan hal yang kamu pelajari, pengalaman mengerjakan tugas, manfaat materi, atau saran untuk kelas..."
+              />
+            </label>
+
+            <div className="mt-2 flex flex-wrap justify-between gap-2 text-[10px] text-[#9A91AA]">
+              <span>
+                {reviewText.trim().split(/\s+/).filter(Boolean).length} kata
+                · {reviewText.trim().length}/3000 karakter
+              </span>
+              <span>Minimal 12 kata dan 80 karakter</span>
+            </div>
+
+            {reviewText.trim().length > 0 && reviewValidationMessage && (
+              <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-5 text-amber-800">
+                {reviewValidationMessage}
+              </p>
+            )}
+
+            {error && (
+              <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-[11px] leading-5 text-rose-700">
+                {error}
+              </p>
+            )}
+
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setShowReviewForm(false)}
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-[#E7DFF4] px-5 text-xs font-bold text-[#51476B] transition hover:bg-[#F8F6FC] disabled:opacity-40"
+              >
+                Nanti
+              </button>
+              <button
+                type="button"
+                onClick={() => void submitReview()}
+                disabled={busy || rating === 0 || Boolean(reviewValidationMessage)}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#260047] px-5 text-xs font-extrabold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {busy ? (
+                  <RefreshCw size={14} className="animate-spin" />
+                ) : (
+                  <Award size={15} />
+                )}
+                Kirim Rating & Ulasan
+              </button>
+            </div>
           </div>
         </div>
       )}
