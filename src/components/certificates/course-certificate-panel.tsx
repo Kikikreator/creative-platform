@@ -101,6 +101,7 @@ export default function CourseCertificatePanel({
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showEligibilityModal, setShowEligibilityModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -145,6 +146,16 @@ export default function CourseCertificatePanel({
     void loadStatus();
   }, [loadStatus, refreshKey]);
 
+  // Tampilkan popup otomatis saat seluruh persyaratan awal sudah terpenuhi.
+  // Jika peserta menutup popup, tombol pengajuan pada kartu tetap dapat membukanya kembali.
+  useEffect(() => {
+    if (!loading && status?.enabled && status.can_request_approval) {
+      setShowEligibilityModal(true);
+    } else {
+      setShowEligibilityModal(false);
+    }
+  }, [loading, status?.enabled, status?.can_request_approval]);
+
   async function requestMentorApproval() {
     setBusy(true);
     setError("");
@@ -158,7 +169,8 @@ export default function CourseCertificatePanel({
     if (actionError) {
       setError(actionError.message);
     } else {
-      setNotice("Permintaan persetujuan kelulusan berhasil dikirim kepada Mentor.");
+      setShowEligibilityModal(false);
+      setNotice("Permintaan sertifikat berhasil diajukan. Mentor akan memeriksa hasil belajarmu.");
       await loadStatus();
     }
 
@@ -230,10 +242,10 @@ export default function CourseCertificatePanel({
     buttonLabel = "Unduh Sertifikat";
   } else if (canRequestApproval) {
     buttonLabel = revisionRequested
-      ? "Ajukan Ulang Persetujuan Mentor"
-      : "Ajukan Persetujuan Mentor";
+      ? "Ajukan Ulang Sertifikat kepada Mentor"
+      : "Ajukan Sertifikat kepada Mentor";
     buttonDisabled = busy;
-    buttonAction = () => void requestMentorApproval();
+    buttonAction = () => setShowEligibilityModal(true);
   } else if (approvalPending) {
     buttonLabel = "Menunggu Persetujuan Mentor";
   } else if (canOpenCertificateStep) {
@@ -360,6 +372,107 @@ export default function CourseCertificatePanel({
           </button>
         )}
       </div>
+
+      {!loading && canRequestApproval && showEligibilityModal && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/60 p-4"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !busy) {
+              setShowEligibilityModal(false);
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="certificate-eligibility-title"
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-7"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700">
+                  <CheckCircle2 size={24} />
+                </span>
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-700">Pemeriksaan pembelajaran selesai</p>
+                  <h3
+                    id="certificate-eligibility-title"
+                    className="mt-1 text-lg font-extrabold text-[#260047]"
+                  >
+                    Selamat, kamu memenuhi syarat kelulusan!
+                  </h3>
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="Tutup informasi kelulusan"
+                disabled={busy}
+                onClick={() => setShowEligibilityModal(false)}
+                className="rounded-lg p-2 text-[#746D7B] transition hover:bg-[#F5F2F8] disabled:opacity-40"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="mt-4 text-xs leading-6 text-[#746D7B]">
+              Sistem telah memeriksa progres belajarmu. Kamu telah menyelesaikan seluruh materi, mengerjakan tugas wajib, dan lulus Tugas Akhir yang sudah dinilai Mentor. Langkah berikutnya adalah mengajukan sertifikat untuk mendapatkan pemeriksaan dan persetujuan akhir dari Mentor.
+            </p>
+
+            <div className="mt-5 space-y-3 rounded-xl bg-[#F8F6FC] p-4">
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <span className="flex items-center gap-2 font-semibold text-[#302647]"><CheckCircle2 size={15} className="text-emerald-600"/> Seluruh materi utama</span>
+                <strong className="text-emerald-700">{status?.completed_lessons}/{status?.total_lessons} selesai</strong>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-xs">
+                <span className="flex items-center gap-2 font-semibold text-[#302647]"><CheckCircle2 size={15} className="text-emerald-600"/> Seluruh tugas Bab wajib</span>
+                <strong className="text-emerald-700">{status?.chapter_tasks_passed}/{status?.chapter_tasks_total} lulus</strong>
+              </div>
+              <div className="flex items-start justify-between gap-3 text-xs">
+                <span className="flex items-center gap-2 font-semibold text-[#302647]"><CheckCircle2 size={15} className="mt-0.5 shrink-0 text-emerald-600"/> Tugas Akhir</span>
+                <span className="max-w-[58%] text-right font-bold text-emerald-700">{status?.final_task_title || "Tugas Akhir"} · Lulus</span>
+              </div>
+              <p className="border-t border-[#EAE5F0] pt-3 text-[11px] leading-5 text-[#746D7B]">
+                Nilai minimum kelulusan kelas: {status?.passing_score}% . Tugas Akhir telah memenuhi standar penilaian.
+              </p>
+            </div>
+
+            {revisionRequested && status?.mentor_feedback && (
+              <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">
+                <strong>Catatan sebelumnya dari Mentor:</strong> {status.mentor_feedback}
+              </div>
+            )}
+
+            {error && (
+              <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-[11px] leading-5 text-rose-700">{error}</p>
+            )}
+
+            <p className="mt-4 text-xs leading-5 text-[#746D7B]">
+              Persetujuan belum otomatis diberikan. Mentor akan menerima ringkasan hasil belajarmu dan menentukan persetujuan akhir.
+            </p>
+
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setShowEligibilityModal(false)}
+                className="inline-flex h-11 items-center justify-center rounded-xl border border-[#E7DFF4] px-5 text-xs font-bold text-[#51476B] transition hover:bg-[#F8F6FC] disabled:opacity-40"
+              >
+                Nanti
+              </button>
+              <button
+                type="button"
+                onClick={() => void requestMentorApproval()}
+                disabled={busy}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#260047] px-5 text-xs font-extrabold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {busy ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
+                {busy ? "Mengirim pengajuan..." : revisionRequested ? "Ajukan Ulang kepada Mentor" : "Ajukan Sertifikat kepada Mentor"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {!loading && canOpenCertificateStep && showReviewForm && (
         <div
