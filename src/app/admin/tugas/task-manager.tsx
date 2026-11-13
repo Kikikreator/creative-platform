@@ -4,6 +4,7 @@ import { useConfirmDialog } from "@/components/ui/confirm-dialog-provider";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { hasTaskRichTextContent, normalizeTaskRichText, TaskRichTextEditor } from "@/components/ui/task-rich-text";
 import {
   BookOpen,
   CalendarClock,
@@ -53,6 +54,7 @@ type CourseTask = {
   instructions: string;
   submission_type: "text" | "file" | "link" | "text_and_file";
   reference_url: string | null;
+  reference_label: string | null;
   due_at: string | null;
   max_score: number;
   is_required: boolean;
@@ -95,6 +97,7 @@ type TaskFormState = {
   position: string;
   submission_type: CourseTask["submission_type"];
   reference_url: string;
+  reference_label: string;
   due_at: string;
   max_score: string;
   is_required: boolean;
@@ -112,6 +115,7 @@ const emptyForm: TaskFormState = {
   position: "0",
   submission_type: "file",
   reference_url: "",
+  reference_label: "Buka Referensi",
   due_at: "",
   max_score: "100",
   is_required: true,
@@ -316,6 +320,7 @@ export default function TaskManager({
       position: String(task.position ?? 0),
       submission_type: task.submission_type,
       reference_url: task.reference_url ?? "",
+      reference_label: task.reference_label ?? "Buka Referensi",
       due_at: toDateTimeLocal(task.due_at),
       max_score: String(task.max_score ?? 100),
       is_required: task.is_required,
@@ -342,12 +347,12 @@ export default function TaskManager({
     }
 
     const title = form.title.trim();
-    const instructions = form.instructions.trim();
+    const instructions = normalizeTaskRichText(form.instructions);
     const maxScore = Number(form.max_score);
     const position = Number(form.position);
     const needsAnchor = form.placement === "before_lesson" || form.placement === "after_lesson";
 
-    if (!title || !instructions) {
+    if (!title || !hasTaskRichTextContent(instructions)) {
       setError("Judul dan instruksi tugas wajib diisi.");
       return;
     }
@@ -392,6 +397,9 @@ export default function TaskManager({
       instructions,
       submission_type: form.submission_type,
       reference_url: form.reference_url.trim() || null,
+      reference_label: form.reference_url.trim()
+        ? (form.reference_label.trim() || "Buka Referensi").slice(0, 60)
+        : null,
       due_at: form.due_at ? new Date(form.due_at).toISOString() : null,
       max_score: maxScore,
       is_required: form.is_required,
@@ -619,9 +627,14 @@ export default function TaskManager({
                 <textarea rows={2} maxLength={1000} value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="mt-1.5 min-h-[88px] w-full resize-y rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm font-normal leading-6 text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25" placeholder="Gambaran singkat tugas untuk peserta." />
               </label>
 
-              <label className={labelClass()}>Instruksi pengerjaan *
-                <textarea required rows={5} value={form.instructions} onChange={(event) => setForm((current) => ({ ...current, instructions: event.target.value }))} className="mt-1.5 min-h-[132px] w-full resize-y rounded-xl border-0 bg-[#F7F6FC] px-4 py-3 text-sm font-normal leading-6 text-[#1B1730] outline-none placeholder:text-sm placeholder:font-normal placeholder:text-[#9A929F] focus:bg-white focus:ring-2 focus:ring-[#8B5CF6]/25" placeholder="Jelaskan apa yang harus dibuat peserta, ketentuan karya, dan cara pengumpulannya." />
-              </label>
+              <div>
+                <label className={labelClass()}>Instruksi pengerjaan *</label>
+                <TaskRichTextEditor
+                  value={form.instructions}
+                  onChange={(value) => setForm((current) => ({ ...current, instructions: value }))}
+                />
+                <p className="mt-2 text-[10px] leading-5 text-slate-400">Gunakan toolbar untuk membuat judul, paragraf, bullet, dan penomoran. Format akan dipertahankan saat tugas diedit kembali.</p>
+              </div>
 
               <div className="rounded-2xl border border-violet-100 bg-violet-50/50 p-4">
                 <div className="flex items-center gap-2 text-sm font-bold text-violet-900"><BookOpen size={17} /> Posisi tugas dalam pembelajaran</div>
@@ -672,9 +685,15 @@ export default function TaskManager({
                 </label>
               </div>
 
-              <label className={labelClass()}>Tautan referensi (opsional)
-                <input type="url" value={form.reference_url} onChange={(event) => setForm((current) => ({ ...current, reference_url: event.target.value }))} className={inputClass()} placeholder="https://..." />
-              </label>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className={labelClass()}>URL referensi (opsional)
+                  <input type="url" value={form.reference_url} onChange={(event) => setForm((current) => ({ ...current, reference_url: event.target.value }))} className={inputClass()} placeholder="https://..." />
+                </label>
+                <label className={labelClass()}>Teks tombol referensi (opsional)
+                  <input type="text" maxLength={60} value={form.reference_label} onChange={(event) => setForm((current) => ({ ...current, reference_label: event.target.value }))} className={inputClass()} placeholder="Contoh: Buka Referensi" />
+                </label>
+              </div>
+              <p className="-mt-2 text-[10px] leading-5 text-slate-400">Jika URL diisi, peserta akan melihatnya sebagai tombol dengan teks yang kamu tentukan.</p>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3">

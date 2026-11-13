@@ -401,7 +401,7 @@ export default async function MemberDashboardPage() {
   // ===================================================
 
   return (
-    <main className="min-h-screen bg-[#F8F7FC] pb-24 text-[#1B1730] md:pb-0">
+    <main className="kcc-member-dashboard min-h-screen bg-[#F8F7FC] pb-28 text-[#1B1730] md:pb-0">
 
       {/* =================================================
           HEADER
@@ -510,7 +510,7 @@ export default async function MemberDashboardPage() {
             WELCOME SECTION
         ================================================= */}
 
-        <section className="relative overflow-hidden rounded-[26px] border border-[#EEE7FF] bg-gradient-to-br from-[#F3EEFF] via-[#F4F0FF] to-[#FAF9FF] px-6 py-8 sm:px-9 sm:py-10">
+        <section className="kcc-member-hero relative overflow-hidden rounded-[22px] border border-[#EEE7FF] bg-gradient-to-br from-[#F3EEFF] via-[#F4F0FF] to-[#FAF9FF] px-4 py-5 sm:rounded-[26px] sm:px-9 sm:py-10">
 
           {/* DECORATION */}
 
@@ -527,21 +527,21 @@ export default async function MemberDashboardPage() {
                 RUANG BELAJAR MEMBER
               </div>
 
-              <h2 className="mt-5 text-2xl font-extrabold tracking-tight text-[#332052] sm:text-3xl lg:text-4xl">
+              <h2 className="mt-4 text-xl font-extrabold tracking-tight text-[#332052] sm:mt-5 sm:text-3xl lg:text-4xl">
                 Halo, {firstName}!
               </h2>
 
-              <p className="mt-3 max-w-lg text-xs leading-6 text-[#77718A] sm:text-sm">
+              <p className="mt-2 max-w-lg text-xs leading-5 text-[#77718A] sm:mt-3 sm:leading-6 sm:text-sm">
                 Senang melihatmu kembali.
                 Yuk, lanjutkan perjalanan belajar dan
                 kembangkan kemampuanmu bersama Kiki Creator Class.
               </p>
 
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-4 flex flex-wrap gap-2.5 sm:mt-6 sm:gap-3">
 
                 <Link
                   href="#kelas-saya"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#5B21B6] px-5 py-3 text-xs font-bold text-white shadow-sm transition hover:bg-[#6D28D9]"
+                  className="kcc-compact-control inline-flex items-center gap-2 rounded-xl bg-[#5B21B6] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#6D28D9] sm:px-5 sm:py-3"
                 >
                   Kelas Saya
                   <ArrowRight size={15} />
@@ -549,7 +549,7 @@ export default async function MemberDashboardPage() {
 
                 <Link
                   href="/kelas"
-                  className="inline-flex items-center gap-2 rounded-xl border border-[#DED0FF] bg-white/80 px-5 py-3 text-xs font-bold text-[#5B21B6] transition hover:bg-white"
+                  className="kcc-compact-control inline-flex items-center gap-2 rounded-xl border border-[#DED0FF] bg-white/80 px-4 py-2.5 text-xs font-semibold text-[#5B21B6] transition hover:bg-white sm:px-5 sm:py-3"
                 >
                   Jelajahi Kelas
                 </Link>
@@ -590,7 +590,7 @@ export default async function MemberDashboardPage() {
 
           <section className="mt-6">
 
-            <div className="flex flex-col justify-between gap-4 rounded-[20px] border border-amber-200 bg-[#FFFCF3] p-5 sm:flex-row sm:items-center sm:p-6">
+            <div className="flex flex-col justify-between gap-3 rounded-[18px] border border-amber-200 bg-[#FFFCF3] p-4 sm:flex-row sm:items-center sm:gap-4 sm:rounded-[20px] sm:p-6">
 
               <div className="flex min-w-0 items-start gap-3">
 
@@ -641,7 +641,7 @@ export default async function MemberDashboardPage() {
 
                 <Link
                   href={`/checkout/${pendingOrder.id}`}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#B7791F] px-4 py-2.5 text-[10px] font-bold text-white transition hover:bg-[#986515]"
+                  className="kcc-compact-control inline-flex items-center justify-center gap-2 rounded-xl bg-[#B7791F] px-3.5 py-2 text-[10px] font-semibold text-white transition hover:bg-[#986515]"
                 >
                   {isWaitingVerification
                     ? "Lihat Status Pembayaran"
@@ -664,12 +664,12 @@ export default async function MemberDashboardPage() {
 
         <section
           id="kelas-saya"
-          className="mt-10 scroll-mt-24"
+          className="mt-8 scroll-mt-24 sm:mt-10"
         >
 
           {/* SECTION HEADING */}
 
-          <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div className="mb-4 flex flex-col justify-between gap-2.5 sm:mb-6 sm:flex-row sm:items-end">
 
             <div>
 
@@ -708,7 +708,7 @@ export default async function MemberDashboardPage() {
 
           ) : enrolledCourses.length > 0 ? (
 
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
 
               {enrolledCourses.map(({ enrollment, course }) => (
 
@@ -753,7 +753,7 @@ export default async function MemberDashboardPage() {
 
                   {/* COURSE INFORMATION */}
 
-                  <div className="p-5">
+                  <div className="p-4 sm:p-5">
 
                     {course.category && (
 
@@ -781,7 +781,7 @@ export default async function MemberDashboardPage() {
 
                       <Link
                         href={`/kelas/${encodeURIComponent(course.slug)}/belajar`}
-                        className="inline-flex items-center gap-2 rounded-xl bg-[#5B21B6] px-4 py-2.5 text-[10px] font-bold text-white transition hover:bg-[#6D28D9]"
+                        className="kcc-compact-control inline-flex items-center gap-2 rounded-xl bg-[#5B21B6] px-3.5 py-2 text-[10px] font-semibold text-white transition hover:bg-[#6D28D9]"
                       >
                         Buka Kelas
                         <ArrowRight size={13} />
@@ -801,9 +801,9 @@ export default async function MemberDashboardPage() {
 
             /* EMPTY STATE */
 
-            <div className="overflow-hidden rounded-[24px] border border-[#EEEAF7] bg-white px-5 py-12 text-center sm:py-16">
+            <div className="overflow-hidden rounded-[20px] border border-[#EEEAF7] bg-white px-4 py-8 text-center sm:rounded-[24px] sm:px-5 sm:py-16">
 
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#F3EEFF] text-[#6D28D9]">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-[#F3EEFF] text-[#6D28D9] sm:h-16 sm:w-16">
                 <BookOpen size={30} strokeWidth={1.5} />
               </div>
 
@@ -819,7 +819,7 @@ export default async function MemberDashboardPage() {
 
               <Link
                 href="/kelas"
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#5B21B6] px-6 py-3 text-xs font-bold text-white transition hover:bg-[#6D28D9]"
+                className="kcc-compact-control mt-4 inline-flex items-center gap-2 rounded-xl bg-[#5B21B6] px-5 py-2.5 text-xs font-semibold text-white transition hover:bg-[#6D28D9] sm:mt-6 sm:px-6 sm:py-3"
               >
                 Jelajahi Kelas
                 <ArrowRight size={15} />
@@ -837,7 +837,7 @@ export default async function MemberDashboardPage() {
 
         <section
           id="pembelian"
-          className="mt-12 scroll-mt-24"
+          className="mt-9 scroll-mt-24 sm:mt-12"
         >
 
           <div className="mb-5">
@@ -857,7 +857,7 @@ export default async function MemberDashboardPage() {
 
           </div>
 
-          <div className="overflow-hidden rounded-[22px] border border-[#F1EDF8] bg-white">
+          <div className="overflow-hidden rounded-[18px] border border-[#F1EDF8] bg-white sm:rounded-[22px]">
 
             {orderItemsError && (
 
@@ -880,7 +880,7 @@ export default async function MemberDashboardPage() {
 
                     <div
                       key={order.id}
-                      className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between"
+                      className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 sm:py-5"
                     >
 
                       <div className="flex min-w-0 items-start gap-3">
@@ -929,7 +929,7 @@ export default async function MemberDashboardPage() {
 
                         <Link
                           href={`/checkout/${order.id}`}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-[#EEEAF7] px-3 py-2.5 text-[10px] font-bold text-[#6D28D9] transition hover:bg-[#F8F6FD]"
+                          className="kcc-compact-control inline-flex items-center gap-1.5 rounded-xl border border-[#EEEAF7] px-3 py-2 text-[10px] font-semibold text-[#6D28D9] transition hover:bg-[#F8F6FD]"
                         >
                           Lihat Invoice
                           <ArrowUpRight size={13} />
@@ -947,7 +947,7 @@ export default async function MemberDashboardPage() {
 
             ) : (
 
-              <div className="px-5 py-12 text-center">
+              <div className="px-4 py-7 text-center sm:px-5 sm:py-12">
 
                 <ReceiptText
                   size={30}
@@ -966,7 +966,7 @@ export default async function MemberDashboardPage() {
 
             )}
 
-            <div className="flex items-center justify-between border-t border-[#F8F6FD] bg-[#FFFFFF] px-5 py-3">
+            <div className="flex items-center justify-between border-t border-[#F8F6FD] bg-[#FFFFFF] px-4 py-2.5 sm:px-5 sm:py-3">
 
               <p className="text-[9px] text-[#9D97B4]">
                 Maksimal 5 pembelian terbaru.
@@ -987,7 +987,7 @@ export default async function MemberDashboardPage() {
             EXPLORE MORE
         ================================================= */}
 
-        <section className="relative mt-10 overflow-hidden rounded-[24px] bg-[#5B21B6] px-6 py-7 text-white sm:px-9 sm:py-8">
+        <section className="relative mt-8 overflow-hidden rounded-[20px] bg-[#5B21B6] px-4 py-5 text-white sm:mt-10 sm:rounded-[24px] sm:px-9 sm:py-8">
 
           <div className="pointer-events-none absolute -right-12 -top-20 h-52 w-52 rounded-full border border-white/10" />
 
@@ -1013,7 +1013,7 @@ export default async function MemberDashboardPage() {
 
             <Link
               href="/kelas"
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-xs font-bold text-[#5B21B6] transition hover:bg-[#F3EEFF]"
+              className="kcc-compact-control inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-[#5B21B6] transition hover:bg-[#F3EEFF] sm:px-5 sm:py-3"
             >
               Lihat Semua Kelas
               <ArrowRight size={15} />
@@ -1027,7 +1027,7 @@ export default async function MemberDashboardPage() {
             FOOTER
         ================================================= */}
 
-        <footer className="mt-10 flex flex-col items-center justify-between gap-2 border-t border-[#F1EDF8] pt-6 text-center sm:flex-row">
+        <footer className="mt-8 flex flex-col items-center justify-between gap-2 border-t border-[#F1EDF8] pt-5 text-center sm:mt-10 sm:flex-row sm:pt-6">
 
           <div>
             <p className="text-xs font-extrabold text-[#5B21B6]">
@@ -1048,12 +1048,12 @@ export default async function MemberDashboardPage() {
 
       </div>
 
-      <nav aria-label="Navigasi member" className="fixed bottom-3 left-3 right-3 z-40 flex items-center justify-around rounded-[22px] border border-white/80 bg-white/95 px-1.5 py-2 shadow-[0_12px_35px_rgba(38,27,72,.14)] backdrop-blur-xl md:hidden" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}>
-        <Link href="/dashboard" className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-bold text-violet-700"><span className="flex h-8 w-9 items-center justify-center rounded-xl bg-[#F1EBFF]"><Home size={18} /></span>Beranda</Link>
-        <Link href="#kelas-saya" className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-bold text-[#9A95A9]"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><BookOpen size={18} /></span>Kelas Saya</Link>
-        <Link href="/kelas" className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-bold text-[#9A95A9]"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><Compass size={18} /></span>Jelajahi</Link>
-        <Link href="#pembelian" className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-bold text-[#9A95A9]"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><ReceiptText size={18} /></span>Pembelian</Link>
-        <Link href="/dashboard/sertifikat" className="flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-bold text-[#9A95A9]"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><Award size={18} /></span>Sertifikat</Link>
+      <nav aria-label="Navigasi member" className="kcc-member-bottom-nav fixed bottom-3 left-3 right-3 z-40 flex items-center justify-around rounded-[18px] border border-white/80 bg-white/95 px-1.5 py-1.5 shadow-[0_8px_24px_rgba(38,27,72,.12)] backdrop-blur-xl md:hidden" style={{ paddingBottom: "max(6px, env(safe-area-inset-bottom))" }}>
+        <Link href="/dashboard" className="kcc-member-nav-link flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-1 text-[9px] font-semibold text-violet-700"><span className="flex h-8 w-9 items-center justify-center rounded-xl bg-[#F1EBFF]"><Home size={18} /></span>Beranda</Link>
+        <Link href="#kelas-saya" className="kcc-member-nav-link flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-1 text-[9px] font-medium text-[#9A95A9]"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><BookOpen size={18} /></span>Kelas Saya</Link>
+        <Link href="/kelas" className="kcc-member-nav-link flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-1 text-[9px] font-medium text-[#9A95A9]"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><Compass size={18} /></span>Jelajahi</Link>
+        <Link href="#pembelian" className="kcc-member-nav-link flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-1 text-[9px] font-medium text-[#9A95A9]"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><ReceiptText size={18} /></span>Pembelian</Link>
+        <Link href="/dashboard/sertifikat" className="kcc-member-nav-link flex min-w-0 flex-1 flex-col items-center gap-1 rounded-xl px-1 py-1 text-[9px] font-medium text-[#9A95A9]"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><Award size={18} /></span>Sertifikat</Link>
       </nav>
     </main>
   );

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import CourseCertificatePanel from "@/components/certificates/course-certificate-panel";
 import LogoutButton from "@/components/auth/logout-button";
+import { TaskRichTextContent } from "@/components/ui/task-rich-text";
 import {
   useEffect,
   useMemo,
@@ -156,6 +157,7 @@ export type LearningTask = {
   instructions: string;
   submission_type: LearningTaskSubmissionType;
   reference_url: string | null;
+  reference_label: string | null;
   due_at: string | null;
   max_score: number | string;
   is_required: boolean;
@@ -208,6 +210,7 @@ function formatShortDate(value: string | null) {
     return "-";
   }
   return new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -402,6 +405,7 @@ function formatTaskDateTime(value: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Jadwal tidak valid";
   return new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
@@ -1118,7 +1122,7 @@ function MiniContentCard({
   return (
     <article className="overflow-hidden rounded-[22px] bg-white shadow-[0_10px_28px_rgba(20,27,52,.06)] ring-1 ring-slate-200/70">
       <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700 sm:h-10 sm:w-10">
           <ContentTypeIcon type={item.content_type} />
         </div>
         <div className="min-w-0 flex-1">
@@ -1265,6 +1269,13 @@ function TaskSubmissionCard({
   const [signedFileUrl, setSignedFileUrl] = useState<string | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileUrlError, setFileUrlError] = useState("");
+  const [clientNow, setClientNow] = useState<number | null>(null);
+
+  // Waktu hanya dibaca setelah komponen terpasang di browser.
+  // Ini membuat render server dan render pertama browser tetap sama.
+  useEffect(() => {
+    setClientNow(Date.now());
+  }, []);
 
   const needsText =
     task.submission_type === "text" ||
@@ -1277,7 +1288,9 @@ function TaskSubmissionCard({
   const canSubmit =
     (!submission || canRevise) && !submissionLoadError;
   const isPastDue =
-    !!task.due_at && new Date(task.due_at).getTime() < Date.now();
+    clientNow !== null &&
+    !!task.due_at &&
+    new Date(task.due_at).getTime() < clientNow;
   const submissionClosed = isPastDue && !task.allow_late_submission;
   const canSend = canSubmit && !submissionClosed && !saving;
 
@@ -1336,7 +1349,13 @@ function TaskSubmissionCard({
       return;
     }
 
-    if (submissionClosed) {
+    // Periksa tenggat kembali saat tombol diklik agar valid meskipun
+    // pengguna menekan tombol sebelum pemeriksaan waktu client selesai.
+    const deadlinePassed =
+      !!task.due_at &&
+      new Date(task.due_at).getTime() < Date.now();
+
+    if (deadlinePassed && !task.allow_late_submission) {
       setErrorMessage("Batas pengumpulan tugas sudah lewat.");
       return;
     }
@@ -1507,9 +1526,9 @@ function TaskSubmissionCard({
             href={referenceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-violet-800 underline decoration-violet-300 underline-offset-4 hover:text-violet-950"
+            className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:ring-offset-2"
           >
-            Buka referensi tugas
+            {task.reference_label?.trim() || "Buka Referensi"}
             <ExternalLink size={13} />
           </a>
         )}
@@ -1520,9 +1539,7 @@ function TaskSubmissionCard({
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-violet-700">
             Instruksi Pengerjaan
           </p>
-          <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">
-            {task.instructions}
-          </p>
+          <TaskRichTextContent value={task.instructions} />
         </div>
 
         {submissionLoadError && (
@@ -2456,18 +2473,18 @@ export default function LearningRoom({
   // RENDER
   // ===================================================
   return (
-    <main className="min-h-screen bg-[#F7F6FC] text-[#1B1730]">
-      <div className="mx-auto w-full max-w-[1440px] px-3 py-4 sm:px-5 sm:py-6 lg:px-8">
+    <main className="kcc-learning-room min-h-screen bg-[#F7F6FC] text-[#1B1730]">
+      <div className="mx-auto w-full max-w-[1440px] px-3 py-3 sm:px-5 sm:py-6 lg:px-8">
         {/* =============================================
             COMPACT HEADER
         ============================================= */}
-        <header className="mb-5 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <header className="mb-4 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:mb-5 sm:px-5 sm:py-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
             <div className="flex min-w-0 items-center gap-3">
               <Link
                 href="/dashboard"
                 aria-label="Kembali ke dashboard"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
+                className="kcc-compact-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
               >
                 <ArrowLeft size={19} />
               </Link>
@@ -2489,16 +2506,16 @@ export default function LearningRoom({
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 flex-wrap items-center gap-2 pl-[52px] lg:pl-0">
+            <div className="flex flex-wrap items-center gap-2 pl-0 lg:justify-end">
               <Link
                 href="/dashboard#pembelian"
-                className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
+                className="kcc-compact-control inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
               >
                 Pembelian
               </Link>
               <Link
                 href="/kelas"
-                className="inline-flex h-9 items-center gap-2 rounded-xl bg-violet-700 px-3 text-xs font-semibold text-white transition hover:bg-violet-800"
+                className="kcc-compact-control inline-flex h-9 items-center gap-2 rounded-xl bg-violet-700 px-3 text-xs font-semibold text-white transition hover:bg-violet-800"
               >
                 Jelajahi Kelas
                 <ArrowRight size={14} />
@@ -2557,11 +2574,11 @@ export default function LearningRoom({
         {/* =============================================
             MOBILE CURRICULUM BUTTON
         ============================================= */}
-        <div className="mb-4 lg:hidden">
+        <div className="mb-3 lg:hidden">
           <button
             type="button"
             onClick={() => setMobileCurriculumOpen(true)}
-            className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-violet-200"
+            className="flex w-full items-center justify-between gap-2.5 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-violet-200 sm:gap-3 sm:p-4"
           >
             <div className="flex min-w-0 items-center gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
@@ -2579,7 +2596,7 @@ export default function LearningRoom({
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-2 rounded-xl bg-violet-50 px-3 py-2 text-xs font-bold text-violet-800">
+            <div className="kcc-member-curriculum-count flex max-w-[46%] shrink-0 flex-wrap items-center justify-end gap-1.5 rounded-xl bg-violet-50 px-2.5 py-1.5 text-[10px] font-semibold leading-4 text-violet-800 sm:max-w-none sm:flex-nowrap sm:gap-2 sm:px-3 sm:py-2 sm:text-xs">
               {orderedLessons.length} materi · {publishedTasks.length} tugas
               <ChevronDown size={15} />
             </div>
@@ -2686,7 +2703,7 @@ export default function LearningRoom({
                   </div>
                 </>
               ) : (
-                <div className="flex min-h-[400px] flex-col items-center justify-center p-8 text-center">
+                <div className="flex min-h-[220px] flex-col items-center justify-center p-5 text-center sm:min-h-[320px] sm:p-8">
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-violet-50 text-violet-700">
                     <BookOpen size={30} />
                   </div>
@@ -2705,7 +2722,7 @@ export default function LearningRoom({
                 MINI MATERIAL PLAYER + PLAYLIST
             ========================================= */}
             {activeLesson && (
-              <section className="space-y-4" aria-labelledby="mini-material-heading">
+              <section className="space-y-3 sm:space-y-4" aria-labelledby="mini-material-heading">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   
                   <div className="flex shrink-0 items-center gap-2">
@@ -2714,7 +2731,7 @@ export default function LearningRoom({
                       <button
                         type="button"
                         onClick={() => setMobileMiniPlaylistOpen(true)}
-                        className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#342254] to-[#263b61] px-3.5 py-2.5 text-[11px] font-bold text-white shadow-[0_8px_18px_rgba(38,43,83,.16)] transition hover:brightness-110 xl:hidden"
+                        className="kcc-compact-control inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#342254] to-[#263b61] px-3.5 py-2.5 text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(38,43,83,.16)] transition hover:brightness-110 xl:hidden"
                         aria-haspopup="dialog"
                       >
                         <ListTree size={15} />
@@ -2750,10 +2767,6 @@ export default function LearningRoom({
                         index={activeMiniContentIndex}
                         supabase={supabase}
                       />
-
-                      <div className="flex items-center justify-between gap-3 rounded-2xl bg-white p-3 shadow-[0_8px_22px_rgba(23,28,54,.045)] ring-1 ring-slate-200/70">
-                        
-                      </div>
                     </div>
 
                     <aside className="hidden min-w-0 xl:block">
@@ -2767,14 +2780,14 @@ export default function LearningRoom({
                     </aside>
                   </div>
                 ) : (
-                  <div className="rounded-[22px] bg-white p-8 text-center shadow-[0_8px_22px_rgba(23,28,54,.045)] ring-1 ring-slate-200/70">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f1eef8] text-[#5c4b80]">
+                  <div className="rounded-[20px] bg-white p-5 text-center shadow-[0_8px_22px_rgba(23,28,54,.045)] ring-1 ring-slate-200/70 sm:rounded-[22px] sm:p-8">
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#f1eef8] text-[#5c4b80] sm:h-14 sm:w-14">
                       <Layers3 size={25} />
                     </div>
-                    <h4 className="mt-4 text-sm font-bold text-[#252b45]">
+                    <h4 className="mt-3 text-sm font-semibold text-[#252b45] sm:mt-4">
                       Belum ada mini materi
                     </h4>
-                    <p className="mx-auto mt-2 max-w-sm text-xs leading-6 text-slate-500">
+                    <p className="mx-auto mt-1.5 max-w-sm text-xs leading-5 text-slate-500 sm:mt-2 sm:leading-6">
                       Mini materi untuk pembelajaran ini belum ditambahkan atau belum dipublikasikan.
                     </p>
                   </div>
@@ -2829,7 +2842,7 @@ export default function LearningRoom({
             )}
             {activeLesson && (
               <>
-                <section className="rounded-2xl bg-white p-4 shadow-[0_8px_24px_rgba(47,30,82,.045)] sm:p-5">
+                <section className="rounded-2xl bg-white p-3.5 shadow-[0_8px_24px_rgba(47,30,82,.045)] sm:p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
                       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${completedLessonIds.includes(activeLesson.id) ? "bg-emerald-50 text-emerald-700" : "bg-violet-50 text-violet-700"}`}>
@@ -2848,7 +2861,7 @@ export default function LearningRoom({
                       type="button"
                       onClick={() => void handleMarkLessonComplete()}
                       disabled={markingLesson || completedLessonIds.includes(activeLesson.id)}
-                      className={`inline-flex h-4 shrink-0 items-center justify-center gap-1 rounded-xl px-4 text-xs font-semibold transition disabled:cursor-not-allowed ${completedLessonIds.includes(activeLesson.id) ? "bg-emerald-50 text-emerald-700" : "bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-[0_7px_18px_rgba(109,40,217,.16)] hover:brightness-105 disabled:opacity-50"}`}
+                      className={`kcc-compact-control inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-[11px] font-semibold transition disabled:cursor-not-allowed ${completedLessonIds.includes(activeLesson.id) ? "bg-emerald-50 text-emerald-700" : "bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-[0_7px_18px_rgba(109,40,217,.16)] hover:brightness-105 disabled:opacity-50"}`}
                     >
                       {markingLesson ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                       {completedLessonIds.includes(activeLesson.id) ? "Materi selesai" : markingLesson ? "Menyimpan..." : "Tandai materi selesai"}
@@ -2859,59 +2872,73 @@ export default function LearningRoom({
                 {/* =========================================
                     PREVIOUS / NEXT LESSON
                 ========================================= */}
-                <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
-              <div className="flex items-center justify-between gap-3">
-                {previousLesson ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleSelectLesson(previousLesson)
-                    }
-                    className="inline-flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 px-3 py-3 text-xs font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800 sm:px-4"
-                  >
-                    <ArrowLeft size={16} />
-                    <span className="truncate">
-                      Materi Sebelumnya
+                <section className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:p-4">
+                  <div className="flex items-center justify-between gap-2 sm:gap-3">
+                    {previousLesson ? (
+                      <button
+                        type="button"
+                        aria-label="Buka materi sebelumnya"
+                        onClick={() => handleSelectLesson(previousLesson)}
+                        className="kcc-compact-control inline-flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 px-2.5 py-2 text-[11px] font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800 sm:gap-2 sm:px-4 sm:text-xs"
+                      >
+                        <ArrowLeft size={15} className="shrink-0" />
+                        <span className="truncate">
+                          <span className="hidden sm:inline">Materi </span>
+                          Sebelumnya
+                        </span>
+                      </button>
+                    ) : (
+                      <span
+                        aria-label="Tidak ada materi sebelumnya"
+                        className="inline-flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl border border-slate-100 px-2.5 py-2 text-[11px] text-slate-300 sm:gap-2 sm:px-4 sm:text-xs"
+                      >
+                        <ArrowLeft size={15} className="shrink-0" />
+                        <span className="truncate">
+                          <span className="hidden sm:inline">Materi </span>
+                          Sebelumnya
+                        </span>
+                      </span>
+                    )}
+
+                    <span className="shrink-0 whitespace-nowrap text-[10px] font-bold tabular-nums text-slate-400">
+                      {activeLessonIndex >= 0
+                        ? activeLessonIndex + 1
+                        : 0}{" "}
+                      / {orderedLessons.length}
                     </span>
-                  </button>
-                ) : (
-                  <span className="inline-flex items-center gap-2 rounded-xl border border-slate-100 px-3 py-3 text-xs text-slate-300 sm:px-4">
-                    <ArrowLeft size={16} />
-                    Materi Sebelumnya
-                  </span>
-                )}
-                <span className="shrink-0 text-[10px] font-bold tabular-nums text-slate-400">
-                  {activeLessonIndex >= 0
-                    ? activeLessonIndex + 1
-                    : 0}{" "}
-                  / {orderedLessons.length}
-                </span>
-                {nextLesson ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleSelectLesson(nextLesson)
-                    }
-                    className="inline-flex min-w-0 items-center gap-2 rounded-xl bg-violet-700 px-3 py-3 text-xs font-semibold text-white transition hover:bg-violet-800 sm:px-4"
-                  >
-                    <span className="truncate">
-                      Materi Berikutnya
-                    </span>
-                    <ArrowRight size={16} />
-                  </button>
-                ) : (
-                  <span className="inline-flex items-center gap-2 rounded-xl bg-violet-50 px-3 py-3 text-xs font-semibold text-violet-300 sm:px-4">
-                    Materi Berikutnya
-                    <ArrowRight size={16} />
-                  </span>
-                )}
-              </div>
+
+                    {nextLesson ? (
+                      <button
+                        type="button"
+                        aria-label="Buka materi berikutnya"
+                        onClick={() => handleSelectLesson(nextLesson)}
+                        className="kcc-compact-control inline-flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl bg-violet-700 px-2.5 py-2 text-[11px] font-semibold text-white transition hover:bg-violet-800 sm:gap-2 sm:px-4 sm:text-xs"
+                      >
+                        <span className="truncate">
+                          <span className="hidden sm:inline">Materi </span>
+                          Berikutnya
+                        </span>
+                        <ArrowRight size={15} className="shrink-0" />
+                      </button>
+                    ) : (
+                      <span
+                        aria-label="Tidak ada materi berikutnya"
+                        className="inline-flex min-h-10 min-w-0 items-center gap-1.5 rounded-xl bg-violet-50 px-2.5 py-2 text-[11px] font-semibold text-violet-300 sm:gap-2 sm:px-4 sm:text-xs"
+                      >
+                        <span className="truncate">
+                          <span className="hidden sm:inline">Materi </span>
+                          Berikutnya
+                        </span>
+                        <ArrowRight size={15} className="shrink-0" />
+                      </span>
+                    )}
+                  </div>
                 </section>
               </>
             )}
             <CourseCertificatePanel courseId={course.id} refreshKey={certificateRefreshKey} />
             {/* SMALL COURSE FOOTER */}
-            <div className="flex flex-wrap items-center justify-between gap-3 px-1 pb-4 text-[10px] text-slate-400">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-5 text-[10px] text-slate-400">
               <div className="flex items-center gap-2">
                 <GraduationCap size={15} />
                 Kiki Creator Class

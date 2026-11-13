@@ -117,7 +117,7 @@ export default function PwaRegister() {
             ? "Lihat cara memasang Kiki Creator Class"
             : "Instal aplikasi Kiki Creator Class"
         }
-        className="fixed bottom-5 right-5 z-[90] inline-flex items-center gap-2 rounded-full bg-[#260047] px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_32px_rgba(38,0,71,.28)] ring-1 ring-white/20 transition hover:-translate-y-0.5 hover:bg-[#09483F] focus:outline-none focus:ring-4 focus:ring-violet-200"
+        className="kcc-pwa-install-button fixed bottom-5 right-5 z-[90] inline-flex items-center gap-2 rounded-full bg-[#260047] px-4 py-2.5 text-xs font-semibold text-white shadow-[0_8px_22px_rgba(38,0,71,.22)] ring-1 ring-white/20 transition hover:-translate-y-0.5 hover:bg-[#09483F] focus:outline-none focus:ring-4 focus:ring-violet-200"
       >
         <span aria-hidden="true" className="text-base leading-none">
           ↓

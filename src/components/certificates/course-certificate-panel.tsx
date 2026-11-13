@@ -12,6 +12,7 @@ import {
   RefreshCw,
   Send,
   Star,
+  ChevronDown,
   X,
 } from "lucide-react";
 
@@ -87,7 +88,7 @@ function getReviewValidationMessage(rawText: string): string {
 }
 
 const primaryButtonClass =
-  "inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#260047] px-5 py-3 text-xs font-bold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:bg-[#EAE7EF] disabled:text-[#A49BAA] disabled:shadow-none md:w-auto";
+  "kcc-certificate-primary inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#260047] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:bg-[#EAE7EF] disabled:text-[#A49BAA] disabled:shadow-none md:w-auto";
 
 export default function CourseCertificatePanel({
   courseId,
@@ -101,6 +102,7 @@ export default function CourseCertificatePanel({
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showRequirements, setShowRequirements] = useState(false);
   const [showEligibilityModal, setShowEligibilityModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -428,9 +430,9 @@ export default function CourseCertificatePanel({
   return (
     <section
       aria-labelledby="course-certificate-title"
-      className="rounded-2xl border border-[#EAE5ED] bg-white p-5 shadow-[0_2px_10px_rgba(38,0,71,.025)] sm:p-6"
+      className="kcc-certificate-panel rounded-2xl border border-[#EAE5ED] bg-white p-4 shadow-[0_2px_10px_rgba(38,0,71,.025)] sm:p-6"
     >
-      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-5">
         <div className="flex min-w-0 items-start gap-3">
           <div className="mt-0.5 shrink-0 text-[#260047]">
             <Award size={23} strokeWidth={1.8} />
@@ -444,10 +446,8 @@ export default function CourseCertificatePanel({
               Sertifikat Peserta Kelas
             </h2>
 
-            <p className="mt-2 max-w-3xl text-xs leading-6 text-[#746D7B]">
-              Sertifikat dapat diperoleh setelah peserta menyelesaikan seluruh
-              materi utama dan tugas yang diwajibkan, dinyatakan lulus pada
-              Tugas Akhir, serta mendapatkan persetujuan kelulusan dari Mentor.
+            <p className="mt-1.5 max-w-3xl text-xs leading-5 text-[#746D7B] sm:mt-2 sm:leading-6">
+              Selesaikan materi dan tugas wajib, lulus Tugas Akhir, lalu dapatkan persetujuan kelulusan dari Mentor.
             </p>
 
             {loading && (
@@ -540,7 +540,7 @@ export default function CourseCertificatePanel({
       </div>
 
       {!loading && status && (
-        <div className="mt-5 rounded-xl border border-[#EEE9F4] bg-[#FBFAFD] p-4 sm:p-5">
+        <div className="mt-4 rounded-xl border border-[#EEE9F4] bg-[#FBFAFD] p-3.5 sm:mt-5 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <p className="text-[9px] font-extrabold uppercase tracking-[.16em] text-[#8B7CA3]">
@@ -564,24 +564,45 @@ export default function CourseCertificatePanel({
             </button>
           </div>
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {requirementRows.map((item) => (
-              <div
-                key={item.label}
-                className="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-white px-3 py-2.5"
-              >
-                <span className="flex min-w-0 items-start gap-2 text-[10px] leading-4 text-[#51476B]">
-                  <span className={`mt-0.5 shrink-0 font-black ${item.done ? "text-emerald-600" : "text-amber-600"}`}>
-                    {item.done ? "✓" : "•"}
+          <button
+            type="button"
+            aria-expanded={showRequirements}
+            aria-controls="certificate-requirements-list"
+            onClick={() => setShowRequirements((current) => !current)}
+            className="kcc-compact-control mt-3 flex min-h-10 w-full items-center justify-between gap-3 rounded-lg border border-[#EEE9F4] bg-white px-3 py-2.5 text-left text-xs font-semibold text-[#51476B] transition hover:bg-[#F8F6FC]"
+          >
+            <span>
+              Rincian persyaratan
+              <span className="ml-2 text-[10px] font-medium text-[#8B7CA3]">
+                {requirementRows.filter((item) => item.done).length}/{requirementRows.length} terpenuhi
+              </span>
+            </span>
+            <ChevronDown
+              size={16}
+              className={`shrink-0 transition-transform ${showRequirements ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {showRequirements && (
+            <div id="certificate-requirements-list" className="mt-2 grid gap-2 sm:grid-cols-2">
+              {requirementRows.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex min-w-0 items-start justify-between gap-3 rounded-lg bg-white px-3 py-2.5"
+                >
+                  <span className="flex min-w-0 items-start gap-2 text-[10px] leading-4 text-[#51476B]">
+                    <span className={`mt-0.5 shrink-0 font-black ${item.done ? "text-emerald-600" : "text-amber-600"}`}>
+                      {item.done ? "✓" : "•"}
+                    </span>
+                    <span className="break-words">{item.label}</span>
                   </span>
-                  <span className="break-words">{item.label}</span>
-                </span>
-                <strong className={`shrink-0 text-right text-[9px] ${item.done ? "text-emerald-700" : "text-amber-700"}`}>
-                  {item.detail}
-                </strong>
-              </div>
-            ))}
-          </div>
+                  <strong className={`shrink-0 text-right text-[9px] ${item.done ? "text-emerald-700" : "text-amber-700"}`}>
+                    {item.detail}
+                  </strong>
+                </div>
+              ))}
+            </div>
+          )}
 
           {status.enabled && canRequestApproval && !showEligibilityModal && (
             <p className="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-[10px] leading-5 text-emerald-800">

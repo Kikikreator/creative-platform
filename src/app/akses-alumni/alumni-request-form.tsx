@@ -11,8 +11,11 @@ import {
   GraduationCap,
   ImagePlus,
   Loader2,
+  MapPin,
+  Megaphone,
   RefreshCw,
   Send,
+  Target,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -84,6 +87,9 @@ export default function AlumniRequestForm({
   const [fullName, setFullName] = useState(initialName);
   const [email, setEmail] = useState(initialEmail);
   const [whatsapp, setWhatsapp] = useState("");
+  const [address, setAddress] = useState("");
+  const [acquisitionSource, setAcquisitionSource] = useState("");
+  const [registrationReason, setRegistrationReason] = useState("");
   const [courseId, setCourseId] = useState("");
   const [proofNote, setProofNote] = useState("");
   const [proofFile, setProofFile] = useState<File | null>(null);
@@ -182,6 +188,9 @@ export default function AlumniRequestForm({
     if (normalizedName.length < 3) return setSubmitError("Nama lengkap minimal 3 karakter.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return setSubmitError("Masukkan alamat email yang valid.");
     if (normalizedWhatsapp.replace(/\D/g, "").length < 9) return setSubmitError("Nomor WhatsApp minimal 9 angka.");
+    if (address.trim().length < 3) return setSubmitError("Isi asal daerah minimal 3 karakter.");
+    if (!acquisitionSource) return setSubmitError("Pilih dari mana kamu mengetahui Kiki Creator Class.");
+    if (!registrationReason) return setSubmitError("Pilih tujuan kamu mengikuti kelas.");
     if (!courseId) return setSubmitError("Pilih kelas yang pernah kamu ikuti.");
     if (!proofFile && !proofNote.trim()) return setSubmitError("Unggah foto bukti atau tulis keterangan keikutsertaanmu.");
 
@@ -208,13 +217,16 @@ export default function AlumniRequestForm({
         if (uploadError) throw new Error(`Foto bukti gagal diunggah: ${uploadError.message}`);
       }
 
-      const { data, error } = await supabase.rpc("submit_alumni_access_request_with_evidence", {
+      const { data, error } = await supabase.rpc("submit_alumni_access_request_with_survey", {
         p_full_name: normalizedName,
         p_email: normalizedEmail,
         p_whatsapp_number: normalizedWhatsapp,
         p_course_id: courseId,
         p_proof_note: proofNote.trim() || null,
         p_evidence_path: evidencePath,
+        p_address: address.trim(),
+        p_acquisition_source: acquisitionSource,
+        p_registration_reason: registrationReason,
       });
 
       if (error) {
@@ -250,6 +262,9 @@ export default function AlumniRequestForm({
       setRequestStatus(optimisticRequest);
       
       setWhatsapp("");
+      setAddress("");
+      setAcquisitionSource("");
+      setRegistrationReason("");
       setProofNote("");
       setProofFile(null);
       if (proofFileInputRef.current) proofFileInputRef.current.value = "";
@@ -484,6 +499,47 @@ export default function AlumniRequestForm({
                 <div>
                   <label htmlFor="alumni-whatsapp" className="text-xs font-medium text-[#51465D]">Nomor WhatsApp aktif <span className="text-rose-500">*</span></label>
                   <input id="alumni-whatsapp" type="tel" inputMode="tel" required minLength={9} maxLength={24} value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} placeholder="08xxxxxxxxxx" className={inputClass} />
+                </div>
+                <div>
+                  <label htmlFor="alumni-address" className="text-xs font-medium text-[#51465D]">Asal daerah <span className="text-rose-500">*</span></label>
+                  <div className="relative">
+                    <MapPin size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8EA3]" />
+                    <input id="alumni-address" type="text" required minLength={3} maxLength={180} autoComplete="address-level2" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Contoh: Gemolong, Sragen, Jawa Tengah" className={`${inputClass} pl-10`} />
+                  </div>
+                  <p className="mt-1 text-[11px] leading-5 text-[#756B7C]">Tuliskan kota/kabupaten dan provinsi tempat kamu tinggal.</p>
+                </div>
+                <div>
+                  <label htmlFor="alumni-acquisition-source" className="text-xs font-medium text-[#51465D]">Mengetahui Kiki Creator Class dari mana? <span className="text-rose-500">*</span></label>
+                  <div className="relative">
+                    <Megaphone size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8EA3]" />
+                    <select id="alumni-acquisition-source" required value={acquisitionSource} onChange={(event) => setAcquisitionSource(event.target.value)} className={`${inputClass} appearance-none pl-10`}>
+                      <option value="">Pilih sumber informasi</option>
+                      <option value="TikTok">TikTok</option>
+                      <option value="Instagram">Instagram</option>
+                      <option value="Facebook">Facebook</option>
+                      <option value="YouTube">YouTube</option>
+                      <option value="WhatsApp">WhatsApp</option>
+                      <option value="Teman atau keluarga">Teman atau keluarga</option>
+                      <option value="Google atau mesin pencari">Google atau mesin pencari</option>
+                      <option value="Lainnya">Lainnya</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="alumni-registration-reason" className="text-xs font-medium text-[#51465D]">Apa tujuan kamu mengikuti kelas? <span className="text-rose-500">*</span></label>
+                  <div className="relative">
+                    <Target size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8EA3]" />
+                    <select id="alumni-registration-reason" required value={registrationReason} onChange={(event) => setRegistrationReason(event.target.value)} className={`${inputClass} appearance-none pl-10`}>
+                      <option value="">Pilih tujuan belajar</option>
+                      <option value="Belajar dari dasar">Belajar dari dasar</option>
+                      <option value="Meningkatkan keterampilan">Meningkatkan keterampilan</option>
+                      <option value="Membangun portofolio">Membangun portofolio</option>
+                      <option value="Kebutuhan pekerjaan atau usaha">Kebutuhan pekerjaan atau usaha</option>
+                      <option value="Persiapan karier atau freelance">Persiapan karier atau freelance</option>
+                      <option value="Mengembangkan bisnis atau brand">Mengembangkan bisnis atau brand</option>
+                      <option value="Lainnya">Lainnya</option>
+                    </select>
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="alumni-course" className="text-xs font-medium text-[#51465D]">Kelas yang pernah diikuti <span className="text-rose-500">*</span></label>

@@ -28,7 +28,7 @@ const lessonContentFields =
   "id, lesson_id, title, content_type, body, media_url, resource_path, link_url, link_label, settings, position, status, created_at, updated_at";
 
 const taskFields =
-  "id, course_id, section_id, anchor_lesson_id, placement, position, title, description, instructions, submission_type, reference_url, due_at, max_score, is_required, allow_late_submission, status, created_at, updated_at";
+  "id, course_id, section_id, anchor_lesson_id, placement, position, title, description, instructions, submission_type, reference_url, reference_label, due_at, max_score, is_required, allow_late_submission, status, created_at, updated_at";
 
 const taskSubmissionFields =
   "id, task_id, user_id, answer_text, answer_url, file_path, attempt_count, status, score, mentor_feedback, reviewed_by, reviewed_at, submitted_at, created_at, updated_at";

@@ -21,6 +21,10 @@ import {
   GraduationCap,
   Ban,
   Sparkles,
+  Eye,
+  MapPin,
+  Target,
+  Megaphone,
 } from "lucide-react";
 
 // ======================================================
@@ -109,6 +113,83 @@ function formatPrice(value: number | string) {
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(Number(value) || 0);
+}
+
+type BreakdownItem = {
+  label: string;
+  count: number;
+};
+
+function normalizeSurveyLabel(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+/**
+ * Alamat domisili pada formulir bersifat teks bebas. Untuk ringkasan,
+ * tampilkan bagian wilayah paling akhir; jika bagian terakhir adalah nama
+ * provinsi, gabungkan dengan satu bagian sebelumnya agar kota/kabupaten
+ * tetap terbaca. Detail alamat lengkap tetap tersedia pada detail peserta.
+ */
+function getRegionLabel(address: string | null) {
+  if (!address?.trim()) return null;
+
+  const parts = address
+    .split(",")
+    .map((part) => normalizeSurveyLabel(part))
+    .filter(Boolean);
+
+  if (parts.length <= 1) {
+    const singleValue = parts[0] ?? null;
+    if (!singleValue) return null;
+    if (
+      singleValue.length > 55 ||
+      /^(jl\.?|jalan\b|gang\b|gg\.?\b|rt\b|rw\b|nomor\b|no\.?\b)/i.test(singleValue)
+    ) {
+      return "Alamat lengkap (wilayah belum dipisahkan)";
+    }
+    return singleValue;
+  }
+
+  const provinceAliases = new Set([
+    "aceh", "sumatera utara", "sumut", "sumatera barat", "sumbar",
+    "riau", "kepulauan riau", "kepri", "jambi", "sumatera selatan",
+    "sumsel", "bengkulu", "lampung", "kepulauan bangka belitung",
+    "bangka belitung", "banten", "dki jakarta", "jakarta", "jawa barat",
+    "jabar", "jawa tengah", "jateng", "di yogyakarta", "yogyakarta",
+    "jawa timur", "jatim", "bali", "nusa tenggara barat", "ntb",
+    "nusa tenggara timur", "ntt", "kalimantan barat", "kalbar",
+    "kalimantan tengah", "kalteng", "kalimantan selatan", "kalsel",
+    "kalimantan timur", "kaltim", "kalimantan utara", "kalut",
+    "sulawesi utara", "sulut", "sulawesi tengah", "sulteng",
+    "sulawesi selatan", "sulsel", "sulawesi tenggara", "sultra",
+    "gorontalo", "sulawesi barat", "sulbar", "maluku",
+    "maluku utara", "papua", "papua barat", "papua selatan",
+    "papua tengah", "papua pegunungan", "papua barat daya",
+  ]);
+
+  const last = parts[parts.length - 1];
+  if (provinceAliases.has(last.toLocaleLowerCase("id-ID")) && parts.length >= 2) {
+    return `${parts[parts.length - 2]}, ${last}`;
+  }
+
+  return last;
+}
+
+function buildBreakdown(values: Array<string | null | undefined>): BreakdownItem[] {
+  const counts = new Map<string, BreakdownItem>();
+
+  for (const rawValue of values) {
+    if (!rawValue?.trim()) continue;
+    const label = normalizeSurveyLabel(rawValue);
+    const key = label.toLocaleLowerCase("id-ID");
+    const current = counts.get(key);
+    if (current) current.count += 1;
+    else counts.set(key, { label, count: 1 });
+  }
+
+  return Array.from(counts.values()).sort(
+    (a, b) => b.count - a.count || a.label.localeCompare(b.label, "id-ID")
+  );
 }
 
 function RoleBadges({
@@ -243,6 +324,66 @@ function StatCard({
   );
 }
 
+function InsightBreakdown({
+  title,
+  description,
+  icon: Icon,
+  items,
+}: {
+  title: string;
+  description: string;
+  icon: typeof Users;
+  items: BreakdownItem[];
+}) {
+  const total = items.reduce((sum, item) => sum + item.count, 0);
+  const top = items[0];
+
+  return (
+    <section className="min-w-0 rounded-2xl border border-[#EEEAF7] bg-white p-4 sm:p-5">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F3EEFF] text-[#6D28D9]">
+          <Icon size={18} />
+        </div>
+        <div className="min-w-0">
+          <h4 className="text-[13px] font-semibold text-[#211A37]">{title}</h4>
+          <p className="mt-1 text-[10px] leading-4 text-[#9D97B4]">{description}</p>
+        </div>
+      </div>
+
+      {top ? (
+        <div className="mt-4 rounded-xl bg-[#F8F6FD] px-3 py-2.5">
+          <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-[#9D97B4]">Paling banyak</p>
+          <p className="mt-1 truncate text-[12px] font-semibold text-[#5B21B6]" title={top.label}>
+            {top.label} <span className="font-medium text-[#817A97]">· {top.count} peserta</span>
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 rounded-xl bg-[#F8F6FD] px-3 py-4 text-center text-[11px] text-[#9D97B4]">Belum ada jawaban yang dapat diringkas.</div>
+      )}
+
+      {items.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {items.slice(0, 5).map((item) => {
+            const percentage = total > 0 ? Math.round((item.count / total) * 100) : 0;
+            return (
+              <div key={item.label} className="min-w-0">
+                <div className="mb-1.5 flex items-center justify-between gap-3 text-[10px]">
+                  <span className="min-w-0 truncate font-medium text-[#625A76]" title={item.label}>{item.label}</span>
+                  <span className="shrink-0 font-semibold text-[#817A97]">{item.count} · {percentage}%</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-[#F0EDF6]">
+                  <div className="h-full rounded-full bg-[#8B5CF6] transition-all" style={{ width: `${percentage}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <p className="mt-4 border-t border-[#F1EEF6] pt-3 text-[9px] text-[#AAA5B8]">{total} jawaban terisi</p>
+    </section>
+  );
+}
+
 // ======================================================
 // MAIN COMPONENT
 // ======================================================
@@ -269,6 +410,9 @@ export default function PenggunaManager({
     useState<FilterType>("all");
 
   const [selectedMember, setSelectedMember] =
+    useState<MemberRow | null>(null);
+
+  const [selectedDetailMember, setSelectedDetailMember] =
     useState<MemberRow | null>(null);
 
   const [selectedCourseId, setSelectedCourseId] =
@@ -331,6 +475,32 @@ export default function PenggunaManager({
   const adminCount = members.filter(
     (member) => member.roles.includes("admin")
   ).length;
+
+  // ----------------------------------------------------
+  // INSIGHT PENDAFTARAN PESERTA
+  // Data diringkas dari kolom profil yang sudah diisi pada form registrasi.
+  // Admin dan Mentor tidak dimasukkan ke statistik peserta.
+  // ----------------------------------------------------
+
+  const participantMembers = useMemo(
+    () => members.filter((member) => member.role === "member"),
+    [members]
+  );
+
+  const regionBreakdown = useMemo(
+    () => buildBreakdown(participantMembers.map((member) => getRegionLabel(member.address))),
+    [participantMembers]
+  );
+
+  const sourceBreakdown = useMemo(
+    () => buildBreakdown(participantMembers.map((member) => member.acquisition_source)),
+    [participantMembers]
+  );
+
+  const reasonBreakdown = useMemo(
+    () => buildBreakdown(participantMembers.map((member) => member.registration_reason)),
+    [participantMembers]
+  );
 
   // ----------------------------------------------------
   // SEARCH AND FILTER
@@ -459,6 +629,14 @@ export default function PenggunaManager({
 
     setError("");
     setSuccess("");
+  }
+
+  function openDetail(member: MemberRow) {
+    setSelectedDetailMember(member);
+  }
+
+  function closeDetail() {
+    setSelectedDetailMember(null);
   }
 
   function closeAccess() {
@@ -617,6 +795,18 @@ export default function PenggunaManager({
     [selectedMember, enrollments]
   );
 
+  const detailActiveCourses = useMemo(
+    () =>
+      selectedDetailMember
+        ? enrollments.filter(
+            (item) =>
+              item.user_id === selectedDetailMember.id &&
+              item.status === "active"
+          )
+        : [],
+    [selectedDetailMember, enrollments]
+  );
+
   const selectedCourse = availableCourses.find(
     (course) => course.id === selectedCourseId
   );
@@ -734,6 +924,52 @@ export default function PenggunaManager({
           ))}
 
         </section>
+
+        {/* =================================================
+            INSIGHT PENDAFTARAN - TETAP DI TAB PENGGUNA
+        ================================================= */}
+        {activeTab === "users" && (
+        <section className="rounded-[22px] border border-[#EEEAF7] bg-white p-5 shadow-[0_8px_32px_rgba(15,45,40,0.045)] sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#6D28D9]">
+                <Sparkles size={13} />
+                Insight Pendaftaran
+              </div>
+              <h3 className="mt-1.5 text-[16px] font-semibold tracking-tight text-[#1B1730]">Mengenal peserta Kiki Creator Class</h3>
+              <p className="mt-1 max-w-2xl text-[11px] leading-5 text-[#9D97B4]">Ringkasan domisili, sumber informasi, dan tujuan belajar berdasarkan jawaban pada formulir pendaftaran peserta.</p>
+            </div>
+            <div className="rounded-xl bg-[#F3EEFF] px-3.5 py-2 text-[11px] font-semibold text-[#6D28D9]">
+              {participantMembers.length.toLocaleString("id-ID")} peserta dianalisis
+            </div>
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
+            <InsightBreakdown
+              title="Domisili peserta"
+              description="Diringkas dari bagian wilayah pada isian alamat domisili."
+              icon={MapPin}
+              items={regionBreakdown}
+            />
+            <InsightBreakdown
+              title="Sumber informasi kelas"
+              description="Dari mana peserta pertama kali mengetahui Kiki Creator Class."
+              icon={Megaphone}
+              items={sourceBreakdown}
+            />
+            <InsightBreakdown
+              title="Tujuan mengikuti kelas"
+              description="Alasan dan tujuan belajar yang dipilih peserta saat mendaftar."
+              icon={Target}
+              items={reasonBreakdown}
+            />
+          </div>
+
+          <p className="mt-4 rounded-xl bg-[#FAF9FD] px-3.5 py-3 text-[10px] leading-5 text-[#8E879F]">
+            Catatan data: ringkasan hanya menghitung jawaban yang terisi. Pada alur aktivasi alumni, kolom sumber informasi dan tujuan belajar memang tidak ditanyakan dan sistem menyimpannya sebagai “Lainnya”; karena itu kategori tersebut tidak selalu berarti jawaban survei langsung. Variasi penulisan domisili juga dapat membuat wilayah serupa terhitung terpisah.
+          </p>
+        </section>
+        )}
 
         {/* =================================================
             NOTIFICATIONS
@@ -879,15 +1115,26 @@ export default function PenggunaManager({
                     <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700">Akses aktif</span>
                     <span className="text-[10px] text-slate-400">Bergabung {formatDate(enrollment.granted_at || enrollment.created_at)}</span>
                     {member && (
-                      <button
-                        type="button"
-                        onClick={() => openAccess(member)}
-                        aria-label={`Kelola akses ${member.full_name}`}
-                        title={`Kelola akses ${member.full_name}`}
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#EEEAF7] bg-white text-[#6D28D9] transition hover:bg-[#F3EEFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
-                      >
-                        <LockKeyhole size={15} />
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => openDetail(member)}
+                          aria-label={`Lihat detail ${member.full_name}`}
+                          title={`Lihat detail ${member.full_name}`}
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#EEEAF7] bg-white text-[#6D28D9] transition hover:bg-[#F3EEFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
+                        >
+                          <Eye size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openAccess(member)}
+                          aria-label={`Kelola akses ${member.full_name}`}
+                          title={`Kelola akses ${member.full_name}`}
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[#EEEAF7] bg-white text-[#6D28D9] transition hover:bg-[#F3EEFF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
+                        >
+                          <LockKeyhole size={15} />
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -1067,14 +1314,24 @@ export default function PenggunaManager({
                       </td>
 
                       <td className="px-7 py-5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => openAccess(member)}
-                          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5B21B6] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
-                        >
-                          <LockKeyhole size={14} />
-                          Kelola Akses
-                        </button>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openDetail(member)}
+                            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#E8E1F3] bg-white px-3 text-[11px] font-semibold text-[#6D28D9] transition hover:bg-[#F7F3FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
+                          >
+                            <Eye size={14} />
+                            Detail
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openAccess(member)}
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-3.5 text-[11px] font-semibold text-white transition hover:bg-[#5B21B6] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
+                          >
+                            <LockKeyhole size={14} />
+                            Kelola Akses
+                          </button>
+                        </div>
                       </td>
 
                     </tr>
@@ -1145,14 +1402,24 @@ export default function PenggunaManager({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => openAccess(member)}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-4 text-[12px] font-semibold text-white transition hover:bg-[#5B21B6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
-                    >
-                      <LockKeyhole size={14} />
-                      Kelola Akses
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openDetail(member)}
+                        className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#E8E1F3] bg-white px-3 text-[11px] font-semibold text-[#6D28D9] transition hover:bg-[#F7F3FF] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
+                      >
+                        <Eye size={14} />
+                        Detail
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openAccess(member)}
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#6D28D9] px-3.5 text-[11px] font-semibold text-white transition hover:bg-[#5B21B6] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#8B5CF6]"
+                      >
+                        <LockKeyhole size={14} />
+                        Kelola Akses
+                      </button>
+                    </div>
 
                   </div>
 
@@ -1630,6 +1897,124 @@ export default function PenggunaManager({
 
           </div>
 
+        </div>
+      )}
+
+      {/* =====================================================
+          DETAIL PESERTA - READ ONLY
+      ===================================================== */}
+      {selectedDetailMember && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-[#211A37]/55 p-2 backdrop-blur-[4px] sm:p-4"
+          onClick={closeDetail}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="member-detail-title"
+            onClick={(event) => event.stopPropagation()}
+            className="flex w-[calc(100vw-24px)] max-w-[680px] max-h-[82dvh] min-h-0 flex-col overflow-hidden rounded-[20px] bg-white shadow-[0_20px_60px_rgba(0,0,0,0.20)] sm:rounded-[22px]"
+            style={{ width: "calc(100vw - 24px)", maxWidth: "680px", maxHeight: "82dvh" }}
+          >
+            <div className="flex shrink-0 items-center justify-between bg-[#5B21B6] px-4 py-3.5 text-white sm:px-5 sm:py-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                  <UserRound size={19} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#D8C7FF]">Profil Peserta</p>
+                  <h3 id="member-detail-title" className="mt-1 text-[16px] font-semibold">Detail Peserta</h3>
+                  <p className="mt-0.5 truncate text-[10px] text-[#E3D8FF]">Informasi pendaftaran dan tujuan belajar.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closeDetail}
+                aria-label="Tutup detail peserta"
+                className="ml-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3.5 sm:p-5">
+              <section className="flex items-center gap-3 rounded-[16px] bg-[#F7F6FC] p-3 sm:p-4">
+                <MemberAvatar member={selectedDetailMember} size="lg" />
+                <div className="min-w-0 flex-1">
+                  <h4 className="truncate text-[14px] font-semibold text-[#211A37]">{selectedDetailMember.full_name}</h4>
+                  <p className="mt-1 text-[10px] text-[#9D97B4]">ID: {selectedDetailMember.id}</p>
+                  <div className="mt-2"><RoleBadges roles={selectedDetailMember.roles} compact /></div>
+                </div>
+              </section>
+
+              <section className="rounded-[16px] border border-[#EEEAF7] p-3 sm:p-4">
+                <div className="mb-2.5 flex items-center gap-2">
+                  <UserRound size={16} className="text-[#6D28D9]" />
+                  <h4 className="text-[13px] font-semibold text-[#211A37]">Informasi peserta</h4>
+                </div>
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  <div className="rounded-xl bg-[#F8F7FC] p-2.5">
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-[#9D97B4]">Nomor WhatsApp</p>
+                    <p className="mt-1 break-words text-[11px] font-semibold text-[#584C6E]">{selectedDetailMember.whatsapp_number || selectedDetailMember.phone || "Belum diisi"}</p>
+                  </div>
+                  <div className="rounded-xl bg-[#F8F7FC] p-2.5">
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-[#9D97B4]">Tanggal bergabung</p>
+                    <p className="mt-1 text-[11px] font-semibold text-[#584C6E]">{formatDate(selectedDetailMember.created_at)}</p>
+                  </div>
+                  <div className="rounded-xl bg-[#F8F7FC] p-3 sm:col-span-2">
+                    <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-[#9D97B4]"><MapPin size={11} /> Domisili / asal daerah</p>
+                    <p className="mt-1 break-words text-[11px] font-semibold leading-5 text-[#584C6E]">{selectedDetailMember.address || "Belum diisi"}</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-[16px] border border-[#EEEAF7] p-3 sm:p-4">
+                <div className="mb-2.5 flex items-center gap-2">
+                  <Megaphone size={16} className="text-[#6D28D9]" />
+                  <h4 className="text-[13px] font-semibold text-[#211A37]">Jawaban formulir pendaftaran</h4>
+                </div>
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  <div className="rounded-xl bg-[#F8F7FC] p-2.5">
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-[#9D97B4]">Mengetahui kelas dari</p>
+                    <p className="mt-1 break-words text-[11px] font-semibold leading-5 text-[#584C6E]">{selectedDetailMember.acquisition_source || "Belum diisi / data lama"}</p>
+                  </div>
+                  <div className="rounded-xl bg-[#F8F7FC] p-2.5">
+                    <p className="text-[9px] font-bold uppercase tracking-wide text-[#9D97B4]">Tujuan mengikuti kelas</p>
+                    <p className="mt-1 break-words text-[11px] font-semibold leading-5 text-[#584C6E]">{selectedDetailMember.registration_reason || "Belum diisi / data lama"}</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-[16px] border border-[#EEEAF7] p-3 sm:p-4">
+                <div className="mb-2.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <BookOpen size={16} className="text-[#6D28D9]" />
+                    <h4 className="text-[13px] font-semibold text-[#211A37]">Kelas yang diikuti</h4>
+                  </div>
+                  <span className="rounded-full bg-[#F3EEFF] px-2.5 py-1 text-[9px] font-semibold text-[#6D28D9]">{detailActiveCourses.length} kelas aktif</span>
+                </div>
+                {detailActiveCourses.length > 0 ? (
+                  <div className="space-y-2">
+                    {detailActiveCourses.map((enrollment) => {
+                      const course = courses.find((item) => item.id === enrollment.course_id);
+                      return (
+                        <div key={enrollment.id} className="flex items-center justify-between gap-3 rounded-xl bg-[#F8F7FC] px-3 py-2.5">
+                          <p className="min-w-0 truncate text-[11px] font-semibold text-[#584C6E]">{course?.title || "Kelas tidak ditemukan"}</p>
+                          <span className="shrink-0 text-[9px] text-[#9D97B4]">Aktif sejak {formatDate(enrollment.granted_at || enrollment.created_at)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="rounded-xl bg-[#F8F7FC] px-3 py-4 text-center text-[11px] text-[#9D97B4]">Peserta belum memiliki akses kelas aktif.</p>
+                )}
+              </section>
+            </div>
+
+            <div className="flex shrink-0 justify-end border-t border-[#F1EEF6] px-4 py-3 sm:px-5 sm:py-3">
+              <button type="button" onClick={closeDetail} className="inline-flex h-9 min-h-0 items-center justify-center rounded-lg bg-[#F3EEFF] px-4 text-[11px] font-semibold text-[#6D28D9] transition hover:bg-[#EAE1FF]">Tutup Detail</button>
+            </div>
+          </div>
         </div>
       )}
 

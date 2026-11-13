@@ -172,18 +172,7 @@ export default function AlumniCreateAccountPage() {
         return;
       }
 
-      const { error: profileError } = await supabase.rpc("save_member_registration_details", {
-        p_full_name: request.full_name,
-        p_whatsapp_number: request.whatsapp_number,
-        p_address: null,
-        p_acquisition_source: "Lainnya",
-        p_registration_reason: "Akses Alumni",
-      });
-      if (profileError) {
-        // The account and member role are already created on the server.
-        // Keep the activation flow available; profile sync can be repaired by Admin.
-        console.warn("Data profil alumni belum tersinkron:", profileError.message);
-      }
+      // Data profil dan jawaban survei sudah disimpan oleh endpoint create-account.
 
       window.location.replace(alumniUrl);
     } catch (error) {

@@ -145,30 +145,52 @@ export async function POST(request: Request) {
     }
 
     const statusRow = Array.isArray(requestRows) ? requestRows[0] : null;
-    const alumniRequest = statusRow
-      ? {
-          id: statusRow.request_id,
-          full_name: statusRow.full_name,
-          email: statusRow.email,
-          whatsapp_number: statusRow.whatsapp_number,
-          status: statusRow.status,
-          expires_at: statusRow.expires_at,
-        }
-      : null;
-
-    if (!alumniRequest) {
+    if (!statusRow) {
       return json({ success: false, message: "Pengajuan tidak ditemukan. Buka tautan pribadi terbaru dari Admin." }, 404);
     }
+
+    const alumniRequestBase = {
+      id: statusRow.request_id,
+      full_name: statusRow.full_name,
+      email: statusRow.email,
+      whatsapp_number: statusRow.whatsapp_number,
+      status: statusRow.status,
+      expires_at: statusRow.expires_at,
+    };
+
     if (
-      alumniRequest.status === "expired" ||
-      !alumniRequest.expires_at ||
-      new Date(alumniRequest.expires_at).getTime() <= Date.now()
+      alumniRequestBase.status === "expired" ||
+      !alumniRequestBase.expires_at ||
+      new Date(alumniRequestBase.expires_at).getTime() <= Date.now()
     ) {
       return json({ success: false, message: "Masa persetujuan sudah berakhir. Hubungi Admin untuk meminta persetujuan ulang." }, 410);
     }
-    if (alumniRequest.status !== "approved") {
+    if (alumniRequestBase.status !== "approved") {
       return json({ success: false, message: "Akun hanya dapat dibuat setelah pengajuan disetujui Admin." }, 409);
     }
+
+    // Ambil jawaban survei dari tabel pengajuan menggunakan service-role.
+    // RPC publik status sengaja hanya mengembalikan data minimum untuk halaman status.
+    const { data: surveyRow, error: surveyError } = await admin
+      .from("alumni_access_requests")
+      .select("address, acquisition_source, registration_reason")
+      .eq("id", requestId)
+      .maybeSingle();
+
+    if (surveyError || !surveyRow) {
+      console.error("Alumni survey data lookup failed:", surveyError?.message ?? "Request row not found");
+      return json({
+        success: false,
+        message: "Data asal daerah dan survei pengajuan belum dapat dibaca. Pastikan migrasi data survei alumni sudah dijalankan, lalu coba kembali.",
+      }, 500);
+    }
+
+    const alumniRequest = {
+      ...alumniRequestBase,
+      address: String(surveyRow.address ?? "").trim() || null,
+      acquisition_source: String(surveyRow.acquisition_source ?? "").trim() || "Lainnya",
+      registration_reason: String(surveyRow.registration_reason ?? "").trim() || "Akses Alumni",
+    };
 
     const email = String(alumniRequest.email ?? "").trim().toLowerCase();
     if (email.length > 254 || !EMAIL_PATTERN.test(email)) {
@@ -198,8 +220,9 @@ export async function POST(request: Request) {
         full_name: alumniRequest.full_name,
         phone: alumniRequest.whatsapp_number,
         whatsapp_number: alumniRequest.whatsapp_number,
-        acquisition_source: "Lainnya",
-        registration_reason: "Akses Alumni",
+        address: alumniRequest.address,
+        acquisition_source: alumniRequest.acquisition_source,
+        registration_reason: alumniRequest.registration_reason,
         account_origin: "approved_alumni_request",
         alumni_request_id: alumniRequest.id,
       },
@@ -269,6 +292,29 @@ export async function POST(request: Request) {
         console.error("Alumni member role creation failed:", roleInsertError.message);
         return json({ success: false, message: "Akun berhasil disiapkan, tetapi role Peserta gagal dibuat. Silakan hubungi Admin sebelum mencoba lagi." }, 500);
       }
+    }
+
+    // Pastikan jawaban survei masuk ke profil yang dibaca halaman Admin > Pengguna.
+    // Metadata Auth juga sudah diisi di atas sebagai cadangan sinkronisasi.
+    const { error: profileUpsertError } = await admin
+      .from("profiles")
+      .upsert({
+        id: userId,
+        full_name: alumniRequest.full_name,
+        phone: alumniRequest.whatsapp_number,
+        whatsapp_number: alumniRequest.whatsapp_number,
+        address: alumniRequest.address,
+        acquisition_source: alumniRequest.acquisition_source,
+        registration_reason: alumniRequest.registration_reason,
+      }, { onConflict: "id" });
+
+    if (profileUpsertError) {
+      await admin.auth.admin.deleteUser(userId);
+      console.error("Alumni profile survey sync failed:", profileUpsertError.message);
+      return json({
+        success: false,
+        message: "Akun belum dapat diselesaikan karena data profil peserta gagal disimpan. Silakan coba kembali atau hubungi Admin.",
+      }, 500);
     }
 
     return json({
