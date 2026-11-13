@@ -1,13 +1,19 @@
+
 import { resolveMx } from "node:dns/promises";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@supabase/supabase-js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-function json(body: Record<string, unknown>, status = 200) {
+function json(
+  body: Record<string, unknown>,
+  status = 200
+) {
   return Response.json(body, {
     status,
     headers: {
@@ -17,7 +23,9 @@ function json(body: Record<string, unknown>, status = 200) {
   });
 }
 
-async function domainHasMailExchange(domain: string): Promise<boolean> {
+async function domainHasMailExchange(
+  domain: string
+): Promise<boolean> {
   try {
     return (await resolveMx(domain)).length > 0;
   } catch {
@@ -27,24 +35,40 @@ async function domainHasMailExchange(domain: string): Promise<boolean> {
 
 export async function POST(request: Request) {
   try {
+    // =========================================
+    // 1. VALIDASI REQUEST
+    // =========================================
+
     const origin = request.headers.get("origin");
     const host = request.headers.get("host");
 
     if (origin && host) {
-      let originHost = "";
       try {
-        originHost = new URL(origin).host;
+        const originHost = new URL(origin).host;
+
+        if (originHost !== host) {
+          return json({
+            success: false,
+            message: "Permintaan tidak diizinkan.",
+          }, 403);
+        }
       } catch {
-        return json({ success: false, message: "Asal permintaan tidak valid." }, 403);
-      }
-      if (originHost !== host) {
-        return json({ success: false, message: "Permintaan tidak diizinkan." }, 403);
+        return json({
+          success: false,
+          message: "Asal permintaan tidak valid.",
+        }, 403);
       }
     }
 
-    const contentLength = Number(request.headers.get("content-length") ?? 0);
-    if (contentLength > 12_000) {
-      return json({ success: false, message: "Data permintaan terlalu besar." }, 413);
+    const contentLength = Number(
+      request.headers.get("content-length") ?? 0
+    );
+
+    if (contentLength > 12000) {
+      return json({
+        success: false,
+        message: "Data permintaan terlalu besar.",
+      }, 413);
     }
 
     const body = await request.json().catch(() => null) as {
@@ -55,52 +79,91 @@ export async function POST(request: Request) {
 
     const requestId = String(body?.requestId ?? "").trim();
     const password = String(body?.password ?? "");
-    const emailOwnershipConfirmed = body?.emailOwnershipConfirmed === true;
+
+    const emailOwnershipConfirmed =
+      body?.emailOwnershipConfirmed === true;
 
     if (!UUID_PATTERN.test(requestId)) {
-      return json({ success: false, message: "Tautan pengajuan tidak valid. Buka kembali tautan pribadi dari Admin." }, 400);
-    }
-    if (password.length > 72) {
-      return json({ success: false, code: "PASSWORD_TOO_LONG", message: "Password maksimal 72 karakter." }, 400);
+      return json({
+        success: false,
+        message:
+          "Tautan pengajuan tidak valid. Buka kembali tautan pribadi dari Admin.",
+      }, 400);
     }
 
-    // Server-side validation must mirror Supabase Authentication > Email
-    // > Password requirements (lowercase, uppercase letters and digits).
-    const passwordRequirementsMet =
+    // =========================================
+    // 2. VALIDASI PASSWORD
+    // =========================================
+
+    if (password.length > 72) {
+      return json({
+        success: false,
+        code: "PASSWORD_TOO_LONG",
+        message: "Password maksimal 72 karakter.",
+      }, 400);
+    }
+
+    const passwordIsValid =
       password.length >= 8 &&
       /[a-z]/.test(password) &&
       /[A-Z]/.test(password) &&
       /[0-9]/.test(password);
 
-    if (!passwordRequirementsMet) {
+    if (!passwordIsValid) {
       return json({
         success: false,
         code: "PASSWORD_POLICY",
-        message: "Password belum memenuhi ketentuan. Gunakan minimal 8 karakter yang mengandung setidaknya 1 huruf kecil, 1 huruf kapital, dan 1 angka.",
+        message:
+          "Password minimal 8 karakter dan harus mengandung huruf kecil, huruf kapital, serta angka.",
       }, 400);
     }
+
     if (!emailOwnershipConfirmed) {
-      return json({ success: false, message: "Centang pernyataan bahwa email tersebut aktif dan milikmu." }, 400);
+      return json({
+        success: false,
+        message:
+          "Pastikan email tersebut aktif dan benar-benar milikmu.",
+      }, 400);
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    // =========================================
+    // 3. KONFIGURASI SUPABASE
+    // =========================================
+
+    const supabaseUrl =
+      process.env.NEXT_PUBLIC_SUPABASE_URL;
+
     const publicApiKey =
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
     const serviceRoleKey =
       process.env.SUPABASE_SERVICE_ROLE_KEY ??
       process.env.SUPABASE_SECRET_KEY;
 
     if (!supabaseUrl || !publicApiKey || !serviceRoleKey) {
-      console.error("Alumni account provisioning is missing Supabase server configuration.", {
+      console.error("ALUMNI_SUPABASE_CONFIG_ERROR", {
         hasUrl: Boolean(supabaseUrl),
         hasPublicKey: Boolean(publicApiKey),
         hasServiceKey: Boolean(serviceRoleKey),
       });
+
       return json({
         success: false,
-        message: "Konfigurasi Supabase server belum lengkap. Periksa URL, publishable/anon key, dan service-role/secret key.",
+        message:
+          "Konfigurasi Supabase server belum lengkap. Periksa URL dan API Key.",
       }, 503);
+    }
+
+    let projectHost = "unknown";
+
+    try {
+      projectHost = new URL(supabaseUrl).host;
+    } catch {
+      return json({
+        success: false,
+        message: "URL Supabase tidak valid.",
+      }, 500);
     }
 
     const clientOptions = {
@@ -111,42 +174,60 @@ export async function POST(request: Request) {
       },
     };
 
-    // This RPC is intentionally granted to anon/authenticated and is the same
-    // limited lookup used by the public alumni status page.
-    const lookup = createSupabaseClient(supabaseUrl, publicApiKey, clientOptions);
+    const lookup = createClient(
+      supabaseUrl,
+      publicApiKey,
+      clientOptions
+    );
 
-    // The secret client is used only for privileged Auth and role operations.
-    const admin = createSupabaseClient(supabaseUrl, serviceRoleKey, clientOptions);
+    const admin = createClient(
+      supabaseUrl,
+      serviceRoleKey,
+      clientOptions
+    );
 
-    const { data: requestRows, error: requestError } = await lookup.rpc(
+    // =========================================
+    // 4. AMBIL STATUS PENGAJUAN
+    // =========================================
+
+    const {
+      data: requestRows,
+      error: requestError,
+    } = await lookup.rpc(
       "get_alumni_access_request_status",
-      { p_request_id: requestId },
+      {
+        p_request_id: requestId,
+      }
     );
 
     if (requestError) {
-      console.error("Alumni request RPC lookup failed:", {
+      console.error("ALUMNI_REQUEST_RPC_ERROR", {
+        projectHost,
         message: requestError.message,
         code: requestError.code,
         details: requestError.details,
         hint: requestError.hint,
       });
 
-      const response: Record<string, unknown> = {
+      return json({
         success: false,
-        message: "Server belum bisa membaca status pengajuan alumni. Pastikan RPC get_alumni_access_request_status(uuid) tersedia dan konfigurasi public Supabase benar.",
-      };
-
-      if (process.env.NODE_ENV !== "production") {
-        response.debug = requestError.message;
-        response.code = requestError.code;
-      }
-
-      return json(response, 500);
+        message:
+          process.env.NODE_ENV !== "production"
+            ? `DEBUG RPC: ${requestError.message} | Code: ${requestError.code}`
+            : "Server belum bisa membaca status pengajuan alumni.",
+      }, 500);
     }
 
-    const statusRow = Array.isArray(requestRows) ? requestRows[0] : null;
+    const statusRow = Array.isArray(requestRows)
+      ? requestRows[0]
+      : requestRows;
+
     if (!statusRow) {
-      return json({ success: false, message: "Pengajuan tidak ditemukan. Buka tautan pribadi terbaru dari Admin." }, 404);
+      return json({
+        success: false,
+        message:
+          "Pengajuan tidak ditemukan. Buka tautan pribadi terbaru dari Admin.",
+      }, 404);
     }
 
     const alumniRequestBase = {
@@ -158,64 +239,149 @@ export async function POST(request: Request) {
       expires_at: statusRow.expires_at,
     };
 
+    // =========================================
+    // 5. VALIDASI PERSETUJUAN ADMIN
+    // =========================================
+
     if (
       alumniRequestBase.status === "expired" ||
       !alumniRequestBase.expires_at ||
-      new Date(alumniRequestBase.expires_at).getTime() <= Date.now()
+      new Date(alumniRequestBase.expires_at).getTime() <=
+        Date.now()
     ) {
-      return json({ success: false, message: "Masa persetujuan sudah berakhir. Hubungi Admin untuk meminta persetujuan ulang." }, 410);
-    }
-    if (alumniRequestBase.status !== "approved") {
-      return json({ success: false, message: "Akun hanya dapat dibuat setelah pengajuan disetujui Admin." }, 409);
+      return json({
+        success: false,
+        message:
+          "Masa persetujuan sudah berakhir. Hubungi Admin untuk meminta persetujuan ulang.",
+      }, 410);
     }
 
-    // Ambil jawaban survei dari tabel pengajuan menggunakan service-role.
-    // RPC publik status sengaja hanya mengembalikan data minimum untuk halaman status.
-    const { data: surveyRow, error: surveyError } = await admin
+    if (alumniRequestBase.status !== "approved") {
+      return json({
+        success: false,
+        message:
+          "Akun hanya dapat dibuat setelah pengajuan disetujui Admin.",
+      }, 409);
+    }
+
+    // =========================================
+    // 6. AMBIL DATA SURVEI ALUMNI
+    // =========================================
+
+    const {
+      data: surveyRow,
+      error: surveyError,
+    } = await admin
       .from("alumni_access_requests")
-      .select("address, acquisition_source, registration_reason")
+      .select(
+        "id, address, acquisition_source, registration_reason"
+      )
       .eq("id", requestId)
       .maybeSingle();
 
     if (surveyError || !surveyRow) {
-      console.error("Alumni survey data lookup failed:", surveyError?.message ?? "Request row not found");
+      const diagnostic = {
+        projectHost,
+        rowFound: Boolean(surveyRow),
+        errorMessage: surveyError?.message ?? null,
+        errorCode: surveyError?.code ?? null,
+        errorDetails: surveyError?.details ?? null,
+        errorHint: surveyError?.hint ?? null,
+      };
+
+      console.error(
+        "ALUMNI_SURVEY_LOOKUP_FAILED:",
+        diagnostic
+      );
+
+      const debugMessage = [
+        `Project: ${projectHost}`,
+        `Row: ${surveyRow ? "FOUND" : "NOT FOUND"}`,
+        `Error: ${surveyError?.message ?? "NONE"}`,
+        `Code: ${surveyError?.code ?? "NONE"}`,
+        `Details: ${surveyError?.details ?? "NONE"}`,
+        `Hint: ${surveyError?.hint ?? "NONE"}`,
+      ].join(" | ");
+
       return json({
         success: false,
-        message: "Data asal daerah dan survei pengajuan belum dapat dibaca. Pastikan migrasi data survei alumni sudah dijalankan, lalu coba kembali.",
+        message:
+          process.env.NODE_ENV !== "production"
+            ? `DEBUG SURVEI: ${debugMessage}`
+            : "Data asal daerah dan survei pengajuan belum dapat dibaca. Silakan coba kembali.",
       }, 500);
     }
 
     const alumniRequest = {
       ...alumniRequestBase,
-      address: String(surveyRow.address ?? "").trim() || null,
-      acquisition_source: String(surveyRow.acquisition_source ?? "").trim() || "Lainnya",
-      registration_reason: String(surveyRow.registration_reason ?? "").trim() || "Akses Alumni",
+
+      address:
+        String(surveyRow.address ?? "").trim() || null,
+
+      acquisition_source:
+        String(surveyRow.acquisition_source ?? "").trim() ||
+        "Lainnya",
+
+      registration_reason:
+        String(surveyRow.registration_reason ?? "").trim() ||
+        "Akses Alumni",
     };
 
-    const email = String(alumniRequest.email ?? "").trim().toLowerCase();
-    if (email.length > 254 || !EMAIL_PATTERN.test(email)) {
-      return json({ success: false, message: "Alamat email pada pengajuan tidak valid. Hubungi Admin untuk memperbaikinya." }, 400);
+    // =========================================
+    // 7. VALIDASI EMAIL
+    // =========================================
+
+    const email = String(
+      alumniRequest.email ?? ""
+    ).trim().toLowerCase();
+
+    if (
+      email.length > 254 ||
+      !EMAIL_PATTERN.test(email)
+    ) {
+      return json({
+        success: false,
+        message:
+          "Alamat email pada pengajuan tidak valid. Hubungi Admin untuk memperbaikinya.",
+      }, 400);
     }
 
     const domain = email.split("@")[1]?.toLowerCase();
+
     if (
       !domain ||
-      ["localhost", "example.com", "example.net", "example.org"].includes(domain) ||
+      ["localhost", "example.com", "example.net", "example.org"].includes(
+        domain
+      ) ||
       /\.(test|invalid|localhost)$/.test(domain)
     ) {
-      return json({ success: false, message: "Gunakan alamat email pribadi dengan domain email yang benar-benar digunakan." }, 400);
+      return json({
+        success: false,
+        message:
+          "Gunakan alamat email pribadi dengan domain email yang benar.",
+      }, 400);
     }
 
     if (!(await domainHasMailExchange(domain))) {
-      return json({ success: false, message: "Domain email tidak memiliki MX record untuk menerima email. Periksa kembali alamat email pada pengajuan dan hubungi Admin jika perlu." }, 400);
+      return json({
+        success: false,
+        message:
+          "Domain email tidak memiliki MX record untuk menerima email. Periksa kembali alamat email.",
+      }, 400);
     }
 
-    // Alumni account creation skips an email challenge by design.
-    // MX validation does not prove ownership of the individual mailbox.
-    const { data: created, error: createError } = await admin.auth.admin.createUser({
+    // =========================================
+    // 8. BUAT AKUN SUPABASE AUTH
+    // =========================================
+
+    const {
+      data: created,
+      error: createError,
+    } = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
+
       user_metadata: {
         full_name: alumniRequest.full_name,
         phone: alumniRequest.whatsapp_number,
@@ -229,7 +395,9 @@ export async function POST(request: Request) {
     });
 
     if (createError || !created.user) {
-      const message = createError?.message ?? "Akun belum berhasil dibuat.";
+      const message =
+        createError?.message ?? "Akun belum berhasil dibuat.";
+
       const lower = message.toLowerCase();
 
       if (
@@ -241,89 +409,168 @@ export async function POST(request: Request) {
         return json({
           success: false,
           code: "EMAIL_EXISTS",
-          message: "Email ini sudah memiliki akun Kiki Creator Class. Silakan login menggunakan akun tersebut.",
+          message:
+            "Email ini sudah memiliki akun Kiki Creator Class. Silakan login menggunakan akun tersebut.",
         }, 409);
       }
 
-      console.error("Alumni Auth user creation failed:", {
+      console.error("ALUMNI_AUTH_CREATE_ERROR", {
         message,
         code: createError?.code ?? null,
         status: createError?.status ?? null,
       });
 
-      // Keep the user-facing error helpful if the Supabase password policy
-      // is changed later and no longer matches this application's validation.
-      if (lower.includes("password should contain") || lower.includes("password") && lower.includes("weak")) {
+      if (
+        lower.includes("password should contain") ||
+        (lower.includes("password") && lower.includes("weak"))
+      ) {
         return json({
           success: false,
           code: "PASSWORD_POLICY",
-          message: "Password belum memenuhi kebijakan keamanan. Gunakan minimal 8 karakter dengan huruf kecil, huruf kapital, dan angka.",
+          message:
+            "Password belum memenuhi kebijakan keamanan.",
         }, 400);
       }
 
-      return json({ success: false, message: "Akun belum berhasil dibuat karena ada kendala pada layanan autentikasi. Silakan coba kembali atau hubungi Admin." }, 500);
+      return json({
+        success: false,
+        message:
+          "Akun belum berhasil dibuat karena ada kendala pada layanan autentikasi. Silakan coba kembali.",
+      }, 500);
     }
 
     const userId = created.user.id;
-    const { data: roleRows, error: roleReadError } = await admin
+
+    // =========================================
+    // 9. PEMBERIAN ROLE MEMBER
+    // =========================================
+
+    const {
+      data: roleRows,
+      error: roleReadError,
+    } = await admin
       .from("user_roles")
       .select("role")
       .eq("user_id", userId);
 
     if (roleReadError) {
       await admin.auth.admin.deleteUser(userId);
-      console.error("Alumni role lookup failed:", roleReadError.message);
-      return json({ success: false, message: "Akun belum dapat disiapkan sebagai Peserta. Silakan hubungi Admin." }, 500);
+
+      console.error(
+        "ALUMNI_ROLE_LOOKUP_ERROR:",
+        roleReadError.message
+      );
+
+      return json({
+        success: false,
+        message:
+          "Akun belum dapat disiapkan sebagai Peserta. Silakan hubungi Admin.",
+      }, 500);
     }
 
-    const roles = (roleRows ?? []).map((row) => String(row.role));
-    if (roles.includes("admin") || roles.includes("instructor")) {
+    const roles = (roleRows ?? []).map(
+      (row) => String(row.role)
+    );
+
+    if (
+      roles.includes("admin") ||
+      roles.includes("instructor")
+    ) {
       await admin.auth.admin.deleteUser(userId);
-      return json({ success: false, message: "Akun ini tidak dapat dibuat sebagai akun alumni Peserta." }, 403);
+
+      return json({
+        success: false,
+        message:
+          "Akun ini tidak dapat dibuat sebagai akun alumni Peserta.",
+      }, 403);
     }
 
     if (!roles.includes("member")) {
       const { error: roleInsertError } = await admin
         .from("user_roles")
-        .insert({ user_id: userId, role: "member" });
+        .insert({
+          user_id: userId,
+          role: "member",
+        });
 
       if (roleInsertError) {
         await admin.auth.admin.deleteUser(userId);
-        console.error("Alumni member role creation failed:", roleInsertError.message);
-        return json({ success: false, message: "Akun berhasil disiapkan, tetapi role Peserta gagal dibuat. Silakan hubungi Admin sebelum mencoba lagi." }, 500);
+
+        console.error(
+          "ALUMNI_ROLE_INSERT_ERROR:",
+          roleInsertError.message
+        );
+
+        return json({
+          success: false,
+          message:
+            "Role Peserta gagal dibuat. Silakan hubungi Admin.",
+        }, 500);
       }
     }
 
-    // Pastikan jawaban survei masuk ke profil yang dibaca halaman Admin > Pengguna.
-    // Metadata Auth juga sudah diisi di atas sebagai cadangan sinkronisasi.
-    const { error: profileUpsertError } = await admin
+    // =========================================
+    // 10. SIMPAN DATA PROFIL DAN SURVEI
+    // =========================================
+
+    const {
+      error: profileUpsertError,
+    } = await admin
       .from("profiles")
-      .upsert({
-        id: userId,
-        full_name: alumniRequest.full_name,
-        phone: alumniRequest.whatsapp_number,
-        whatsapp_number: alumniRequest.whatsapp_number,
-        address: alumniRequest.address,
-        acquisition_source: alumniRequest.acquisition_source,
-        registration_reason: alumniRequest.registration_reason,
-      }, { onConflict: "id" });
+      .upsert(
+        {
+          id: userId,
+          full_name: alumniRequest.full_name,
+          phone: alumniRequest.whatsapp_number,
+          whatsapp_number: alumniRequest.whatsapp_number,
+          address: alumniRequest.address,
+          acquisition_source: alumniRequest.acquisition_source,
+          registration_reason: alumniRequest.registration_reason,
+        },
+        {
+          onConflict: "id",
+        }
+      );
 
     if (profileUpsertError) {
       await admin.auth.admin.deleteUser(userId);
-      console.error("Alumni profile survey sync failed:", profileUpsertError.message);
+
+      console.error(
+        "ALUMNI_PROFILE_SYNC_ERROR:",
+        profileUpsertError.message
+      );
+
       return json({
         success: false,
-        message: "Akun belum dapat diselesaikan karena data profil peserta gagal disimpan. Silakan coba kembali atau hubungi Admin.",
+        message:
+          "Data profil peserta gagal disimpan. Silakan hubungi Admin.",
       }, 500);
     }
+
+    // =========================================
+    // 11. BERHASIL
+    // =========================================
 
     return json({
       success: true,
       email,
-      message: "Akun alumni berhasil dibuat tanpa email verifikasi. Kamu bisa langsung masuk dan mengaktifkan kelas.",
+      message:
+        "Akun alumni berhasil dibuat tanpa email verifikasi. Kamu bisa langsung masuk dan mengaktifkan kelas.",
     });
+
   } catch (error) {
-    console.error("Unexpected alumni account provisioning error:", error);
-    return json({ success: false, message: "Terjadi kendala saat membuat akun alumni. Coba lagi atau hubungi Admin." }, 500);
+    console.error(
+      "UNEXPECTED_ALUMNI_ACCOUNT_ERROR:",
+      error
+    );
+
+    return json({
+      success: false,
+      message:
+        process.env.NODE_ENV !== "production" &&
+        error instanceof Error
+          ? `DEBUG SERVER: ${error.message}`
+          : "Terjadi kendala saat membuat akun alumni. Silakan coba kembali.",
+    }, 500);
   }
 }
