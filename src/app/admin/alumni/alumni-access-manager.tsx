@@ -129,6 +129,17 @@ export default function AlumniAccessManager({
   const [evidenceError, setEvidenceError] = useState<{ id: string; message: string } | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<AlumniAccessRequestRow | null>(null);
 
+  // Sinkronkan state lokal setiap kali server mengirim data terbaru.
+  // Ini penting setelah router.refresh() atau ketika data berubah di Supabase.
+  useEffect(() => {
+    setRequests(initialRequests);
+
+    setSelectedRequest((current) => {
+      if (!current) return null;
+      return initialRequests.find((row) => row.id === current.id) ?? null;
+    });
+  }, [initialRequests]);
+
   const courseMap = useMemo(
     () => new Map(courses.map((course) => [course.id, course.title])),
     [courses],
