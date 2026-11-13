@@ -13,7 +13,7 @@ export default async function AdminAlumniAccessPage() {
     supabase
       .from("alumni_access_requests")
       .select(
-        "id, full_name, email, whatsapp_number, course_id, previous_platform, proof_note, evidence_path, status, admin_note, reviewed_by, reviewed_at, expires_at, claimed_by, claimed_at, created_at",
+        "id, full_name, email, whatsapp_number, course_id, address, acquisition_source, registration_reason, previous_platform, proof_note, evidence_path, status, admin_note, reviewed_by, reviewed_at, expires_at, claimed_by, claimed_at, created_at",
       )
       .order("created_at", { ascending: false })
       .limit(1000),

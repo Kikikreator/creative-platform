@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Check,
@@ -9,9 +9,7 @@ import {
   Copy,
   Filter,
   FileImage,
-  Mail,
   Link2,
-  MessageCircle,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -28,6 +26,9 @@ export type AlumniAccessRequestRow = {
   email: string;
   whatsapp_number: string;
   course_id: string;
+  address: string | null;
+  acquisition_source: string | null;
+  registration_reason: string | null;
   previous_platform: string | null;
   proof_note: string | null;
   evidence_path: string | null;
@@ -61,6 +62,7 @@ function formatDate(value: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
   return new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -69,13 +71,15 @@ function formatDate(value: string | null) {
   }).format(date);
 }
 
-function isExpired(row: AlumniAccessRequestRow) {
-  return row.status === "approved" && Boolean(row.expires_at) &&
-    new Date(row.expires_at as string).getTime() <= Date.now();
+function isExpired(row: AlumniAccessRequestRow, now: number) {
+  return now > 0 &&
+    row.status === "approved" &&
+    Boolean(row.expires_at) &&
+    new Date(row.expires_at as string).getTime() <= now;
 }
 
-function statusMeta(row: AlumniAccessRequestRow) {
-  if (isExpired(row)) {
+function statusMeta(row: AlumniAccessRequestRow, now: number) {
+  if (isExpired(row, now)) {
     return { label: "Kedaluwarsa", className: "bg-amber-50 text-amber-700", icon: Clock3 };
   }
   switch (row.status) {
@@ -100,6 +104,19 @@ export default function AlumniAccessManager({
   const router = useRouter();
   const confirm = useConfirmDialog();
   const [requests, setRequests] = useState(initialRequests);
+  // Keep the first server/client render deterministic. The real clock is read
+  // only after hydration, then refreshed periodically for expiry labels.
+  const [now, setNow] = useState(0);
+
+  useEffect(() => {
+    // Waktu dibaca setelah hydration agar render awal server dan browser sama.
+    const updateClock = () => setNow(Date.now());
+
+    updateClock();
+    const timer = window.setInterval(updateClock, 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterValue>("all");
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -120,15 +137,15 @@ export default function AlumniAccessManager({
   const counts = useMemo(() => ({
     total: requests.length,
     pending: requests.filter((row) => row.status === "pending").length,
-    approved: requests.filter((row) => row.status === "approved" && !isExpired(row)).length,
+    approved: requests.filter((row) => row.status === "approved" && !isExpired(row, now)).length,
     claimed: requests.filter((row) => row.status === "claimed").length,
     rejected: requests.filter((row) => row.status === "rejected").length,
-  }), [requests]);
+  }), [requests, now]);
 
   const filteredRequests = useMemo(() => {
     const keyword = search.trim().toLowerCase();
     return requests.filter((row) => {
-      const expired = isExpired(row);
+      const expired = isExpired(row, now);
       const matchesFilter =
         filter === "all" ||
         (filter === "expired" && expired) ||
@@ -142,7 +159,7 @@ export default function AlumniAccessManager({
         courseTitle.toLowerCase().includes(keyword);
       return matchesFilter && matchesSearch;
     });
-  }, [requests, search, filter, courseMap]);
+  }, [requests, search, filter, courseMap, now]);
 
   async function prepareEvidenceLink(row: AlumniAccessRequestRow) {
     if (!row.evidence_path || evidenceLoadingId) return;
@@ -236,11 +253,11 @@ export default function AlumniAccessManager({
     }
   }
 
-  async function copyActivationMessage(row: AlumniAccessRequestRow) {
-    // Link ini bersifat personal: UUID pengajuan digunakan sebagai token untuk
-    // menampilkan status tanpa membuka tabel alumni_access_requests secara publik.
+  function buildActivationMessage(row: AlumniAccessRequestRow) {
+    // Pesan yang sama dipakai oleh tombol salin dan tombol WhatsApp.
+    // UUID pengajuan menjadi token pribadi untuk membuka status alumni.
     const activationUrl = `${window.location.origin}/akses-alumni?request=${encodeURIComponent(row.id)}`;
-    const message = [
+    return [
       `Halo ${row.full_name},`,
       "",
       "Pengajuan Akses Alumni Kiki Creator Class kamu sudah DISETUJUI.",
@@ -261,6 +278,11 @@ export default function AlumniAccessManager({
       "",
       "Kiki Creator Class",
     ].join("\n");
+  }
+
+  async function copyActivationMessage(row: AlumniAccessRequestRow) {
+    const activationUrl = `${window.location.origin}/akses-alumni?request=${encodeURIComponent(row.id)}`;
+    const message = buildActivationMessage(row);
 
     try {
       await navigator.clipboard.writeText(message);
@@ -269,6 +291,26 @@ export default function AlumniAccessManager({
     } catch {
       setActionError("Browser tidak mengizinkan penyalinan otomatis. Salin tautan halaman alumni secara manual: " + activationUrl);
     }
+  }
+
+  function openWhatsAppInvitation(row: AlumniAccessRequestRow) {
+    const rawPhone = (row.whatsapp_number ?? "").trim().replace(/\D/g, "");
+    const phone = rawPhone.startsWith("00")
+      ? rawPhone.slice(2)
+      : rawPhone.startsWith("0")
+        ? `62${rawPhone.slice(1)}`
+        : rawPhone.startsWith("8")
+          ? `62${rawPhone}`
+          : rawPhone;
+
+    if (!/^62\d{8,13}$/.test(phone)) {
+      setActionError("Nomor WhatsApp alumni tidak valid. Periksa kembali nomor yang diisi peserta.");
+      return;
+    }
+
+    const message = buildActivationMessage(row);
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
   }
 
   return (
@@ -374,7 +416,7 @@ export default function AlumniAccessManager({
         ) : (
           <div className="divide-y divide-[#F0ECF2]">
             {filteredRequests.map((row) => {
-              const status = statusMeta(row);
+              const status = statusMeta(row, now);
               const StatusIcon = status.icon;
               const courseTitle = courseMap.get(row.course_id) ?? "Kelas tidak ditemukan";
               const busy = savingId === row.id;
@@ -431,15 +473,29 @@ export default function AlumniAccessManager({
                           </button>
                         </>
                       )}
-                      {row.status === "approved" && !isExpired(row) && (
-                        <button
-                          type="button"
-                          onClick={() => copyActivationMessage(row)}
-                          className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[#E5DDEA] px-3.5 text-xs font-semibold text-[#51465D] transition hover:bg-[#FAF8FB]"
-                        >
-                          {copiedId === row.id ? <Check size={14} /> : <Copy size={14} />}
-                          {copiedId === row.id ? "Pesan disalin" : "Salin pesan undangan"}
-                        </button>
+                      {row.status === "approved" && !isExpired(row, now) && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => openWhatsAppInvitation(row)}
+                            title="Kirim undangan melalui WhatsApp"
+                            aria-label={`Kirim undangan WhatsApp ke ${row.full_name}`}
+                            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#25D366] text-white transition hover:bg-[#1DA851]"
+                          >
+                            <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" aria-hidden="true" fill="currentColor">
+                              <path d="M12.04 2C6.58 2 2.14 6.44 2.14 11.9c0 1.75.46 3.39 1.27 4.82L2 22l5.43-1.42a9.85 9.85 0 0 0 4.61 1.17h.01c5.46 0 9.9-4.44 9.9-9.9 0-2.65-1.03-5.14-2.91-7.01A9.83 9.83 0 0 0 12.04 2Zm0 18.07h-.01a8.2 8.2 0 0 1-4.18-1.14l-.3-.18-3.22.84.86-3.14-.2-.32a8.17 8.17 0 1 1 7.05 3.94Z" />
+                              <path d="M16.97 14.37c-.27-.14-1.61-.79-1.86-.88-.25-.09-.43-.14-.61.14-.18.27-.7.88-.86 1.06-.16.18-.32.2-.59.07-.27-.14-1.14-.42-2.17-1.34-.8-.71-1.34-1.59-1.5-1.86-.16-.27-.02-.42.12-.56.12-.12.27-.32.41-.48.14-.16.18-.27.27-.45.09-.18.05-.34-.02-.48-.07-.14-.61-1.47-.84-2.01-.22-.53-.45-.46-.61-.47h-.52c-.18 0-.48.07-.73.34-.25.27-.95.93-.95 2.27s.98 2.63 1.11 2.81c.14.18 1.93 2.95 4.68 4.14.65.28 1.16.45 1.56.58.65.21 1.24.18 1.7.11.52-.08 1.61-.66 1.84-1.3.23-.64.23-1.19.16-1.3-.07-.11-.25-.18-.52-.32Z" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyActivationMessage(row)}
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-[#E5DDEA] px-3.5 text-xs font-semibold text-[#51465D] transition hover:bg-[#FAF8FB]"
+                          >
+                            {copiedId === row.id ? <Check size={14} /> : <Copy size={14} />}
+                            {copiedId === row.id ? "Pesan disalin" : "Salin pesan undangan"}
+                          </button>
+                        </>
                       )}
                       {row.status === "claimed" && (
                         <span className="inline-flex min-h-9 items-center gap-1.5 rounded-xl bg-emerald-50 px-3.5 text-xs font-medium text-emerald-700">
@@ -457,7 +513,7 @@ export default function AlumniAccessManager({
 
       {selectedRequest && (() => {
         const row = selectedRequest;
-        const status = statusMeta(row);
+        const status = statusMeta(row, now);
         const StatusIcon = status.icon;
         const courseTitle = courseMap.get(row.course_id) ?? "Kelas tidak ditemukan";
         return (
@@ -504,6 +560,18 @@ export default function AlumniAccessManager({
                   <div className="rounded-xl bg-[#FAF8FB] p-3">
                     <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">WhatsApp</p>
                     <p className="mt-1 text-sm font-medium text-[#40334B]">{row.whatsapp_number || "—"}</p>
+                  </div>
+                  <div className="rounded-xl bg-[#FAF8FB] p-3 sm:col-span-2">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Domisili / asal daerah</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-[#40334B]">{row.address?.trim() || "Tidak dicantumkan"}</p>
+                  </div>
+                  <div className="rounded-xl bg-[#FAF8FB] p-3 sm:col-span-2">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Mengetahui kelas dari</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-[#40334B]">{row.acquisition_source?.trim() || "Tidak dicantumkan"}</p>
+                  </div>
+                  <div className="rounded-xl bg-[#FAF8FB] p-3 sm:col-span-2">
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Tujuan mengikuti kelas</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-[#40334B]">{row.registration_reason?.trim() || "Tidak dicantumkan"}</p>
                   </div>
                   <div className="rounded-xl bg-[#FAF8FB] p-3 sm:col-span-2">
                     <p className="text-[10px] font-medium uppercase tracking-wide text-[#948B9B]">Kelas yang diajukan</p>
@@ -597,7 +665,9 @@ export default function AlumniAccessManager({
         );
       })()}
 
-      
+      <div className="rounded-xl border border-[#EAE5ED] bg-[#FCFBFD] px-4 py-3 text-xs leading-5 text-[#827889]">
+        <strong className="font-semibold text-[#51465D]">Catatan:</strong> Persetujuan tidak mengirim email otomatis. Setelah menyetujui, gunakan tombol WhatsApp untuk membuka percakapan dengan pesan undangan yang sudah disiapkan, atau gunakan “Salin pesan undangan” untuk menyalinnya secara manual. Peserta membuat akun dari tautan pribadi tersebut menggunakan email aktif miliknya, lalu mengaktifkan akses gratis. Sistem tidak mengirim email verifikasi.
+      </div>
     </div>
   );
 }
