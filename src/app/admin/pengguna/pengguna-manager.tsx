@@ -3,7 +3,7 @@
 
 import { useConfirmDialog } from "@/components/ui/confirm-dialog-provider";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   Users,
@@ -37,12 +37,27 @@ export type MemberRow = {
   phone: string | null;
   whatsapp_number: string | null;
   address: string | null;
+  province: string | null;
+  regency_city: string | null;
+  district: string | null;
   acquisition_source: string | null;
   registration_reason: string | null;
   avatar_url: string | null;
   created_at: string;
   role: string;
   roles: string[];
+};
+
+export type AlumniRegionRow = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  status: string | null;
+  address: string | null;
+  province: string | null;
+  regency_city: string | null;
+  district: string | null;
+  created_at: string;
 };
 
 export type EnrollmentRow = {
@@ -66,6 +81,7 @@ export type CourseOption = {
 
 type Props = {
   initialMembers: MemberRow[];
+  initialAlumniRequests: AlumniRegionRow[];
   initialEnrollments: EnrollmentRow[];
   courses: CourseOption[];
   initialError: string | null;
@@ -124,55 +140,176 @@ function normalizeSurveyLabel(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
 
-/**
- * Alamat domisili pada formulir bersifat teks bebas. Untuk ringkasan,
- * tampilkan bagian wilayah paling akhir; jika bagian terakhir adalah nama
- * provinsi, gabungkan dengan satu bagian sebelumnya agar kota/kabupaten
- * tetap terbaca. Detail alamat lengkap tetap tersedia pada detail peserta.
- */
-function getRegionLabel(address: string | null) {
-  if (!address?.trim()) return null;
+type RegionFields = {
+  full_name?: string | null;
+  email?: string | null;
+  address?: string | null;
+  province?: string | null;
+  regency_city?: string | null;
+  district?: string | null;
+};
 
-  const parts = address
+type SurveyRegionEntry = {
+  region: string | null;
+  province: string | null;
+};
+
+function toTitleCase(value: string) {
+  return normalizeSurveyLabel(value)
+    .toLocaleLowerCase("id-ID")
+    .replace(/(^|\s)[\p{L}]/gu, (match) => match.toLocaleUpperCase("id-ID"));
+}
+
+const PROVINCE_ALIASES: Record<string, string> = {
+  aceh: "Aceh",
+  "sumatera utara": "Sumatera Utara",
+  sumut: "Sumatera Utara",
+  "sumatera barat": "Sumatera Barat",
+  sumbar: "Sumatera Barat",
+  riau: "Riau",
+  "kepulauan riau": "Kepulauan Riau",
+  kepri: "Kepulauan Riau",
+  jambi: "Jambi",
+  "sumatera selatan": "Sumatera Selatan",
+  sumsel: "Sumatera Selatan",
+  bengkulu: "Bengkulu",
+  lampung: "Lampung",
+  "kepulauan bangka belitung": "Kepulauan Bangka Belitung",
+  "bangka belitung": "Kepulauan Bangka Belitung",
+  banten: "Banten",
+  "dki jakarta": "DKI Jakarta",
+  jakarta: "DKI Jakarta",
+  "jawa barat": "Jawa Barat",
+  jabar: "Jawa Barat",
+  "jawa tengah": "Jawa Tengah",
+  jateng: "Jawa Tengah",
+  "di yogyakarta": "DI Yogyakarta",
+  yogyakarta: "DI Yogyakarta",
+  "jawa timur": "Jawa Timur",
+  jatim: "Jawa Timur",
+  bali: "Bali",
+  "nusa tenggara barat": "Nusa Tenggara Barat",
+  ntb: "Nusa Tenggara Barat",
+  "nusa tenggara timur": "Nusa Tenggara Timur",
+  ntt: "Nusa Tenggara Timur",
+  "kalimantan barat": "Kalimantan Barat",
+  kalbar: "Kalimantan Barat",
+  "kalimantan tengah": "Kalimantan Tengah",
+  kalteng: "Kalimantan Tengah",
+  "kalimantan selatan": "Kalimantan Selatan",
+  kalsel: "Kalimantan Selatan",
+  "kalimantan timur": "Kalimantan Timur",
+  kaltim: "Kalimantan Timur",
+  "kalimantan utara": "Kalimantan Utara",
+  kalut: "Kalimantan Utara",
+  "sulawesi utara": "Sulawesi Utara",
+  sulut: "Sulawesi Utara",
+  "sulawesi tengah": "Sulawesi Tengah",
+  sulteng: "Sulawesi Tengah",
+  "sulawesi selatan": "Sulawesi Selatan",
+  sulsel: "Sulawesi Selatan",
+  "sulawesi tenggara": "Sulawesi Tenggara",
+  sultra: "Sulawesi Tenggara",
+  gorontalo: "Gorontalo",
+  "sulawesi barat": "Sulawesi Barat",
+  sulbar: "Sulawesi Barat",
+  maluku: "Maluku",
+  "maluku utara": "Maluku Utara",
+  papua: "Papua",
+  "papua barat": "Papua Barat",
+  "papua selatan": "Papua Selatan",
+  "papua tengah": "Papua Tengah",
+  "papua pegunungan": "Papua Pegunungan",
+  "papua barat daya": "Papua Barat Daya",
+};
+
+const LEGACY_REGION_ALIASES: Record<string, string> = {
+  bandung: "Kota Bandung",
+  padang: "Kota Padang",
+  solo: "Kota Surakarta",
+  surakarta: "Kota Surakarta",
+  sumenep: "Kabupaten Sumenep",
+  "kotawaringin timur": "Kabupaten Kotawaringin Timur",
+};
+
+const REGION_PROVINCES: Record<string, string> = {
+  "kota bandung": "Jawa Barat",
+  "kota padang": "Sumatera Barat",
+  "kota surakarta": "Jawa Tengah",
+  "kabupaten sumenep": "Jawa Timur",
+  "kabupaten kotawaringin timur": "Kalimantan Tengah",
+};
+
+function normalizeProvinceLabel(value: string | null | undefined) {
+  if (!value?.trim()) return null;
+  const cleaned = normalizeSurveyLabel(value);
+  return PROVINCE_ALIASES[cleaned.toLocaleLowerCase("id-ID")] ?? toTitleCase(cleaned);
+}
+
+function normalizeRegionLabel(value: string | null | undefined) {
+  if (!value?.trim()) return null;
+  const cleaned = normalizeSurveyLabel(value);
+  const key = cleaned.toLocaleLowerCase("id-ID");
+  const legacy = LEGACY_REGION_ALIASES[key];
+  if (legacy) return legacy;
+
+  const match = cleaned.match(/^(kabupaten|kab\.?|kota)\s+(.+)$/i);
+  if (match) {
+    const prefix = match[1].toLocaleLowerCase("id-ID").startsWith("kab")
+      ? "Kabupaten"
+      : "Kota";
+    return `${prefix} ${toTitleCase(match[2])}`;
+  }
+
+  return toTitleCase(cleaned);
+}
+
+function getRegionLabel(source: RegionFields) {
+  // Data pendaftaran baru: gunakan kolom kabupaten/kota yang terstandar.
+  const structuredRegion = normalizeRegionLabel(source.regency_city);
+  if (structuredRegion) return structuredRegion;
+
+  if (!source.address?.trim()) return null;
+
+  const parts = source.address
     .split(",")
     .map((part) => normalizeSurveyLabel(part))
     .filter(Boolean);
 
-  if (parts.length <= 1) {
-    const singleValue = parts[0] ?? null;
-    if (!singleValue) return null;
-    if (
-      singleValue.length > 55 ||
-      /^(jl\.?|jalan\b|gang\b|gg\.?\b|rt\b|rw\b|nomor\b|no\.?\b)/i.test(singleValue)
-    ) {
-      return "Alamat lengkap (wilayah belum dipisahkan)";
+  // Data lama yang masih menyimpan nama kabupaten/kota di dalam alamat.
+  const explicitRegion = parts.find((part) => /^(kabupaten|kab\.?|kota)\b/i.test(part));
+  if (explicitRegion) return normalizeRegionLabel(explicitRegion);
+
+  const nonProvinceParts = parts.filter(
+    (part) => !PROVINCE_ALIASES[part.toLocaleLowerCase("id-ID")]
+  );
+  const candidate = nonProvinceParts[0] ?? parts[0];
+  if (!candidate || candidate.length > 70) return null;
+
+  return normalizeRegionLabel(candidate);
+}
+
+function getProvinceLabel(source: RegionFields) {
+  const structuredProvince = normalizeProvinceLabel(source.province);
+  if (structuredProvince) return structuredProvince;
+
+  if (source.address?.trim()) {
+    const parts = source.address
+      .split(",")
+      .map((part) => normalizeSurveyLabel(part))
+      .filter(Boolean);
+
+    for (let index = parts.length - 1; index >= 0; index -= 1) {
+      const province = normalizeProvinceLabel(parts[index]);
+      if (province && PROVINCE_ALIASES[parts[index].toLocaleLowerCase("id-ID")]) {
+        return province;
+      }
     }
-    return singleValue;
   }
 
-  const provinceAliases = new Set([
-    "aceh", "sumatera utara", "sumut", "sumatera barat", "sumbar",
-    "riau", "kepulauan riau", "kepri", "jambi", "sumatera selatan",
-    "sumsel", "bengkulu", "lampung", "kepulauan bangka belitung",
-    "bangka belitung", "banten", "dki jakarta", "jakarta", "jawa barat",
-    "jabar", "jawa tengah", "jateng", "di yogyakarta", "yogyakarta",
-    "jawa timur", "jatim", "bali", "nusa tenggara barat", "ntb",
-    "nusa tenggara timur", "ntt", "kalimantan barat", "kalbar",
-    "kalimantan tengah", "kalteng", "kalimantan selatan", "kalsel",
-    "kalimantan timur", "kaltim", "kalimantan utara", "kalut",
-    "sulawesi utara", "sulut", "sulawesi tengah", "sulteng",
-    "sulawesi selatan", "sulsel", "sulawesi tenggara", "sultra",
-    "gorontalo", "sulawesi barat", "sulbar", "maluku",
-    "maluku utara", "papua", "papua barat", "papua selatan",
-    "papua tengah", "papua pegunungan", "papua barat daya",
-  ]);
-
-  const last = parts[parts.length - 1];
-  if (provinceAliases.has(last.toLocaleLowerCase("id-ID")) && parts.length >= 2) {
-    return `${parts[parts.length - 2]}, ${last}`;
-  }
-
-  return last;
+  const region = getRegionLabel(source);
+  if (region) return REGION_PROVINCES[region.toLocaleLowerCase("id-ID")] ?? null;
+  return null;
 }
 
 function buildBreakdown(values: Array<string | null | undefined>): BreakdownItem[] {
@@ -190,6 +327,67 @@ function buildBreakdown(values: Array<string | null | undefined>): BreakdownItem
   return Array.from(counts.values()).sort(
     (a, b) => b.count - a.count || a.label.localeCompare(b.label, "id-ID")
   );
+}
+
+/**
+ * Gabungkan profil member dan pengajuan alumni.
+ * Profil diprioritaskan; pengajuan alumni dengan nama dan wilayah yang sama
+ * tidak dihitung dua kali. Pengajuan yang ditolak tidak masuk survei.
+ */
+function buildUniqueSurveyEntries(
+  profiles: MemberRow[],
+  alumniRequests: AlumniRegionRow[]
+): SurveyRegionEntry[] {
+  const entries: SurveyRegionEntry[] = [];
+  const entriesByIdentity = new Map<string, SurveyRegionEntry[]>();
+
+  const addEntry = (source: RegionFields) => {
+    const region = getRegionLabel(source);
+    const province = getProvinceLabel(source);
+    if (!region && !province) return;
+
+    const nameKey = normalizeSurveyLabel(source.full_name ?? "").toLocaleLowerCase("id-ID");
+    const emailKey = normalizeSurveyLabel(source.email ?? "").toLocaleLowerCase("id-ID");
+    const identity = nameKey ? `name:${nameKey}` : emailKey ? `email:${emailKey}` : null;
+
+    if (!identity) {
+      entries.push({ region, province });
+      return;
+    }
+
+    const existingForIdentity = entriesByIdentity.get(identity) ?? [];
+    const duplicate = existingForIdentity.find((existing) => {
+      const sameRegion =
+        !region || !existing.region ||
+        region.toLocaleLowerCase("id-ID") === existing.region.toLocaleLowerCase("id-ID");
+      const sameProvince =
+        !province || !existing.province ||
+        province.toLocaleLowerCase("id-ID") === existing.province.toLocaleLowerCase("id-ID");
+      return sameRegion && sameProvince;
+    });
+
+    if (duplicate) {
+      if (!duplicate.region && region) duplicate.region = region;
+      if (!duplicate.province && province) duplicate.province = province;
+      return;
+    }
+
+    const entry = { region, province };
+    entries.push(entry);
+    existingForIdentity.push(entry);
+    entriesByIdentity.set(identity, existingForIdentity);
+  };
+
+  profiles.forEach(addEntry);
+
+  alumniRequests
+    .filter((item) => {
+      const status = (item.status ?? "").trim().toLocaleLowerCase("id-ID");
+      return !["rejected", "ditolak", "cancelled", "canceled", "dibatalkan"].includes(status);
+    })
+    .forEach(addEntry);
+
+  return entries;
 }
 
 function RoleBadges({
@@ -329,11 +527,13 @@ function InsightBreakdown({
   description,
   icon: Icon,
   items,
+  showAll = false,
 }: {
   title: string;
   description: string;
   icon: typeof Users;
   items: BreakdownItem[];
+  showAll?: boolean;
 }) {
   const total = items.reduce((sum, item) => sum + item.count, 0);
   const top = items[0];
@@ -362,8 +562,8 @@ function InsightBreakdown({
       )}
 
       {items.length > 0 && (
-        <div className="mt-4 space-y-3">
-          {items.slice(0, 5).map((item) => {
+        <div className={`mt-4 space-y-3 ${showAll ? "max-h-64 overflow-y-auto pr-1" : ""}`}>
+          {(showAll ? items : items.slice(0, 5)).map((item) => {
             const percentage = total > 0 ? Math.round((item.count / total) * 100) : 0;
             return (
               <div key={item.label} className="min-w-0">
@@ -390,6 +590,7 @@ function InsightBreakdown({
 
 export default function PenggunaManager({
   initialMembers,
+  initialAlumniRequests,
   initialEnrollments,
   courses,
   initialError,
@@ -399,6 +600,10 @@ export default function PenggunaManager({
 
   const [members, setMembers] = useState<MemberRow[]>(
     initialMembers
+  );
+
+  const [alumniRequests, setAlumniRequests] = useState<AlumniRegionRow[]>(
+    initialAlumniRequests
   );
 
   const [enrollments, setEnrollments] =
@@ -432,6 +637,14 @@ export default function PenggunaManager({
   const [error, setError] = useState(initialError ?? "");
 
   const [success, setSuccess] = useState("");
+
+  // Hindari perbedaan hasil render server dan browser pada ringkasan survei.
+  // Data insight ditampilkan setelah proses hydration selesai.
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // ----------------------------------------------------
   // AVAILABLE COURSES
@@ -487,9 +700,19 @@ export default function PenggunaManager({
     [members]
   );
 
+  const surveyRegionEntries = useMemo(
+    () => buildUniqueSurveyEntries(participantMembers, alumniRequests),
+    [participantMembers, alumniRequests]
+  );
+
   const regionBreakdown = useMemo(
-    () => buildBreakdown(participantMembers.map((member) => getRegionLabel(member.address))),
-    [participantMembers]
+    () => buildBreakdown(surveyRegionEntries.map((item) => item.region)),
+    [surveyRegionEntries]
+  );
+
+  const provinceBreakdown = useMemo(
+    () => buildBreakdown(surveyRegionEntries.map((item) => item.province)),
+    [surveyRegionEntries]
   );
 
   const sourceBreakdown = useMemo(
@@ -542,11 +765,12 @@ export default function PenggunaManager({
         profilesResult,
         rolesResult,
         enrollmentsResult,
+        alumniRequestsResult,
       ] = await Promise.all([
         supabase
           .from("profiles")
           .select(
-            "id, full_name, phone, whatsapp_number, address, acquisition_source, registration_reason, avatar_url, created_at"
+            "id, full_name, phone, whatsapp_number, address, province, regency_city, district, acquisition_source, registration_reason, avatar_url, created_at"
           )
           .order("created_at", { ascending: false })
           .limit(500),
@@ -563,6 +787,12 @@ export default function PenggunaManager({
           )
           .order("created_at", { ascending: false })
           .limit(2000),
+
+        supabase
+          .from("alumni_access_requests")
+          .select("id, full_name, email, status, address, province, regency_city, district, created_at")
+          .order("created_at", { ascending: false })
+          .limit(1000),
       ]);
 
       if (profilesResult.error) {
@@ -575,6 +805,10 @@ export default function PenggunaManager({
 
       if (enrollmentsResult.error) {
         throw enrollmentsResult.error;
+      }
+
+      if (alumniRequestsResult.error) {
+        throw alumniRequestsResult.error;
       }
 
       const roleMap = new Map<string, string[]>();
@@ -600,6 +834,10 @@ export default function PenggunaManager({
             roles,
           };
         })
+      );
+
+      setAlumniRequests(
+        (alumniRequestsResult.data ?? []) as AlumniRegionRow[]
       );
 
       setEnrollments(
@@ -940,34 +1178,51 @@ export default function PenggunaManager({
               <p className="mt-1 max-w-2xl text-[11px] leading-5 text-[#9D97B4]">Ringkasan domisili, sumber informasi, dan tujuan belajar berdasarkan jawaban pada formulir pendaftaran peserta.</p>
             </div>
             <div className="rounded-xl bg-[#F3EEFF] px-3.5 py-2 text-[11px] font-semibold text-[#6D28D9]">
-              {participantMembers.length.toLocaleString("id-ID")} peserta dianalisis
+              {isHydrated
+                ? `${surveyRegionEntries.length.toLocaleString("id-ID")} peserta/alumni dianalisis`
+                : "Memuat data peserta..."}
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-3">
-            <InsightBreakdown
-              title="Domisili peserta"
-              description="Diringkas dari bagian wilayah pada isian alamat domisili."
-              icon={MapPin}
-              items={regionBreakdown}
-            />
-            <InsightBreakdown
-              title="Sumber informasi kelas"
-              description="Dari mana peserta pertama kali mengetahui Kiki Creator Class."
-              icon={Megaphone}
-              items={sourceBreakdown}
-            />
-            <InsightBreakdown
-              title="Tujuan mengikuti kelas"
-              description="Alasan dan tujuan belajar yang dipilih peserta saat mendaftar."
-              icon={Target}
-              items={reasonBreakdown}
-            />
-          </div>
+          {isHydrated ? (
+            <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-4">
+              <InsightBreakdown
+                title="Asal provinsi"
+                description="Jumlah peserta dan alumni berdasarkan provinsi asal."
+                icon={MapPin}
+                items={provinceBreakdown}
+                showAll
+              />
+              <InsightBreakdown
+                title="Asal kabupaten/kota"
+                description="Jumlah peserta dan alumni berdasarkan kabupaten/kota. Nama provinsi tidak digabung ke label kota."
+                icon={MapPin}
+                items={regionBreakdown}
+                showAll
+              />
+              <InsightBreakdown
+                title="Sumber informasi kelas"
+                description="Dari mana peserta pertama kali mengetahui Kiki Creator Class."
+                icon={Megaphone}
+                items={sourceBreakdown}
+              />
+              <InsightBreakdown
+                title="Tujuan mengikuti kelas"
+                description="Alasan dan tujuan belajar yang dipilih peserta saat mendaftar."
+                icon={Target}
+                items={reasonBreakdown}
+              />
+            </div>
+          ) : (
+            <div
+              className="mt-5 flex min-h-36 items-center justify-center rounded-2xl border border-dashed border-[#E8E1F3] bg-[#FAF9FD] px-4 text-center text-[12px] text-[#9D97B4]"
+              aria-live="polite"
+            >
+              Menyiapkan ringkasan asal provinsi dan kabupaten/kota...
+            </div>
+          )}
 
-          <p className="mt-4 rounded-xl bg-[#FAF9FD] px-3.5 py-3 text-[10px] leading-5 text-[#8E879F]">
-            Catatan data: ringkasan hanya menghitung jawaban yang terisi. Pada alur aktivasi alumni, kolom sumber informasi dan tujuan belajar memang tidak ditanyakan dan sistem menyimpannya sebagai “Lainnya”; karena itu kategori tersebut tidak selalu berarti jawaban survei langsung. Variasi penulisan domisili juga dapat membuat wilayah serupa terhitung terpisah.
-          </p>
+        
         </section>
         )}
 
@@ -1963,7 +2218,9 @@ export default function PenggunaManager({
                   </div>
                   <div className="rounded-xl bg-[#F8F7FC] p-3 sm:col-span-2">
                     <p className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-[#9D97B4]"><MapPin size={11} /> Domisili / asal daerah</p>
-                    <p className="mt-1 break-words text-[11px] font-semibold leading-5 text-[#584C6E]">{selectedDetailMember.address || "Belum diisi"}</p>
+                    <p className="mt-1 break-words text-[11px] font-semibold leading-5 text-[#584C6E]">{selectedDetailMember.regency_city && selectedDetailMember.province
+                      ? `${selectedDetailMember.regency_city}, ${selectedDetailMember.province}`
+                      : selectedDetailMember.address || "Belum diisi"}</p>
                   </div>
                 </div>
               </section>

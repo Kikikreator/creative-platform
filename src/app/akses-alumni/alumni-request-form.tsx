@@ -11,7 +11,6 @@ import {
   GraduationCap,
   ImagePlus,
   Loader2,
-  MapPin,
   Megaphone,
   RefreshCw,
   Send,
@@ -20,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import IndonesiaRegionSelect from "@/components/forms/indonesia-region-select";
 
 export type AlumniCourseOption = {
   id: string;
@@ -87,7 +87,8 @@ export default function AlumniRequestForm({
   const [fullName, setFullName] = useState(initialName);
   const [email, setEmail] = useState(initialEmail);
   const [whatsapp, setWhatsapp] = useState("");
-  const [address, setAddress] = useState("");
+  const [province, setProvince] = useState("");
+  const [regency, setRegency] = useState("");
   const [acquisitionSource, setAcquisitionSource] = useState("");
   const [registrationReason, setRegistrationReason] = useState("");
   const [courseId, setCourseId] = useState("");
@@ -188,7 +189,7 @@ export default function AlumniRequestForm({
     if (normalizedName.length < 3) return setSubmitError("Nama lengkap minimal 3 karakter.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) return setSubmitError("Masukkan alamat email yang valid.");
     if (normalizedWhatsapp.replace(/\D/g, "").length < 9) return setSubmitError("Nomor WhatsApp minimal 9 angka.");
-    if (address.trim().length < 3) return setSubmitError("Isi asal daerah minimal 3 karakter.");
+    if (!province || !regency) return setSubmitError("Pilih provinsi dan kabupaten/kota asal daerah.");
     if (!acquisitionSource) return setSubmitError("Pilih dari mana kamu mengetahui Kiki Creator Class.");
     if (!registrationReason) return setSubmitError("Pilih tujuan kamu mengikuti kelas.");
     if (!courseId) return setSubmitError("Pilih kelas yang pernah kamu ikuti.");
@@ -224,7 +225,7 @@ export default function AlumniRequestForm({
         p_course_id: courseId,
         p_proof_note: proofNote.trim() || null,
         p_evidence_path: evidencePath,
-        p_address: address.trim(),
+        p_address: `${regency}, ${province}`,
         p_acquisition_source: acquisitionSource,
         p_registration_reason: registrationReason,
       });
@@ -262,7 +263,8 @@ export default function AlumniRequestForm({
       setRequestStatus(optimisticRequest);
       
       setWhatsapp("");
-      setAddress("");
+      setProvince("");
+      setRegency("");
       setAcquisitionSource("");
       setRegistrationReason("");
       setProofNote("");
@@ -501,12 +503,20 @@ export default function AlumniRequestForm({
                   <input id="alumni-whatsapp" type="tel" inputMode="tel" required minLength={9} maxLength={24} value={whatsapp} onChange={(event) => setWhatsapp(event.target.value)} placeholder="08xxxxxxxxxx" className={inputClass} />
                 </div>
                 <div>
-                  <label htmlFor="alumni-address" className="text-xs font-medium text-[#51465D]">Asal daerah <span className="text-rose-500">*</span></label>
-                  <div className="relative">
-                    <MapPin size={15} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8EA3]" />
-                    <input id="alumni-address" type="text" required minLength={3} maxLength={180} autoComplete="address-level2" value={address} onChange={(event) => setAddress(event.target.value)} placeholder="Contoh: Gemolong, Sragen, Jawa Tengah" className={`${inputClass} pl-10`} />
-                  </div>
-                  <p className="mt-1 text-[11px] leading-5 text-[#756B7C]">Tuliskan kota/kabupaten dan provinsi tempat kamu tinggal.</p>
+                  <p className="mb-1.5 text-xs font-medium text-[#51465D]">Asal daerah <span className="text-rose-500">*</span></p>
+                  <IndonesiaRegionSelect
+                    province={province}
+                    regency={regency}
+                    onProvinceChange={setProvince}
+                    onRegencyChange={setRegency}
+                    required
+                    labelClassName="mb-1.5 block text-xs font-medium text-[#51465D]"
+                    fieldClassName="relative"
+                    selectClassName={`${inputClass} appearance-none pl-10`}
+                    iconClassName="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9A8EA3]"
+                    helperClassName="mt-1 text-[11px] leading-5 text-[#756B7C]"
+                    withIcon
+                  />
                 </div>
                 <div>
                   <label htmlFor="alumni-acquisition-source" className="text-xs font-medium text-[#51465D]">Mengetahui Kiki Creator Class dari mana? <span className="text-rose-500">*</span></label>

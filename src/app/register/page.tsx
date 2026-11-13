@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import IndonesiaRegionSelect from "@/components/forms/indonesia-region-select";
 import { getPrimaryRole, normalizeRoles } from "@/lib/auth/roles";
 
 import {
@@ -20,7 +21,6 @@ import {
   Loader2,
   LockKeyhole,
   Mail,
-  MapPin,
   Phone,
   UserRound,
 } from "lucide-react";
@@ -31,7 +31,8 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [whatsappNumber, setWhatsappNumber] = useState("");
-  const [address, setAddress] = useState("");
+  const [province, setProvince] = useState("");
+  const [regency, setRegency] = useState("");
   const [acquisitionSource, setAcquisitionSource] = useState("");
   const [registrationReason, setRegistrationReason] = useState("");
   const [password, setPassword] = useState("");
@@ -218,6 +219,12 @@ export default function RegisterPage() {
     const name = fullName.trim();
     const normalizedEmail = email.trim().toLowerCase();
     const normalizedWhatsapp = whatsappNumber.replace(/[^0-9+]/g, "");
+    const address = province && regency ? `${regency}, ${province}` : "";
+
+    if (province && !regency) {
+      setError("Pilih kabupaten/kota sesuai provinsi yang dipilih.");
+      return;
+    }
 
     if (name.length < 3) {
       setError("Nama lengkap minimal 3 karakter.");
@@ -355,7 +362,8 @@ export default function RegisterPage() {
       setFullName("");
       setEmail("");
       setWhatsappNumber("");
-      setAddress("");
+      setProvince("");
+      setRegency("");
       setAcquisitionSource("");
       setRegistrationReason("");
       setPassword("");
@@ -588,27 +596,26 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* ADDRESS */}
+            {/* ASAL DAERAH */}
             <div>
-              <label
-                htmlFor="address"
-                className="mb-2 block text-xs font-semibold text-[#2A2042]"
-              >
-                Alamat domisili
-                <span className="ml-1 font-normal text-slate-400">(opsional)</span>
-              </label>
-              <div className={fieldClass}>
-                <MapPin size={18} className="shrink-0 text-slate-400" />
-                <input
-                  id="address"
-                  type="text"
-                  autoComplete="street-address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Kota atau alamat domisili"
-                  className={inputClass}
-                />
+              <div className="mb-2">
+                <p className="text-xs font-semibold text-[#2A2042]">
+                  Asal daerah
+                  <span className="ml-1 font-normal text-slate-400">(opsional)</span>
+                </p>
               </div>
+              <IndonesiaRegionSelect
+                province={province}
+                regency={regency}
+                onProvinceChange={setProvince}
+                onRegencyChange={setRegency}
+                labelClassName="mb-1.5 block text-xs font-medium text-[#2A2042]"
+                fieldClassName={fieldClass}
+                selectClassName={`${inputClass} h-full flex-1 appearance-none`}
+                iconClassName="shrink-0 text-slate-400"
+                helperClassName="mt-1.5 text-[11px] leading-5 text-slate-500"
+                withIcon
+              />
             </div>
 
             {!mentorInvite && !alumniFlow && (

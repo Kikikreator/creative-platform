@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 import PenggunaManager, {
   type MemberRow,
+  type AlumniRegionRow,
   type EnrollmentRow,
   type CourseOption,
 } from "./pengguna-manager";
@@ -61,12 +62,13 @@ async function AdminPenggunaContent() {
     rolesResult,
     enrollmentsResult,
     coursesResult,
+    alumniRequestsResult,
   ] = await Promise.all([
-    // Data profil member.
+    // Profil pengguna, termasuk kolom wilayah yang sudah terstandar.
     supabase
       .from("profiles")
       .select(
-        "id, full_name, phone, whatsapp_number, address, acquisition_source, registration_reason, avatar_url, created_at"
+        "id, full_name, phone, whatsapp_number, address, province, regency_city, district, acquisition_source, registration_reason, avatar_url, created_at"
       )
       .order("created_at", {
         ascending: false,
@@ -93,13 +95,22 @@ async function AdminPenggunaContent() {
     // Data pilihan kelas.
     supabase
       .from("courses")
-      .select(
-        "id, title, slug, status, price"
-      )
+      .select("id, title, slug, status, price")
       .order("title", {
         ascending: true,
       })
       .limit(500),
+
+    // Pengajuan alumni untuk melengkapi statistik asal daerah.
+    supabase
+      .from("alumni_access_requests")
+      .select(
+        "id, full_name, email, status, address, province, regency_city, district, created_at"
+      )
+      .order("created_at", {
+        ascending: false,
+      })
+      .limit(1000),
   ]);
 
   // ==========================================
@@ -138,13 +149,10 @@ async function AdminPenggunaContent() {
     rolesResult.error?.message,
     enrollmentsResult.error?.message,
     coursesResult.error?.message,
-  ].filter(
-    (message): message is string => Boolean(message)
-  );
+    alumniRequestsResult.error?.message,
+  ].filter((message): message is string => Boolean(message));
 
-  const initialError = errors.length
-    ? errors.join(" | ")
-    : null;
+  const initialError = errors.length ? errors.join(" | ") : null;
 
   // ==========================================
   // 4. TAMPILKAN PENGELOLAAN PENGGUNA
@@ -153,12 +161,11 @@ async function AdminPenggunaContent() {
   return (
     <PenggunaManager
       initialMembers={members}
-      initialEnrollments={
-        (enrollmentsResult.data ?? []) as EnrollmentRow[]
+      initialAlumniRequests={
+        (alumniRequestsResult.data ?? []) as AlumniRegionRow[]
       }
-      courses={
-        (coursesResult.data ?? []) as CourseOption[]
-      }
+      initialEnrollments={(enrollmentsResult.data ?? []) as EnrollmentRow[]}
+      courses={(coursesResult.data ?? []) as CourseOption[]}
       initialError={initialError}
     />
   );
