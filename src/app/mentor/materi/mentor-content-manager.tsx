@@ -483,7 +483,12 @@ export default function MentorContentManager({
     if (!sectionTitle.trim() || !courseId) return;
     const oldSection = sections.find((item) => item.id === editingSection);
     const lockedDraft = editingSection ? draftMap.get(editingSection) : null;
-    if (lockedDraft?.status === "pending" || lockedDraft?.is_deleted) return;
+    if (
+      lockedDraft?.status === "pending" ||
+      lockedDraft?.status === "approved" ||
+      lockedDraft?.is_deleted ||
+      (Boolean(editingSection) && !lockedDraft && Boolean(officialSnapshots[editingSection!]))
+    ) return;
 
     setSaving(true);
     setError("");
@@ -514,7 +519,11 @@ export default function MentorContentManager({
 
   async function deleteSection(section: Section) {
     const draft = draftMap.get(section.id);
-    if (draft?.status === "pending") return;
+    if (
+      draft?.status === "pending" ||
+      draft?.status === "approved" ||
+      (!draft && Boolean(officialSnapshots[section.id]))
+    ) return;
     const confirmed = await confirmDialog({
       title: draft?.base_snapshot ? "Ajukan penghapusan Bab?" : "Hapus draft Bab?",
       message: draft?.base_snapshot
@@ -548,6 +557,8 @@ export default function MentorContentManager({
   }
 
   async function undoDeleteSection(section: Section) {
+    const draft = draftMap.get(section.id);
+    if (draft?.status === "pending" || draft?.status === "approved") return;
     setSaving(true);
     setError("");
     try {
@@ -587,7 +598,7 @@ export default function MentorContentManager({
     if (!title || !activeSectionId) return;
     const section = sections.find((item) => item.id === activeSectionId);
     const draft = draftMap.get(activeSectionId);
-    if (!section || draft?.status === "pending" || draft?.is_deleted) return;
+    if (!section || draft?.status === "pending" || draft?.status === "approved" || draft?.is_deleted || (!draft && Boolean(officialSnapshots[section.id]))) return;
     if (["text", "info"].includes(kind) && !body) {
       setError(kind === "info" ? "Isi informasi wajib diisi." : "Isi materi teks wajib diisi.");
       return;
@@ -687,7 +698,7 @@ export default function MentorContentManager({
   async function deleteLesson(lesson: Lesson) {
     const section = sections.find((item) => item.id === lesson.section_id);
     const draft = section ? draftMap.get(section.id) : null;
-    if (!section || draft?.status === "pending" || draft?.is_deleted) return;
+    if (!section || draft?.status === "pending" || draft?.status === "approved" || draft?.is_deleted || (!draft && Boolean(officialSnapshots[section.id]))) return;
 
     const confirmed = await confirmDialog({
       title: "Hapus Materi Inti?",
@@ -736,7 +747,7 @@ export default function MentorContentManager({
     const lesson = lessons.find((item) => item.id === activeLessonId);
     const section = lesson ? sections.find((item) => item.id === lesson.section_id) : null;
     const draft = section ? draftMap.get(section.id) : null;
-    if (!lesson || !section || draft?.status === "pending" || draft?.is_deleted) return;
+    if (!lesson || !section || draft?.status === "pending" || draft?.status === "approved" || draft?.is_deleted || (!draft && Boolean(officialSnapshots[section.id]))) return;
     if (["text", "callout"].includes(contentType) && !contentBody.trim()) {
       setError("Isi mini materi wajib diisi.");
       return;
@@ -830,7 +841,7 @@ export default function MentorContentManager({
     const lesson = lessons.find((row) => row.id === item.lesson_id);
     const section = lesson ? sections.find((row) => row.id === lesson.section_id) : null;
     const draft = section ? draftMap.get(section.id) : null;
-    if (!section || draft?.status === "pending" || draft?.is_deleted) return;
+    if (!section || draft?.status === "pending" || draft?.status === "approved" || draft?.is_deleted || (!draft && Boolean(officialSnapshots[section.id]))) return;
     const confirmed = await confirmDialog({
       title: "Hapus Mini Materi?",
       message: `Hapus Mini Materi \"${item.title}\" dari draft Bab?`,
@@ -860,7 +871,13 @@ export default function MentorContentManager({
     if (!other) return;
     const firstDraft = draftMap.get(section.id);
     const secondDraft = draftMap.get(other.id);
-    if (firstDraft?.status === "pending" || secondDraft?.status === "pending" || firstDraft?.is_deleted || secondDraft?.is_deleted) {
+    if (
+      firstDraft?.status === "pending" || firstDraft?.status === "approved" ||
+      secondDraft?.status === "pending" || secondDraft?.status === "approved" ||
+      firstDraft?.is_deleted || secondDraft?.is_deleted ||
+      (!firstDraft && Boolean(officialSnapshots[section.id])) ||
+      (!secondDraft && Boolean(officialSnapshots[other.id]))
+    ) {
       setError("Selesaikan pengajuan atau batalkan penandaan penghapusan sebelum mengubah urutan Bab.");
       return;
     }
@@ -887,7 +904,7 @@ export default function MentorContentManager({
       setError("Simpan perubahan Bab terlebih dahulu sebelum mengajukan.");
       return;
     }
-    if (draft.status === "pending") return;
+    if (draft.status === "pending" || draft.status === "approved") return;
     if (!draft.is_deleted && draft.payload.lessons.length < 1) {
       setError("Tambahkan minimal satu Materi Inti sebelum mengajukan Bab.");
       return;
@@ -1026,10 +1043,13 @@ export default function MentorContentManager({
           {sortByPosition(sections).map((section, sectionIndex) => {
             const sectionLessons = sortByPosition(lessons.filter((lesson) => lesson.section_id === section.id));
             const draft = draftMap.get(section.id);
-            const locked = draft?.status === "pending";
+            const pendingReview = draft?.status === "pending";
+            const approved = draft?.status === "approved";
+            const officialWithoutDraft = !draft && Boolean(officialSnapshots[section.id]);
+            const locked = pendingReview || approved || officialWithoutDraft;
             const markedDelete = Boolean(draft?.is_deleted);
-            const statusLabel = locked ? "Menunggu Admin" : draft?.status === "revision_requested" ? "Perlu revisi" : draft?.status === "approved" ? "Disetujui" : draft ? "Draft tersimpan" : "Materi resmi";
-            const statusClass = locked ? "bg-amber-50 text-amber-700" : draft?.status === "revision_requested" ? "bg-rose-50 text-rose-700" : draft?.status === "approved" ? "bg-emerald-50 text-emerald-700" : draft ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700";
+            const statusLabel = pendingReview ? "Menunggu Admin" : approved ? "Disetujui · Terkunci" : officialWithoutDraft ? "Materi resmi · Terkunci" : draft?.status === "revision_requested" ? "Izin revisi dari Admin" : draft ? "Draft tersimpan" : "Materi resmi";
+            const statusClass = pendingReview ? "bg-amber-50 text-amber-700" : approved || officialWithoutDraft ? "bg-emerald-50 text-emerald-700" : draft?.status === "revision_requested" ? "bg-rose-50 text-rose-700" : draft ? "bg-violet-50 text-violet-700" : "bg-emerald-50 text-emerald-700";
             return (
               <section key={section.id} className={`overflow-hidden rounded-2xl border bg-white shadow-sm ${markedDelete ? "border-rose-200" : "border-[#EEEAF7]"}`}>
                 <div className="border-b border-slate-100 bg-white p-4 sm:p-5">
@@ -1146,7 +1166,7 @@ export default function MentorContentManager({
                 </div>
 
                 <div className="flex flex-col gap-1 border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-[9px] leading-5 text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                  <span>{locked ? "Bab sedang diperiksa Admin. Draft dikunci sementara agar isi yang diperiksa tidak berubah." : markedDelete ? "Bab ditandai untuk penghapusan. Ajukan agar Admin dapat memeriksanya." : "Perubahan tersimpan sebagai draft. Materi resmi peserta tidak berubah sebelum Bab disetujui."}</span>
+                  <span>{pendingReview ? "Bab sedang diperiksa Admin. Draft dikunci sementara agar isi yang diperiksa tidak berubah." : approved || officialWithoutDraft ? "Materi resmi ini terkunci untuk Mentor. Hubungi Admin jika perlu revisi atau penghapusan." : markedDelete ? "Bab ditandai untuk penghapusan. Ajukan agar Admin dapat memeriksanya." : draft?.status === "revision_requested" ? "Admin telah memberikan izin revisi untuk Bab ini. Setelah selesai, ajukan kembali kepada Admin." : "Perubahan tersimpan sebagai draft. Materi resmi peserta tidak berubah sebelum Bab disetujui."}</span>
                   {draft?.updated_at && <span>Terakhir disimpan: {new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short" }).format(new Date(draft.updated_at))}</span>}
                 </div>
               </section>

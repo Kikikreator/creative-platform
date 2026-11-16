@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import MentorPublicationReview, { type AdminChapterSubmission } from "./review-manager";
+import MentorPublicationReview, { type AdminApprovedChapter, type AdminChapterSubmission } from "./review-manager";
 
 type SnapshotLesson = {
   resource_path?: string | null;
@@ -17,8 +17,21 @@ export default async function AdminMentorPublicationPage() {
     .order("submitted_at", { ascending: true })
     .limit(100);
 
-  const mentorIds = Array.from(new Set((data ?? []).map((item) => item.mentor_user_id)));
-  const courseIds = Array.from(new Set((data ?? []).map((item) => item.course_id)));
+  const { data: approvedDrafts, error: approvedError } = await supabase
+    .from("mentor_chapter_drafts")
+    .select("id, mentor_user_id, course_id, section_id, title, status, updated_at")
+    .eq("status", "approved")
+    .order("updated_at", { ascending: false })
+    .limit(100);
+
+  const mentorIds = Array.from(new Set([
+    ...(data ?? []).map((item) => item.mentor_user_id),
+    ...(approvedDrafts ?? []).map((item) => item.mentor_user_id),
+  ]));
+  const courseIds = Array.from(new Set([
+    ...(data ?? []).map((item) => item.course_id),
+    ...(approvedDrafts ?? []).map((item) => item.course_id),
+  ]));
   const [{ data: profiles }, { data: courses }] = await Promise.all([
     mentorIds.length ? supabase.from("profiles").select("id, full_name").in("id", mentorIds) : Promise.resolve({ data: [] }),
     courseIds.length ? supabase.from("courses").select("id, title").in("id", courseIds) : Promise.resolve({ data: [] }),
@@ -53,5 +66,22 @@ export default async function AdminMentorPublicationPage() {
     } as AdminChapterSubmission;
   }));
 
-  return <MentorPublicationReview items={items} initialError={error?.message ?? null} />;
+  const approvedItems: AdminApprovedChapter[] = (approvedDrafts ?? []).map((item) => ({
+    id: item.id,
+    mentor_user_id: item.mentor_user_id,
+    course_id: item.course_id,
+    section_id: item.section_id,
+    title: item.title,
+    updated_at: item.updated_at,
+    mentor_name: mentorMap.get(item.mentor_user_id) || "Mentor",
+    course_title: courseMap.get(item.course_id) || "Kelas",
+  }));
+
+  return (
+    <MentorPublicationReview
+      items={items}
+      approvedItems={approvedItems}
+      initialError={error?.message ?? approvedError?.message ?? null}
+    />
+  );
 }

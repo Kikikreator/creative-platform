@@ -13,6 +13,7 @@ import {
   PlayCircle,
   RefreshCw,
   RotateCcw,
+  Unlock,
   Trash2,
   Video,
   Layers3,
@@ -24,6 +25,17 @@ type JsonRecord = Record<string, unknown>;
 export type ChapterSnapshot = {
   section: JsonRecord;
   lessons: Array<JsonRecord & { contents?: JsonRecord[] }>;
+};
+
+export type AdminApprovedChapter = {
+  id: string;
+  mentor_user_id: string;
+  course_id: string;
+  section_id: string;
+  title: string;
+  updated_at: string;
+  mentor_name: string;
+  course_title: string;
 };
 
 export type AdminChapterSubmission = {
@@ -233,12 +245,17 @@ function ChapterPreview({
 
 export default function MentorPublicationReview({
   items,
+  approvedItems,
   initialError,
 }: {
   items: AdminChapterSubmission[];
+  approvedItems: AdminApprovedChapter[];
   initialError: string | null;
 }) {
   const [rows, setRows] = useState(items);
+  const [approvedRows, setApprovedRows] = useState(approvedItems);
+  const [revisionNotes, setRevisionNotes] = useState<Record<string, string>>({});
+  const [grantBusyId, setGrantBusyId] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState(initialError ?? "");
@@ -273,6 +290,26 @@ export default function MentorPublicationReview({
       setError(err instanceof Error ? err.message : "Gagal memproses pengajuan Bab.");
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function allowRevision(item: AdminApprovedChapter) {
+    setGrantBusyId(item.id);
+    setError("");
+    setNotice("");
+    try {
+      const supabase = createClient();
+      const { error: rpcError } = await supabase.rpc("allow_mentor_chapter_revision", {
+        p_draft_id: item.id,
+        p_note: revisionNotes[item.id]?.trim() || null,
+      });
+      if (rpcError) throw rpcError;
+      setApprovedRows((current) => current.filter((row) => row.id !== item.id));
+      setNotice(`Izin revisi untuk Bab "${item.title}" berhasil dibuka. Mentor dapat mengedit dan mengajukan ulang Bab tersebut.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gagal memberikan izin revisi.");
+    } finally {
+      setGrantBusyId(null);
     }
   }
 
@@ -350,6 +387,64 @@ export default function MentorPublicationReview({
                 </article>
               );
             })}
+          </div>
+        )}
+      </section>
+
+      <section className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Unlock size={17} className="text-violet-700" />
+              <h3 className="text-sm font-extrabold text-slate-900">Materi Disetujui & Terkunci</h3>
+            </div>
+            <p className="mt-1 text-[10px] text-slate-500">Berikan izin revisi hanya jika mentor memang perlu memperbarui Bab yang sudah diterbitkan.</p>
+          </div>
+          <span className="w-fit rounded-full bg-emerald-50 px-3 py-1.5 text-[9px] font-bold text-emerald-700">{approvedRows.length} Bab terkunci</span>
+        </div>
+
+        {approvedRows.length === 0 ? (
+          <div className="p-8 text-center">
+            <CheckCircle2 className="mx-auto text-emerald-300" size={28} />
+            <p className="mt-2 text-xs font-semibold text-slate-700">Tidak ada Bab disetujui yang menunggu izin revisi.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {approvedRows.map((item) => (
+              <article key={item.id} className="flex flex-col gap-3 p-4 sm:p-5">
+                <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-extrabold text-slate-900">{item.title}</h4>
+                    <p className="mt-1 text-[10px] text-slate-500">{item.course_title} · Mentor: {item.mentor_name}</p>
+                    <p className="mt-1 text-[9px] text-slate-400">Terakhir diperbarui: {dateLabel(item.updated_at)}</p>
+                  </div>
+                  <span className="w-fit rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-700">Disetujui · Terkunci</span>
+                </div>
+
+                <label className="block text-[10px] font-bold text-slate-600">
+                  Catatan izin revisi (opsional)
+                  <textarea
+                    rows={2}
+                    value={revisionNotes[item.id] ?? ""}
+                    onChange={(event) => setRevisionNotes((current) => ({ ...current, [item.id]: event.target.value }))}
+                    className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-xs outline-none focus:border-violet-500"
+                    placeholder="Contoh: Silakan perbarui bagian video pada Bab ini."
+                  />
+                </label>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => void allowRevision(item)}
+                    disabled={grantBusyId === item.id}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-violet-700 px-3 text-[10px] font-bold text-white transition hover:bg-violet-800 disabled:opacity-50"
+                  >
+                    {grantBusyId === item.id ? <RefreshCw size={13} className="animate-spin" /> : <Unlock size={13} />}
+                    {grantBusyId === item.id ? "Membuka izin..." : "Izinkan Mentor Revisi"}
+                  </button>
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </section>
