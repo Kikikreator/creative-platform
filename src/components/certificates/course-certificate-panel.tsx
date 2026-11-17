@@ -88,7 +88,7 @@ function getReviewValidationMessage(rawText: string): string {
 }
 
 const primaryButtonClass =
-  "kcc-certificate-primary inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#260047] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:bg-[#EAE7EF] disabled:text-[#A49BAA] disabled:shadow-none md:w-auto";
+  "kcc-certificate-primary inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-[#260047] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#4e2879] disabled:cursor-not-allowed disabled:bg-[#EAE7EF] disabled:text-[#A49BAA] disabled:shadow-none md:w-auto";
 
 export default function CourseCertificatePanel({
   courseId,
@@ -733,7 +733,7 @@ export default function CourseCertificatePanel({
                   type="button"
                   onClick={() => void requestMentorApproval()}
                   disabled={busy}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#260047] px-5 text-xs font-extrabold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#260047] px-5 text-xs font-extrabold text-white transition hover:bg-[#4e2879] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {busy ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
                   {busy ? "Mengirim pengajuan..." : revisionRequested ? "Ajukan Ulang kepada Mentor" : "Ajukan Sertifikat kepada Mentor"}
@@ -875,7 +875,7 @@ export default function CourseCertificatePanel({
                 type="button"
                 onClick={() => void submitReview()}
                 disabled={busy || rating === 0 || Boolean(reviewValidationMessage)}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#260047] px-5 text-xs font-extrabold text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#260047] px-5 text-xs font-extrabold text-white transition hover:bg-[#4e2879] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {busy ? (
                   <RefreshCw size={14} className="animate-spin" />

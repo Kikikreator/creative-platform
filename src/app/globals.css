@@ -947,3 +947,182 @@ main .overflow-x-auto {
     max-width: 42%;
   }
 }
+
+
+/* ==========================================================
+   KCC LEARNING ROOM — MOBILE-FIRST REFINEMENT
+   Desktop layout remains unchanged. Mobile gets a calmer
+   header, clearer curriculum entry point, and tighter rhythm.
+========================================================== */
+@media (max-width: 767px) {
+  .kcc-learning-room {
+    background: #f8f7fa !important;
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+  }
+
+  .kcc-learning-room .kcc-learning-header {
+    overflow: hidden;
+    padding: 0 !important;
+    border: 1px solid #eee9f3 !important;
+    border-radius: 21px !important;
+    box-shadow: 0 5px 18px rgba(38, 0, 71, .045) !important;
+  }
+
+  .kcc-learning-room .kcc-learning-header-mobile {
+    padding: 15px !important;
+  }
+
+  .kcc-learning-room .kcc-learning-header-mobile h1 {
+    font-size: 17px !important;
+    line-height: 1.25 !important;
+    letter-spacing: -.035em !important;
+  }
+
+  .kcc-learning-room .kcc-mobile-back {
+    min-width: 40px !important;
+    min-height: 40px !important;
+    border-radius: 13px !important;
+  }
+
+  .kcc-learning-room .kcc-mobile-curriculum-trigger {
+    margin-bottom: 12px !important;
+  }
+
+  .kcc-learning-room .kcc-mobile-curriculum-trigger > button {
+    min-height: 76px !important;
+    border-radius: 18px !important;
+    padding: 12px !important;
+    box-shadow: 0 5px 18px rgba(38, 0, 71, .045) !important;
+  }
+
+  .kcc-learning-room .kcc-learning-grid {
+    gap: 12px !important;
+  }
+
+  .kcc-learning-room .kcc-learning-main-column {
+    gap: 12px !important;
+  }
+
+  .kcc-learning-room .kcc-learning-main-column > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 12px !important;
+  }
+
+  .kcc-learning-room .kcc-active-lesson-card {
+    border: 1px solid #eee9f3 !important;
+    border-radius: 21px !important;
+    box-shadow: 0 5px 20px rgba(38, 0, 71, .045) !important;
+  }
+
+  .kcc-learning-room .kcc-active-lesson-card > div:first-child {
+    padding: 15px !important;
+  }
+
+  .kcc-learning-room .kcc-active-lesson-card h2 {
+    font-size: 20px !important;
+    line-height: 1.28 !important;
+    letter-spacing: -.025em !important;
+  }
+
+  .kcc-learning-room .kcc-active-lesson-card .mt-5 {
+    margin-top: 14px !important;
+  }
+
+  .kcc-learning-room .kcc-mini-material-section {
+    gap: 10px !important;
+  }
+
+  .kcc-learning-room .kcc-mini-material-section > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 10px !important;
+  }
+
+  .kcc-learning-room .kcc-mini-material-section > div > div:first-child {
+    border-radius: 18px !important;
+  }
+
+  .kcc-learning-room .kcc-lesson-status-card {
+    padding: 13px !important;
+    border: 1px solid #eee9f3;
+    border-radius: 18px !important;
+    box-shadow: 0 4px 16px rgba(38, 0, 71, .035) !important;
+  }
+
+  .kcc-learning-room .kcc-lesson-navigation {
+    padding: 8px !important;
+    border-radius: 16px !important;
+    box-shadow: none !important;
+  }
+
+  .kcc-learning-room .kcc-lesson-navigation button {
+    min-width: 0 !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .kcc-learning-room .kcc-mobile-curriculum-drawer {
+    padding: 14px !important;
+    border-color: #eee9f3 !important;
+    border-radius: 25px 25px 0 0 !important;
+    background: #faf9fc !important;
+    padding-bottom: max(14px, env(safe-area-inset-bottom)) !important;
+  }
+
+  .kcc-learning-room .kcc-search-clear {
+    width: 40px !important;
+    min-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+  }
+
+  .kcc-learning-room .kcc-mobile-curriculum-drawer input[aria-label="Cari bab, materi, atau tugas"] {
+    min-height: 0 !important;
+    width: 100%;
+    border: 0 !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+  }
+
+  .kcc-learning-room .kcc-mobile-curriculum-drawer input[aria-label="Cari bab, materi, atau tugas"]:focus {
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .kcc-learning-room .kcc-mobile-curriculum-drawer [aria-current="step"] {
+    border-color: #d9c9eb !important;
+    background: #f8f3fc !important;
+  }
+
+  .kcc-learning-room .kcc-certificate-panel {
+    border-radius: 20px !important;
+  }
+
+  .kcc-learning-room .kcc-certificate-panel .kcc-certificate-primary {
+    border-radius: 13px !important;
+  }
+
+  .kcc-learning-room .kcc-learning-main-column > div:last-child {
+    padding-bottom: 4px;
+  }
+}
+
+
+.kcc-learning-room button[class*="bg-violet-700"],
+.kcc-learning-room a[class*="bg-violet-700"] {
+  background-image: linear-gradient(115deg, #260047 0%, #7650b8 100%) !important;
+}
+
+/* Purple is the primary action color; green remains a separate
+   semantic color for active access and completed/success states. */
+.kcc-learning-room a[class*="bg-gradient-to-r"],
+.kcc-learning-room button[class*="bg-gradient-to-r"] {
+  background-image: linear-gradient(115deg, #260047 0%, #7650b8 100%) !important;
+}
+
+@media (min-width: 768px) {
+  .kcc-learning-room .kcc-learning-header-mobile,
+  .kcc-learning-room .kcc-mobile-curriculum-trigger {
+    display: none !important;
+  }
+}

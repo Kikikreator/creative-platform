@@ -77,11 +77,16 @@ export default async function AdminMentorPublicationPage() {
     course_title: courseMap.get(item.course_id) || "Kelas",
   }));
 
+  const loadErrors = [
+    error?.message ? `Gagal memuat antrean pengajuan Bab: ${error.message}` : "",
+    approvedError?.message ? `Gagal memuat daftar Bab disetujui: ${approvedError.message}` : "",
+  ].filter(Boolean);
+
   return (
     <MentorPublicationReview
       items={items}
       approvedItems={approvedItems}
-      initialError={error?.message ?? approvedError?.message ?? null}
+      initialError={loadErrors.length ? loadErrors.join("\n") : null}
     />
   );
 }

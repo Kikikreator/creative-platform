@@ -37,6 +37,7 @@ import {
   Play,
   Video,
   Sparkles,
+  Search,
   X,
 } from "lucide-react";
 // =====================================================
@@ -672,7 +673,7 @@ function MainLessonContent({
         <h3 className="mt-4 text-base font-bold text-slate-900">Tautan Eksternal</h3>
         {lesson.content && <p className="mx-auto mt-2 max-w-xl whitespace-pre-wrap text-sm leading-7 text-slate-500">{lesson.content}</p>}
         {linkUrl ? (
-          <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-violet-800 to-indigo-800 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:brightness-110">Buka Tautan <ExternalLink size={15} /></a>
+          <a href={linkUrl} target="_blank" rel="noopener noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#260047] to-[#7650b8] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:brightness-110">Buka Tautan <ExternalLink size={15} /></a>
         ) : <p className="mt-4 text-xs text-rose-600">Tautan belum tersedia atau tidak valid.</p>}
       </article>
     );
@@ -1196,7 +1197,7 @@ function MiniContentPlaylist({
               aria-current={isActive ? "step" : undefined}
               className={`group flex w-full min-w-0 items-start gap-3 rounded-2xl p-3 text-left transition ${
                 isActive
-                  ? "bg-gradient-to-r from-[#30204f] to-[#263a60] text-white shadow-[0_8px_18px_rgba(38,43,83,.16)]"
+                  ? "bg-gradient-to-r from-[#260047] to-[#7650b8] text-white shadow-[0_8px_18px_rgba(38,43,83,.16)]"
                   : "bg-white text-[#28304a] hover:bg-[#f6f5fa]"
               }`}
             >
@@ -1475,7 +1476,7 @@ function TaskSubmissionCard({
   const referenceUrl = getSafeUrl(task.reference_url);
 
   return (
-    <section className="scroll-mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+    <section className="kcc-active-lesson-card scroll-mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 bg-gradient-to-r from-violet-50 via-white to-violet-50 p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-violet-800">
@@ -1815,6 +1816,8 @@ type CurriculumPanelProps = {
   onSelectLesson: (lesson: LearningLesson) => void;
   onSelectTask: (task: LearningTask) => void;
   showHeading?: boolean;
+  compact?: boolean;
+  searchEnabled?: boolean;
 };
 
 function CurriculumPanel({
@@ -1832,9 +1835,34 @@ function CurriculumPanel({
   onSelectLesson,
   onSelectTask,
   showHeading = true,
+  compact = false,
+  searchEnabled = false,
 }: CurriculumPanelProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const normalizedSearch = searchQuery.trim().toLocaleLowerCase("id-ID");
+  const matchesSearch = (value: string | null | undefined) =>
+    (value ?? "").toLocaleLowerCase("id-ID").includes(normalizedSearch);
+
+  const visibleSections = normalizedSearch
+    ? sections.filter((section) =>
+        matchesSearch(section.title) ||
+        lessons.some((lesson) =>
+          lesson.section_id === section.id &&
+          (
+            matchesSearch(lesson.title) ||
+            contents.some((item) =>
+              item.lesson_id === lesson.id && matchesSearch(item.title)
+            )
+          )
+        ) ||
+        tasks.some((task) =>
+          task.section_id === section.id && matchesSearch(task.title)
+        )
+      )
+    : sections;
+
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+    <div className={compact ? "min-w-0" : "rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"}>
       {showHeading && (
         <div className="mb-5 flex items-start justify-between gap-3">
           <div>
@@ -1859,19 +1887,52 @@ function CurriculumPanel({
         </div>
       )}
 
-      {sections.length === 0 ? (
+      {searchEnabled && (
+        <div className={compact ? "mb-3" : "mb-4"}>
+          <label className="flex min-h-11 items-center gap-2.5 rounded-xl border border-[#e9e2f1] bg-[#fbfaff] px-3.5 transition focus-within:border-[#b9a2d7] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#6d28d9]/[0.08]">
+            <Search size={17} className="shrink-0 text-[#80699b]" />
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Cari nama bab, materi, atau tugas..."
+              aria-label="Cari bab, materi, atau tugas"
+              className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[12px] font-medium text-[#2b2038] outline-none placeholder:text-[#aaa1b4] focus:border-0 focus:outline-none focus:ring-0"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                aria-label="Hapus pencarian"
+                className="kcc-search-clear flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-[#f0eaf6] hover:text-[#4d2877]"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </label>
+          <p className="mt-1.5 px-1 text-[10px] text-slate-400">
+            {normalizedSearch
+              ? `${visibleSections.length} bab ditemukan`
+              : "Ketik kata kunci untuk menemukan materi lebih cepat."}
+          </p>
+        </div>
+      )}
+
+      {visibleSections.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
           <BookOpen className="mx-auto h-8 w-8 text-slate-400" />
           <p className="mt-3 text-sm font-semibold text-slate-700">
-            Kurikulum belum tersedia
+            {normalizedSearch ? "Materi tidak ditemukan" : "Kurikulum belum tersedia"}
           </p>
           <p className="mt-1 text-xs text-slate-500">
-            Admin belum menambahkan bab pembelajaran.
+            {normalizedSearch
+              ? "Coba kata kunci lain atau periksa ejaan pencarian."
+              : "Admin belum menambahkan bab pembelajaran."}
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {sections.map((section, sectionIndex) => {
+        <div className={compact ? "space-y-2" : "space-y-3"}>
+          {visibleSections.map((section) => {
             const sectionLessons = lessons.filter(
               (lesson) => lesson.section_id === section.id
             );
@@ -1883,7 +1944,24 @@ function CurriculumPanel({
               lessons,
               tasks
             );
-            const isExpanded = expandedSectionIds.includes(section.id);
+            const sectionMatchesSearch =
+              normalizedSearch.length > 0 && matchesSearch(section.title);
+            const visibleTimeline =
+              normalizedSearch && !sectionMatchesSearch
+                ? timeline.filter((entry) =>
+                    entry.type === "task"
+                      ? matchesSearch(entry.task.title)
+                      : (
+                          matchesSearch(entry.lesson.title) ||
+                          contents.some((item) =>
+                            item.lesson_id === entry.lesson.id && matchesSearch(item.title)
+                          )
+                        )
+                  )
+                : timeline;
+            const isExpanded = normalizedSearch
+              ? visibleTimeline.length > 0
+              : expandedSectionIds.includes(section.id);
             const hasActiveLesson = sectionLessons.some(
               (lesson) => lesson.id === activeLessonId
             );
@@ -1903,9 +1981,9 @@ function CurriculumPanel({
               >
                 <button
                   type="button"
-                  onClick={() => onToggleSection(section.id)}
+                  onClick={() => { if (!normalizedSearch) onToggleSection(section.id); }}
                   aria-expanded={isExpanded}
-                  className="flex w-full items-center gap-3 p-3 text-left transition hover:bg-slate-50"
+                  className={`flex w-full items-center gap-3 text-left transition hover:bg-slate-50 ${compact ? "p-2.5" : "p-3"}`}
                 >
                   <div
                     className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold ${
@@ -1914,7 +1992,7 @@ function CurriculumPanel({
                         : "bg-slate-100 text-slate-700"
                     }`}
                   >
-                    {sectionIndex + 1}
+                    {sections.findIndex((item) => item.id === section.id) + 1}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="break-words text-sm font-bold text-slate-800">
@@ -1933,13 +2011,13 @@ function CurriculumPanel({
                 </button>
 
                 {isExpanded && (
-                  <div className="space-y-2 border-t border-slate-100 p-2">
-                    {timeline.length === 0 ? (
+                  <div className={`space-y-2 border-t border-slate-100 ${compact ? "p-1.5" : "p-2"}`}>
+                    {visibleTimeline.length === 0 ? (
                       <div className="rounded-xl bg-slate-50 p-4 text-center text-xs text-slate-500">
                         Belum ada materi atau tugas yang dipublikasikan.
                       </div>
                     ) : (
-                      timeline.map((entry) => {
+                      visibleTimeline.map((entry) => {
                         if (entry.type === "task") {
                           const task = entry.task;
                           const submission = submissions.find(
@@ -2034,7 +2112,7 @@ function CurriculumPanel({
                                 title={getLessonKindLabel(getLessonContentKind(lesson.video_provider))}
                                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-sm transition ${
                                   isActive
-                                    ? "bg-gradient-to-br from-violet-700 to-indigo-700 text-white shadow-violet-200"
+                                    ? "bg-gradient-to-br from-[#260047] to-[#7650b8] text-white shadow-violet-200"
                                     : "border border-violet-100 bg-gradient-to-br from-violet-50 to-indigo-50 text-violet-700 group-hover:border-violet-200"
                                 }`}
                               >
@@ -2478,68 +2556,125 @@ export default function LearningRoom({
         {/* =============================================
             COMPACT HEADER
         ============================================= */}
-        <header className="mb-4 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:mb-5 sm:px-5 sm:py-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-            <div className="flex min-w-0 items-center gap-3">
+        <header className="kcc-learning-header mb-3 rounded-2xl border border-slate-200 bg-white shadow-sm lg:mb-5 lg:px-5 lg:py-4">
+          {/* DESKTOP HEADER — layout lama dipertahankan */}
+          <div className="hidden lg:block">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <Link
+                  href="/dashboard"
+                  aria-label="Kembali ke dashboard"
+                  className="kcc-compact-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
+                >
+                  <ArrowLeft size={19} />
+                </Link>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-violet-700">
+                      Kiki Creator Class / Ruang Belajar
+                    </p>
+                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
+                      Akses Aktif
+                    </span>
+                  </div>
+                  <h1 className="mt-1 truncate text-base font-bold text-slate-900 sm:text-lg">
+                    {course.title}
+                  </h1>
+                  <p className="mt-1 truncate text-[11px] text-slate-500">
+                    Hai {profileName}, selamat belajar bersama{" "}
+                    {course.mentor_name || "Kiki Creator Class"}.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 pl-0 lg:justify-end">
+                <Link
+                  href="/dashboard#pembelian"
+                  className="kcc-compact-control inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
+                >
+                  Pembelian
+                </Link>
+                <Link
+                  href="/kelas"
+                  className="kcc-compact-control inline-flex h-9 items-center gap-2 rounded-xl bg-violet-700 px-3 text-xs font-semibold text-white transition hover:bg-violet-800"
+                >
+                  Jelajahi Kelas
+                  <ArrowRight size={14} />
+                </Link>
+                <LogoutButton compact />
+              </div>
+            </div>
+            <div className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-3">
+              <span className="shrink-0 text-[10px] font-semibold text-slate-500">
+                Posisi belajar
+              </span>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-violet-600 transition-all duration-300"
+                  style={{ width: `${positionPercent}%` }}
+                />
+              </div>
+              <span className="shrink-0 text-[10px] font-bold tabular-nums text-violet-800">
+                {activeLessonIndex >= 0 ? activeLessonIndex + 1 : 0} / {orderedLessons.length} materi
+              </span>
+            </div>
+          </div>
+
+          {/* MOBILE HEADER — fokus pada kelas dan progres belajar */}
+          <div className="kcc-learning-header-mobile p-4 lg:hidden">
+            <div className="flex min-w-0 items-start gap-3">
               <Link
                 href="/dashboard"
                 aria-label="Kembali ke dashboard"
-                className="kcc-compact-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
+                className="kcc-mobile-back flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#eee8f5] bg-white text-[#432263] shadow-sm"
               >
                 <ArrowLeft size={19} />
               </Link>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-violet-700">
-                    Kiki Creator Class / Ruang Belajar
-                  </p>
-                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
-                    Akses Aktif
+
+              <div className="min-w-0 flex-1">
+                <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-700">
+                    Akses aktif
+                  </span>
+                  <span className="text-[9px] font-semibold uppercase tracking-[.14em] text-[#9a91a7]">
+                    Ruang belajar
                   </span>
                 </div>
-                <h1 className="mt-1 truncate text-base font-bold text-slate-900 sm:text-lg">
+                <h1 className="break-words text-[17px] font-extrabold leading-tight tracking-[-.035em] text-[#21152f]">
                   {course.title}
                 </h1>
-                <p className="mt-1 truncate text-[11px] text-slate-500">
-                  Hai {profileName}, selamat belajar bersama{" "}
-                  {course.mentor_name || "Kiki Creator Class"}.
+                <p className="mt-1 text-[11px] leading-5 text-slate-500">
+                  Mentor: {course.mentor_name || "Kiki Creator Class"}
                 </p>
               </div>
+
+              <div className="shrink-0">
+                <LogoutButton compact />
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 pl-0 lg:justify-end">
-              <Link
-                href="/dashboard#pembelian"
-                className="kcc-compact-control inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
-              >
-                Pembelian
-              </Link>
-              <Link
-                href="/kelas"
-                className="kcc-compact-control inline-flex h-9 items-center gap-2 rounded-xl bg-violet-700 px-3 text-xs font-semibold text-white transition hover:bg-violet-800"
-              >
-                Jelajahi Kelas
-                <ArrowRight size={14} />
-              </Link>
-              <LogoutButton compact />
-            </div>
-          </div>
-          {/* Posisi materi, bukan status penyelesaian */}
-          <div className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-3">
-            <span className="shrink-0 text-[10px] font-semibold text-slate-500">
-              Posisi belajar
-            </span>
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+
+            <div className="mt-4 border-t border-[#f0edf4] pt-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-[11px] font-semibold text-slate-500">
+                  Progres belajar
+                </span>
+                <span className="shrink-0 text-[11px] font-extrabold tabular-nums text-[#432263]">
+                  {activeLessonIndex >= 0 ? activeLessonIndex + 1 : 0} dari {orderedLessons.length} materi
+                </span>
+              </div>
               <div
-                className="h-full rounded-full bg-violet-600 transition-all duration-300"
-                style={{ width: `${positionPercent}%` }}
-              />
+                className="h-2 overflow-hidden rounded-full bg-[#f0edf5]"
+                role="progressbar"
+                aria-label="Progres posisi belajar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(positionPercent)}
+              >
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#260047] to-[#7650b8] transition-all duration-300"
+                  style={{ width: `${positionPercent}%` }}
+                />
+              </div>
             </div>
-            <span className="shrink-0 text-[10px] font-bold tabular-nums text-violet-800">
-              {activeLessonIndex >= 0
-                ? activeLessonIndex + 1
-                : 0}{" "}
-              / {orderedLessons.length} materi
-            </span>
           </div>
         </header>
         {/* =============================================
@@ -2574,42 +2709,45 @@ export default function LearningRoom({
         {/* =============================================
             MOBILE CURRICULUM BUTTON
         ============================================= */}
-        <div className="mb-3 lg:hidden">
+        <div className="kcc-mobile-curriculum-trigger mb-3 lg:hidden">
           <button
             type="button"
             onClick={() => setMobileCurriculumOpen(true)}
-            className="flex w-full items-center justify-between gap-2.5 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm transition hover:border-violet-200 sm:gap-3 sm:p-4"
+            className="flex w-full items-center gap-3 rounded-2xl border border-[#e9e2f1] bg-white p-3.5 text-left shadow-[0_5px_18px_rgba(38,0,71,.045)] transition active:scale-[.99]"
+            aria-haspopup="dialog"
           >
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700">
-                <ListTree size={20} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-violet-700">
-                  Learning Curriculum
-                </p>
-                <p className="mt-1 text-sm font-bold text-slate-900">
-                  Daftar Bab, Materi & Tugas
-                </p>
-                <p className="mt-1 truncate text-[10px] text-slate-500">
-                  {activeSection?.title || "Pilih materi"}
-                </p>
-              </div>
-            </div>
-            <div className="kcc-member-curriculum-count flex max-w-[46%] shrink-0 flex-wrap items-center justify-end gap-1.5 rounded-xl bg-violet-50 px-2.5 py-1.5 text-[10px] font-semibold leading-4 text-violet-800 sm:max-w-none sm:flex-nowrap sm:gap-2 sm:px-3 sm:py-2 sm:text-xs">
-              {orderedLessons.length} materi · {publishedTasks.length} tugas
-              <ChevronDown size={15} />
-            </div>
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#f2edf8] text-[#4d2877]">
+              <Search size={20} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[9px] font-extrabold uppercase tracking-[.15em] text-[#795c9c]">
+                Cari materi kelas
+              </span>
+              <span className="mt-0.5 block text-[13px] font-extrabold text-[#21152f]">
+                Temukan bab, materi, atau tugas
+              </span>
+              <span className="mt-0.5 block truncate text-[10px] text-slate-500">
+                Sedang di: {activeSection?.title || "Pilih materi untuk mulai belajar"}
+              </span>
+            </span>
+            <span className="flex shrink-0 flex-col items-end gap-1">
+              <span className="rounded-full bg-[#f4f0f8] px-2.5 py-1 text-[9px] font-bold text-[#51336f]">
+                {orderedLessons.length} materi
+              </span>
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#51336f]">
+                Buka daftar <ChevronRight size={13} />
+              </span>
+            </span>
           </button>
         </div>
         {/* =============================================
             MAIN TWO COLUMN LAYOUT
         ============================================= */}
-        <div className="grid min-w-0 grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px] xl:gap-6">
+        <div className="kcc-learning-grid grid min-w-0 grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5 xl:gap-6">
           {/* ===========================================
               LEFT: LEARNING CONTENT
           =========================================== */}
-          <div className="min-w-0 space-y-5">
+          <div className="kcc-learning-main-column min-w-0 space-y-3 sm:space-y-5">
             {/* ACTIVE LESSON OR TASK */}
             {activeTask ? (
               <div
@@ -2722,7 +2860,7 @@ export default function LearningRoom({
                 MINI MATERIAL PLAYER + PLAYLIST
             ========================================= */}
             {activeLesson && (
-              <section className="space-y-3 sm:space-y-4" aria-labelledby="mini-material-heading">
+              <section className="kcc-mini-material-section space-y-3 sm:space-y-4" aria-labelledby="mini-material-heading">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   
                   <div className="flex shrink-0 items-center gap-2">
@@ -2731,7 +2869,7 @@ export default function LearningRoom({
                       <button
                         type="button"
                         onClick={() => setMobileMiniPlaylistOpen(true)}
-                        className="kcc-compact-control inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#342254] to-[#263b61] px-3.5 py-2.5 text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(38,43,83,.16)] transition hover:brightness-110 xl:hidden"
+                        className="kcc-compact-control inline-flex min-h-10 items-center gap-2 rounded-xl bg-gradient-to-r from-[#260047] to-[#7650b8] px-3.5 py-2.5 text-[11px] font-semibold text-white shadow-[0_8px_18px_rgba(38,43,83,.16)] transition hover:brightness-110 xl:hidden"
                         aria-haspopup="dialog"
                       >
                         <ListTree size={15} />
@@ -2744,7 +2882,7 @@ export default function LearningRoom({
                 {activeContents.length > 0 && activeMiniContent ? (
                   <div className="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_290px]">
                     <div className="min-w-0 space-y-3">
-                      <div className="overflow-hidden rounded-[22px] bg-gradient-to-br from-[#342254] via-[#302957] to-[#203653] p-4 text-white shadow-[0_12px_28px_rgba(33,39,75,.16)] sm:p-5">
+                      <div className="overflow-hidden rounded-[22px] bg-gradient-to-br from-[#260047] via-[#4c2878] to-[#7650b8] p-4 text-white shadow-[0_12px_28px_rgba(33,39,75,.16)] sm:p-5">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-[9px] font-extrabold uppercase tracking-[.18em] text-violet-100/80">
                             Segmen {activeMiniContentIndex + 1} dari {activeContents.length}
@@ -2842,7 +2980,7 @@ export default function LearningRoom({
             )}
             {activeLesson && (
               <>
-                <section className="rounded-2xl bg-white p-3.5 shadow-[0_8px_24px_rgba(47,30,82,.045)] sm:p-5">
+                <section className="kcc-lesson-status-card rounded-2xl bg-white p-3.5 shadow-[0_8px_24px_rgba(47,30,82,.045)] sm:p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
                       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${completedLessonIds.includes(activeLesson.id) ? "bg-emerald-50 text-emerald-700" : "bg-violet-50 text-violet-700"}`}>
@@ -2861,7 +2999,7 @@ export default function LearningRoom({
                       type="button"
                       onClick={() => void handleMarkLessonComplete()}
                       disabled={markingLesson || completedLessonIds.includes(activeLesson.id)}
-                      className={`kcc-compact-control inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-[11px] font-semibold transition disabled:cursor-not-allowed ${completedLessonIds.includes(activeLesson.id) ? "bg-emerald-50 text-emerald-700" : "bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-[0_7px_18px_rgba(109,40,217,.16)] hover:brightness-105 disabled:opacity-50"}`}
+                      className={`kcc-compact-control inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-[11px] font-semibold transition disabled:cursor-not-allowed ${completedLessonIds.includes(activeLesson.id) ? "bg-emerald-50 text-emerald-700" : "bg-gradient-to-r from-[#260047] to-[#7650b8] text-white shadow-[0_7px_18px_rgba(109,40,217,.16)] hover:brightness-105 disabled:opacity-50"}`}
                     >
                       {markingLesson ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
                       {completedLessonIds.includes(activeLesson.id) ? "Materi selesai" : markingLesson ? "Menyimpan..." : "Tandai materi selesai"}
@@ -2872,7 +3010,7 @@ export default function LearningRoom({
                 {/* =========================================
                     PREVIOUS / NEXT LESSON
                 ========================================= */}
-                <section className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:p-4">
+                <section className="kcc-lesson-navigation rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:p-4">
                   <div className="flex items-center justify-between gap-2 sm:gap-3">
                     {previousLesson ? (
                       <button
@@ -2993,16 +3131,19 @@ export default function LearningRoom({
               role="dialog"
               aria-modal="true"
               aria-label="Daftar kurikulum kelas"
-              className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-hidden rounded-t-[28px] border border-slate-200 bg-[#F7F6FC] p-4 shadow-2xl sm:inset-x-auto sm:right-0 sm:top-0 sm:h-full sm:max-h-none sm:w-[430px] sm:rounded-none sm:rounded-l-[28px] sm:p-5"
+              className="kcc-mobile-curriculum-drawer absolute inset-x-0 bottom-0 max-h-[90dvh] overflow-hidden rounded-t-[26px] border border-slate-200 bg-[#F8F6FB] p-3.5 shadow-2xl sm:inset-x-auto sm:right-0 sm:top-0 sm:h-full sm:max-h-none sm:w-[430px] sm:rounded-none sm:rounded-l-[28px] sm:p-5"
             >
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-700">
-                    Learning Curriculum
+                  <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#795c9c]">
+                    RUANG BELAJAR
                   </p>
-                  <h2 className="mt-1 text-lg font-bold text-slate-900">
-                    Daftar Bab, Materi & Tugas
+                  <h2 className="mt-1 text-[17px] font-extrabold tracking-[-.02em] text-[#21152f]">
+                    Cari & pilih materi
                   </h2>
+                  <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                    Pilih Bab, materi pembelajaran, atau tugas kelas.
+                  </p>
                 </div>
                 <button
                   type="button"
@@ -3015,7 +3156,7 @@ export default function LearningRoom({
                   <X size={20} />
                 </button>
               </div>
-              <div className="max-h-[calc(88dvh-90px)] overflow-y-auto pb-5 sm:max-h-[calc(100vh-100px)]">
+              <div className="max-h-[calc(90dvh-105px)] overflow-y-auto pb-5 sm:max-h-[calc(100vh-112px)]">
                 <CurriculumPanel
                   sections={orderedSections}
                   lessons={orderedLessons}
@@ -3031,6 +3172,8 @@ export default function LearningRoom({
                   onSelectLesson={handleSelectLesson}
                   onSelectTask={handleSelectTask}
                   showHeading={false}
+                  compact
+                  searchEnabled
                 />
               </div>
             </div>

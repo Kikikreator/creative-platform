@@ -117,7 +117,7 @@ export default function KelasCatalog({
                 Kiki Creator Class
               </h1>
 
-              <p className="text-[10px] font-medium text-[#9D97B4]">
+              <p className="text-[9px] font-medium text-[#9D97B4] sm:text-[10px]">
                 Learning Management System
               </p>
             </div>
@@ -178,7 +178,7 @@ export default function KelasCatalog({
           MAIN CATALOG
       ========================================= */}
 
-      <section className="mx-auto min-h-[calc(100vh-140px)] max-w-7xl px-4 pb-14 pt-8 sm:px-6 sm:pt-10 lg:px-8">
+      <section className="mx-auto min-h-[calc(100vh-140px)] max-w-7xl px-4 pb-9 pt-6 sm:px-6 sm:pb-14 sm:pt-10 lg:px-8">
 
         {/* HEADER DAN SEARCH */}
 
@@ -246,7 +246,7 @@ export default function KelasCatalog({
             CATEGORY FILTER
         ===================================== */}
 
-        <div className="mt-7 flex items-center gap-2 overflow-x-auto pb-2">
+        <div className="mt-5 flex items-center gap-2 overflow-x-auto pb-1.5 sm:mt-7 sm:pb-2">
 
           {categories.map((category) => {
             const active = selectedCategory === category;
@@ -274,7 +274,7 @@ export default function KelasCatalog({
             COURSE COUNT
         ===================================== */}
 
-        <div className="mb-5 mt-5 flex items-center justify-between">
+        <div className="mb-3 mt-3 flex items-center justify-between sm:mb-5 sm:mt-5">
 
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#F0EAFE] text-[#6D28D9]">
@@ -358,13 +358,13 @@ export default function KelasCatalog({
               COURSE CARDS
           ===================================== */
 
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:gap-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:gap-6">
 
             {filteredCourses.map((course) => (
 
               <article
                 key={course.id}
-                className="group flex h-full flex-col overflow-hidden rounded-2xl border border-[#EEEAF7] bg-white shadow-[0_3px_18px_rgba(25,65,52,0.035)] transition-all duration-300 hover:-translate-y-1 hover:border-[#DED0FF] hover:shadow-[0_12px_30px_rgba(25,65,52,0.09)]"
+                className="group flex h-full min-w-0 flex-col overflow-hidden rounded-xl border border-[#EEEAF7] bg-white shadow-[0_3px_18px_rgba(25,65,52,0.035)] transition-all duration-300 hover:-translate-y-1 hover:border-[#DED0FF] hover:shadow-[0_12px_30px_rgba(25,65,52,0.09)] sm:rounded-2xl"
               >
 
                 {/* COVER */}
@@ -399,7 +399,7 @@ export default function KelasCatalog({
 
                   {course.category && (
 
-                    <span className="absolute left-3 top-3 rounded-lg border border-white/60 bg-white/95 px-3 py-1.5 text-[10px] font-bold text-[#6D28D9] shadow-sm backdrop-blur">
+                    <span className="absolute left-2 top-2 max-w-[calc(100%-1rem)] truncate rounded-md border border-white/60 bg-white/95 px-2 py-1 text-[8px] font-bold text-[#6D28D9] shadow-sm backdrop-blur sm:left-3 sm:top-3 sm:rounded-lg sm:px-3 sm:py-1.5 sm:text-[10px]">
                       {course.category}
                     </span>
 
@@ -413,20 +413,20 @@ export default function KelasCatalog({
 
                 {/* COURSE INFORMATION */}
 
-                <div className="flex flex-1 flex-col p-4 sm:p-5">
+                <div className="flex flex-1 flex-col p-2.5 sm:p-5">
 
                   {/* TITLE */}
 
                   <Link
                     href={`/kelas/${course.slug}`}
-                    className="line-clamp-2 text-[15px] font-bold leading-6 text-[#251A3D] transition hover:text-[#6D28D9]"
+                    className="line-clamp-2 text-[12px] font-bold leading-4 text-[#251A3D] transition hover:text-[#6D28D9] sm:text-[15px] sm:leading-6"
                   >
                     {course.title}
                   </Link>
 
                   {/* DESCRIPTION */}
 
-                  <p className="mt-2 line-clamp-2 min-h-[40px] text-xs leading-5 text-[#84958F]">
+                  <p className="mt-1.5 line-clamp-2 min-h-[32px] text-[10px] leading-4 text-[#84958F] sm:mt-2 sm:min-h-[40px] sm:text-xs sm:leading-5">
                     {course.short_description ||
                       course.description ||
                       "Pelajari program ini bersama Kiki Creator Class."}
@@ -434,15 +434,15 @@ export default function KelasCatalog({
 
                   {/* MENTOR */}
 
-                  <div className="mt-3 flex min-h-[20px] items-center gap-2">
+                  <div className="mt-2 flex min-h-[18px] items-center gap-1.5 sm:mt-3 sm:min-h-[20px] sm:gap-2">
 
                     {course.mentor_name && (
                       <>
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#F3EEFF] text-[#6D28D9]">
-                          <GraduationCap size={13} />
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#F3EEFF] text-[#6D28D9] sm:h-6 sm:w-6">
+                          <GraduationCap size={11} />
                         </div>
 
-                        <span className="text-[11px] font-medium text-[#817A97]">
+                        <span className="truncate text-[9px] font-medium text-[#817A97] sm:text-[11px]">
                           {course.mentor_name}
                         </span>
                       </>
@@ -452,15 +452,15 @@ export default function KelasCatalog({
 
                   {/* PRICE AND ACTION */}
 
-                  <div className="mt-auto flex items-center justify-between gap-3 border-t border-[#F8F6FD] pt-4">
+                  <div className="mt-auto flex items-center justify-between gap-1.5 border-t border-[#F8F6FD] pt-2.5 sm:gap-3 sm:pt-4">
 
                     <div className="min-w-0">
 
-                      <p className="text-[10px] font-medium text-[#9D97B4]">
+                      <p className="text-[9px] font-medium text-[#9D97B4] sm:text-[10px]">
                         Harga kelas
                       </p>
 
-                      <p className="mt-1 text-[15px] font-bold tracking-tight text-[#5B21B6]">
+                      <p className="mt-0.5 text-[11px] font-bold tracking-tight text-[#5B21B6] sm:mt-1 sm:text-[15px]">
                         {formatPrice(course.price)}
                       </p>
 
@@ -468,11 +468,13 @@ export default function KelasCatalog({
 
                     <Link
                       href={`/kelas/${course.slug}`}
-                      className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[#F3EEFF] px-3.5 py-2.5 text-[11px] font-bold text-[#6D28D9] transition duration-200 hover:bg-[#5B21B6] hover:text-white active:scale-[0.97]"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#F3EEFF] px-2 py-2 text-[9px] font-bold text-[#6D28D9] transition duration-200 hover:bg-[#5B21B6] hover:text-white active:scale-[0.97] sm:gap-2 sm:rounded-xl sm:px-3.5 sm:py-2.5 sm:text-[11px]"
                     >
-                      Lihat Detail
+                      <span className="sm:hidden">Detail</span>
+                      <span className="hidden sm:inline">Lihat Detail</span>
 
-                      <ArrowRight size={14} />
+                      <ArrowRight size={12} className="sm:hidden" />
+                      <ArrowRight size={14} className="hidden sm:block" />
                     </Link>
 
                   </div>

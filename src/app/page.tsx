@@ -78,44 +78,44 @@ const features = [
   {
     icon: Infinity,
     iconStyle: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-    title: "Sekali bayar, akses selamanya",
+    title: "Bayar sekali, akses selamanya",
     description:
-      "Setelah pembelian disetujui, kamu dapat mengakses kelas yang dibeli tanpa biaya berlangganan bulanan.",
+      "Tanpa langganan bulanan. Akses kelas tetap tersedia setelah pembelian disetujui.",
   },
   {
     icon: BookOpen,
     iconStyle: "bg-violet-50 text-violet-600 ring-violet-100",
-    title: "Materi tersusun dan terarah",
+    title: "Materi terstruktur",
     description:
-      "Belajar dari materi dasar secara bertahap sehingga kamu tidak perlu bingung menentukan langkah berikutnya.",
+      "Belajar bertahap dari materi dasar hingga praktik.",
   },
   {
     icon: Clock3,
     iconStyle: "bg-sky-50 text-sky-600 ring-sky-100",
-    title: "Waktu belajar lebih fleksibel",
+    title: "Waktu belajar fleksibel",
     description:
-      "Atur jadwal belajarmu sendiri dan ulangi materi melalui ruang belajar kapan pun kamu membutuhkannya.",
+      "Atur jadwal sendiri dan ulangi materi kapan pun.",
   },
   {
     icon: ClipboardCheck,
     iconStyle: "bg-orange-50 text-orange-600 ring-orange-100",
-    title: "Belajar sambil menghasilkan karya",
+    title: "Langsung praktik",
     description:
-      "Latihan dan tugas membantumu menerapkan materi, bukan hanya menonton video pembelajaran.",
+      "Terapkan materi melalui latihan dan tugas kelas.",
   },
   {
     icon: MessageCircle,
     iconStyle: "bg-pink-50 text-pink-600 ring-pink-100",
-    title: "Ada penilaian dan masukan mentor",
+    title: "Masukan dari mentor",
     description:
-      "Hasil tugas dapat ditinjau mentor agar kamu mengetahui bagian yang sudah baik dan yang masih perlu ditingkatkan.",
+      "Dapatkan penilaian dan arahan untuk mengembangkan karyamu.",
   },
   {
     icon: BadgeCheck,
     iconStyle: "bg-amber-50 text-amber-600 ring-amber-100",
-    title: "Kesempatan memperoleh sertifikat",
+    title: "Sertifikat kelulusan",
     description:
-      "Sertifikat tersedia setelah seluruh ketentuan kelulusan kelas berhasil kamu penuhi.",
+      "Raih sertifikat setelah memenuhi persyaratan kelas.",
   },
 ];
 
@@ -134,14 +134,14 @@ function formatPrice(price: number | string) {
 
 function CourseSkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
       {[1, 2, 3].map((item) => (
         <div
           key={item}
           className="overflow-hidden rounded-2xl border border-slate-100 bg-white"
         >
-          <div className="h-40 animate-pulse bg-[#F4F0F6] sm:h-48" />
-          <div className="space-y-3 p-4 sm:p-5">
+          <div className="h-28 animate-pulse bg-[#F4F0F6] sm:h-48" />
+          <div className="space-y-2.5 p-3 sm:space-y-3 sm:p-5">
             <div className="h-4 w-3/4 animate-pulse rounded bg-slate-100" />
             <div className="h-3 w-full animate-pulse rounded bg-slate-100" />
             <div className="h-3 w-1/2 animate-pulse rounded bg-slate-100" />
@@ -229,7 +229,7 @@ async function FeaturedCourses() {
   }
 
   return (
-    <div className="grid gap-4 min-[480px]:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3">
       {courses.map((course) => (
         <Link
           key={course.id}
@@ -239,7 +239,7 @@ async function FeaturedCourses() {
           <div
             role="img"
             aria-label={`Cover ${course.title}`}
-            className="relative flex h-40 items-center justify-center overflow-hidden bg-[#F4F0F6] bg-cover bg-center sm:h-48"
+            className="relative flex h-28 items-center justify-center overflow-hidden bg-[#F4F0F6] bg-cover bg-center sm:h-48"
             style={
               course.cover_image_url
                 ? {
@@ -249,39 +249,41 @@ async function FeaturedCourses() {
             }
           >
             {!course.cover_image_url && (
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#260047] shadow-sm">
-                <GraduationCap size={28} />
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#260047] shadow-sm sm:h-14 sm:w-14 sm:rounded-2xl">
+                <GraduationCap size={20} className="sm:hidden" />
+                <GraduationCap size={28} className="hidden sm:block" />
               </div>
             )}
 
-            <div className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1.5 text-[10px] font-bold text-[#260047] shadow-sm">
+            <div className="absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[8px] font-bold text-[#260047] shadow-sm sm:left-3 sm:top-3 sm:px-3 sm:py-1.5 sm:text-[10px]">
               KELAS PILIHAN
             </div>
           </div>
 
-          <div className="p-4 sm:p-5">
-            <h3 className="line-clamp-2 text-base font-bold text-slate-900 transition group-hover:text-[#09483F] sm:text-lg">
+          <div className="p-3 sm:p-5">
+            <h3 className="line-clamp-2 text-[12px] font-bold leading-4 text-slate-900 transition group-hover:text-[#09483F] sm:text-lg sm:leading-normal">
               {course.title}
             </h3>
 
-            <p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-slate-500 sm:text-sm">
+            <p className="mt-1.5 line-clamp-2 min-h-8 text-[10px] leading-4 text-slate-500 sm:mt-2 sm:min-h-10 sm:text-sm sm:leading-5">
               {course.short_description ||
                 course.description ||
                 "Pelajari materi lengkap melalui kelas Kiki Creator Class."}
             </p>
 
-            <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 sm:mt-5 sm:pt-4">
+            <div className="mt-3 flex items-center justify-between gap-1 border-t border-slate-100 pt-2.5 sm:mt-5 sm:pt-4">
               <div>
-                <p className="text-[10px] text-slate-400 sm:text-[11px]">
+                <p className="text-[9px] text-slate-400 sm:text-[11px]">
                   Investasi belajar
                 </p>
-                <p className="mt-1 text-sm font-bold text-[#260047] sm:text-base">
+                <p className="mt-0.5 text-[11px] font-bold text-[#260047] sm:mt-1 sm:text-base">
                   {formatPrice(course.price)}
                 </p>
               </div>
 
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#260047] text-white transition group-hover:bg-[#09483F] sm:h-10 sm:w-10">
-                <ArrowRight size={17} />
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#260047] text-white transition group-hover:bg-[#09483F] sm:h-10 sm:w-10 sm:rounded-xl">
+                <ArrowRight size={14} className="sm:hidden" />
+                <ArrowRight size={17} className="hidden sm:block" />
               </span>
             </div>
           </div>
@@ -520,7 +522,7 @@ export default async function Home() {
       {/* SISTEM BELAJAR */}
       <section
         id="sistem-belajar"
-        className="scroll-mt-24 bg-white py-14 sm:py-20"
+        className="scroll-mt-24 bg-white py-9 sm:py-20"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
@@ -537,29 +539,29 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className="mt-9 grid gap-4 sm:mt-12 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-7 grid gap-3 sm:mt-12 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
             {learningSteps.map((step) => {
               const Icon = step.icon;
 
               return (
                 <article
                   key={step.number}
-                  className="relative rounded-2xl border border-[#EAE5ED] bg-white p-5 shadow-[0_5px_20px_rgba(38,0,71,0.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(38,0,71,0.09)] sm:p-6"
+                  className="relative rounded-2xl border border-[#EAE5ED] bg-white p-4 shadow-[0_5px_20px_rgba(38,0,71,0.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(38,0,71,0.09)] sm:p-6"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <span
-                      className={`flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ${step.iconStyle}`}
+                      className={`flex h-10 w-10 items-center justify-center rounded-xl ring-1 sm:h-12 sm:w-12 sm:rounded-2xl ${step.iconStyle}`}
                     >
-                      <Icon size={23} strokeWidth={1.9} />
+                      <Icon size={20} strokeWidth={1.9} />
                     </span>
                     <span className="text-2xl font-black tracking-tight text-[#EAE5ED]">
                       {step.number}
                     </span>
                   </div>
-                  <h3 className="mt-5 text-base font-extrabold leading-snug text-[#21182A]">
+                  <h3 className="mt-4 text-sm font-extrabold leading-snug text-[#21182A] sm:mt-5 sm:text-base">
                     {step.title}
                   </h3>
-                  <p className="mt-2 text-xs leading-6 text-slate-500 sm:text-sm">
+                  <p className="mt-2 text-[11px] leading-5 text-slate-500 sm:text-sm sm:leading-6">
                     {step.description}
                   </p>
                 </article>
@@ -572,7 +574,7 @@ export default async function Home() {
       {/* KENAPA HARUS IKUT KELAS INI */}
       <section
         id="keunggulan"
-        className="scroll-mt-24 border-y border-[#F0EBF2] bg-[#FAF8FB] py-14 sm:py-20"
+        className="scroll-mt-24 border-y border-[#F0EBF2] bg-[#FAF8FB] py-9 sm:py-20"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
@@ -588,24 +590,25 @@ export default async function Home() {
             </p>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 gap-3 min-[520px]:grid-cols-2 sm:mt-12 sm:gap-5 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-2 gap-2.5 sm:mt-12 sm:gap-5 lg:grid-cols-3">
             {features.map((feature) => {
               const Icon = feature.icon;
 
               return (
                 <article
                   key={feature.title}
-                  className="group rounded-2xl border border-[#EAE5ED] bg-white p-5 shadow-[0_4px_16px_rgba(38,0,71,0.035)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(38,0,71,0.08)] sm:p-6"
+                  className="group min-w-0 rounded-xl border border-[#EAE5ED] bg-white p-3 shadow-[0_4px_16px_rgba(38,0,71,0.035)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_14px_30px_rgba(38,0,71,0.08)] sm:rounded-2xl sm:p-6"
                 >
                   <div
-                    className={`flex h-12 w-12 items-center justify-center rounded-2xl ring-1 transition group-hover:scale-105 ${feature.iconStyle}`}
+                    className={`flex h-9 w-9 items-center justify-center rounded-xl ring-1 transition group-hover:scale-105 sm:h-12 sm:w-12 sm:rounded-2xl ${feature.iconStyle}`}
                   >
-                    <Icon size={23} strokeWidth={1.9} />
+                    <Icon size={18} strokeWidth={1.9} className="sm:hidden" />
+                    <Icon size={23} strokeWidth={1.9} className="hidden sm:block" />
                   </div>
-                  <h3 className="mt-4 text-sm font-extrabold leading-6 text-[#21182A] sm:text-base">
+                  <h3 className="mt-3 text-[11px] font-extrabold leading-4 text-[#21182A] sm:mt-4 sm:text-base sm:leading-6">
                     {feature.title}
                   </h3>
-                  <p className="mt-2 text-xs leading-6 text-slate-500 sm:text-sm">
+                  <p className="mt-1.5 text-[10px] leading-[1.45] text-slate-500 sm:mt-2 sm:text-sm sm:leading-6">
                     {feature.description}
                   </p>
                 </article>
@@ -618,7 +621,7 @@ export default async function Home() {
       {/* KATALOG KELAS */}
       <section
         id="kelas"
-        className="scroll-mt-24 bg-white py-14 sm:py-20"
+        className="scroll-mt-24 bg-white py-9 sm:py-20"
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-5">
@@ -644,7 +647,7 @@ export default async function Home() {
             </Link>
           </div>
 
-          <div className="mt-7 sm:mt-10">
+          <div className="mt-5 sm:mt-10">
             <Suspense fallback={<CourseSkeleton />}>
               <FeaturedCourses />
             </Suspense>
@@ -653,9 +656,9 @@ export default async function Home() {
       </section>
 
       {/* CTA / TENTANG */}
-      <section id="tentang" className="scroll-mt-24 bg-[#FAF8FB] py-14 sm:py-20">
+      <section id="tentang" className="scroll-mt-24 bg-[#FAF8FB] py-9 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-8">
-          <div className="relative overflow-hidden rounded-[26px] bg-[#260047] px-5 py-10 shadow-[0_20px_55px_rgba(38,0,71,0.16)] sm:rounded-[32px] sm:px-12 sm:py-16">
+          <div className="relative overflow-hidden rounded-[24px] bg-[#260047] px-4 py-7 shadow-[0_16px_38px_rgba(38,0,71,0.14)] sm:rounded-[32px] sm:px-12 sm:py-16">
             <div
               aria-hidden="true"
               className="absolute -right-16 -top-24 h-64 w-64 rounded-full bg-[#0F9D78]/35 blur-3xl"
@@ -666,20 +669,21 @@ export default async function Home() {
             />
 
             <div className="relative mx-auto max-w-3xl text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-amber-300 ring-1 ring-white/15 sm:h-14 sm:w-14">
-                <Sparkles size={24} />
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-amber-300 ring-1 ring-white/15 sm:h-14 sm:w-14 sm:rounded-2xl">
+                <Sparkles size={20} className="sm:hidden" />
+                <Sparkles size={24} className="hidden sm:block" />
               </div>
-              <h2 className="mt-5 text-2xl font-extrabold tracking-tight text-white sm:mt-6 sm:text-4xl">
+              <h2 className="mt-4 text-xl font-extrabold leading-tight tracking-tight text-white sm:mt-6 sm:text-4xl">
                 Siap mulai belajar dan membuat karya terbaikmu?
               </h2>
-              <p className="mx-auto mt-3 max-w-2xl text-xs leading-6 text-white/75 sm:mt-4 sm:text-sm sm:leading-7">
+              <p className="mx-auto mt-2.5 max-w-2xl text-[11px] leading-5 text-white/75 sm:mt-4 sm:text-sm sm:leading-7">
                 Temukan kelas yang cocok untukmu. Jika masih ingin mengetahui
                 materi, biaya, atau cara pendaftaran, admin kami siap membantu.
               </p>
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3 sm:mt-8">
+              <div className="mx-auto mt-5 flex w-full max-w-[260px] flex-col items-stretch justify-center gap-2.5 sm:mt-8 sm:max-w-none sm:flex-row sm:items-center sm:gap-3">
                 <Link
                   href="#kelas"
-                  className="inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-xs font-extrabold text-[#260047] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#F4F0F6] sm:h-12 sm:px-6 sm:text-sm"
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-white px-4 text-[11px] font-extrabold text-[#260047] shadow-sm transition hover:-translate-y-0.5 hover:bg-[#F4F0F6] sm:h-12 sm:w-auto sm:px-6 sm:text-sm"
                 >
                   Lihat Pilihan Kelas
                   <ArrowRight size={16} />
@@ -688,7 +692,7 @@ export default async function Home() {
                   href={ADMIN_WHATSAPP_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex h-11 items-center gap-2 rounded-xl px-5 text-xs font-extrabold text-white shadow-[0_8px_22px_rgba(18,168,121,0.22)] transition hover:-translate-y-0.5 sm:h-12 sm:px-6 sm:text-sm"
+                  className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl px-4 text-[11px] font-extrabold text-white shadow-[0_8px_22px_rgba(18,168,121,0.22)] transition hover:-translate-y-0.5 sm:h-12 sm:w-auto sm:px-6 sm:text-sm"
                   style={{
                     backgroundImage:
                       "linear-gradient(135deg, #25D366 0%, #12A879 55%, #087F5B 100%)",
@@ -701,12 +705,88 @@ export default async function Home() {
               </div>
             </div>
           </div>
+
+          {/* FAQ / PERTANYAAN YANG SERING DITANYAKAN */}
+          <section
+            aria-labelledby="faq-title"
+            className="mx-auto mt-5 max-w-4xl sm:mt-10"
+          >
+            <div className="mb-3 text-center sm:mb-5">
+              <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#0F9D78] sm:text-[10px]">
+                MASIH ADA PERTANYAAN?
+              </p>
+              <h2
+                id="faq-title"
+                className="mt-1.5 text-lg font-extrabold tracking-tight text-[#21182A] sm:mt-2 sm:text-2xl"
+              >
+                Pertanyaan yang sering ditanyakan
+              </h2>
+              <p className="mt-1 text-[10px] leading-5 text-slate-500 sm:text-xs">
+                Informasi singkat sebelum kamu memilih kelas.
+              </p>
+            </div>
+
+            <div className="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
+              {[
+                {
+                  question: "Apakah akses kelas berlaku seumur hidup?",
+                  answer:
+                    "Ya. Setelah pembelian disetujui, akses kelas bersifat lifetime (seumur hidup), tanpa biaya langganan bulanan.",
+                },
+                {
+                  question: "Apakah kelas ini live atau bisa dipelajari mandiri?",
+                  answer:
+                    "Materi diakses melalui ruang belajar website, jadi kamu bisa belajar sesuai waktumu sendiri tanpa harus hadir pada jadwal live tertentu.",
+                },
+                {
+                  question: "Apakah saya perlu menyiapkan software desain?",
+                  answer:
+                    "Kebutuhan software mengikuti kelas yang dipilih. Periksa detail kelas atau tanyakan kepada admin sebelum mendaftar agar perangkatmu sesuai.",
+                },
+                {
+                  question: "Apakah kelas cocok untuk pemula?",
+                  answer:
+                    "Setiap kelas memiliki target peserta dan materi yang berbeda. Periksa informasi pada halaman detail kelas atau hubungi admin untuk dibantu memilih.",
+                },
+                {
+                  question: "Apakah ada tugas dan penilaian mentor?",
+                  answer:
+                    "Ada. Kamu dapat mengerjakan tugas kelas, lalu melihat hasil penilaian dan masukan dari mentor.",
+                },
+                {
+                  question: "Apakah peserta mendapatkan sertifikat?",
+                  answer:
+                    "Sertifikat dapat diperoleh setelah kamu menyelesaikan materi dan memenuhi persyaratan kelulusan kelas.",
+                },
+                {
+                  question: "Bagaimana cara mulai belajar?",
+                  answer:
+                    "Pilih kelas, buat akun atau masuk, lalu ikuti proses pendaftaran dan pembayaran. Setelah pembelian disetujui, kelas dapat diakses melalui akunmu.",
+                },
+              ].map((item) => (
+                <details
+                  key={item.question}
+                  className="group rounded-xl border border-[#EAE5ED] bg-white px-3.5 py-3 shadow-[0_2px_10px_rgba(38,0,71,0.025)] open:border-[#D9C8E8] sm:rounded-2xl sm:px-4 sm:py-3.5"
+                >
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[11px] font-bold leading-4 text-[#21182A] marker:hidden sm:text-xs sm:leading-5">
+                    <span>{item.question}</span>
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#F4F0F6] text-[#260047] transition group-open:rotate-45">
+                      +
+                    </span>
+                  </summary>
+                  <p className="mt-2.5 border-t border-slate-100 pt-2.5 text-[10px] leading-[1.6] text-slate-600 sm:text-xs sm:leading-6">
+                    {item.answer}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </section>
         </div>
       </section>
 
       {/* FOOTER */}
       <footer className="border-t border-[#EAE5ED] bg-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-11 sm:px-5 sm:py-14 lg:grid-cols-[1.5fr_1fr_1fr_1.2fr] lg:gap-12 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-7 px-4 py-8 sm:gap-10 sm:px-5 sm:py-14 lg:grid-cols-[1.5fr_1fr_1fr_1.2fr] lg:gap-12 lg:px-8">
           <div>
             <Link href="/" className="inline-flex items-center gap-3">
               <Image

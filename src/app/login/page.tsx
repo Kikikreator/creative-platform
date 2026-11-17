@@ -423,7 +423,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="kcc-login-main relative flex min-h-screen items-start justify-center overflow-hidden bg-[#F8F7FC] px-4 py-4 sm:items-center sm:px-6 sm:py-6">
+    <main className="kcc-login-main relative flex min-h-screen min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#F8F7FC] px-3 py-6 sm:px-6 sm:py-6">
 
       {/* BACKGROUND */}
       <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-violet-300/15 blur-3xl" />
@@ -431,7 +431,7 @@ export default function LoginPage() {
       <div className="pointer-events-none absolute -bottom-32 -right-32 h-80 w-80 rounded-full bg-emerald-300/15 blur-3xl" />
 
       {/* MAIN CARD */}
-      <div className="kcc-login-card relative grid w-full max-w-[440px] overflow-hidden rounded-[26px] border border-white bg-white shadow-[0_18px_55px_rgba(76,29,149,0.12)] sm:rounded-[28px] lg:max-w-[920px] lg:min-h-[560px] lg:grid-cols-2">
+      <div className="kcc-login-card relative grid w-full max-w-[440px] overflow-hidden rounded-[24px] border border-white bg-white shadow-[0_18px_55px_rgba(76,29,149,0.12)] sm:rounded-[28px] lg:max-w-[920px] lg:min-h-[560px] lg:grid-cols-2">
 
         {/* LEFT PANEL */}
         <section className="relative hidden flex-col justify-between overflow-hidden bg-[#260047] p-8 text-white lg:flex xl:p-10">
@@ -530,14 +530,14 @@ export default function LoginPage() {
         </section>
 
         {/* RIGHT PANEL */}
-        <section className="kcc-login-panel flex min-w-0 flex-col justify-start px-5 py-6 sm:px-10 sm:py-10 lg:justify-center lg:px-9 lg:py-9 xl:px-11">
+        <section className="kcc-login-panel flex min-w-0 flex-col justify-start px-5 py-5 sm:px-10 sm:py-10 lg:justify-center lg:px-9 lg:py-9 xl:px-11">
 
           {/* MOBILE BRAND */}
           <Link
             href="/"
-            className="kcc-login-mobile-brand mb-5 flex items-center gap-3 lg:hidden"
+            className="kcc-login-mobile-brand mb-5 flex items-center gap-2.5 lg:hidden"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#EEEAF7] bg-[#FBFAFF] p-1.5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#EEEAF7] bg-[#FBFAFF] p-1.5">
               <Image
                 src="/logo_brand.png"
                 alt="Kiki Creator Class"
@@ -549,31 +549,18 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <p className="text-sm font-extrabold text-[#211A37]">
+              <p className="text-[13px] font-extrabold leading-5 text-[#211A37]">
                 Kiki Creator Class
               </p>
 
-              <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-[#260047]">
+              <p className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[#260047]">
                 Learn · Create · Grow
               </p>
             </div>
           </Link>
 
-          {/* MOBILE LEARNING IDENTITY — kept directly below the brand */}
-
-          <div className="kcc-login-mobile-intro mb-6 lg:hidden">
-            <span className="inline-flex items-center gap-2 rounded-full border border-[#EEEAF7] bg-[#F8F6FA] px-3 py-1.5 text-[12px] font-medium text-[#51436F]">
-              <Sparkles size={14} />
-              Learning Workspace
-            </span>
-            <p className="mt-3 max-w-[28ch] text-[21px] font-semibold leading-[1.25] tracking-tight text-[#211A37]">
-              Belajar dan kembangkan kreativitas bersama.
-            </p>
-          </div>
-
-
           {/* HEADING */}
-          <div className="mb-6">
+          <div className="mb-5 sm:mb-6">
 
             <div className="mb-4 hidden h-12 w-12 items-center justify-center rounded-2xl border border-[#EEEAF7] bg-[#FBFAFF] text-[#260047] shadow-sm lg:flex">
   <GraduationCap size={23} />
@@ -582,12 +569,12 @@ export default function LoginPage() {
 
             
 
-            <h2 className="mt-0 text-[27px] font-extrabold tracking-tight text-[#211A37] sm:text-[30px] lg:mt-2">
+            <h2 className="mt-0 text-[25px] font-extrabold tracking-tight text-[#211A37] sm:text-[30px] lg:mt-2">
 
               Selamat datang!
             </h2>
 
-            <p className="mt-2 max-w-[340px] text-sm leading-6 text-slate-500">
+            <p className="mt-1.5 max-w-[340px] text-xs leading-5 text-slate-500 sm:mt-2 sm:text-sm sm:leading-6">
               Masuk ke akunmu untuk melanjutkan perjalanan
               belajar bersama Kiki Creator Class.
             </p>
@@ -597,19 +584,19 @@ export default function LoginPage() {
           {/* LOGIN FORM */}
           <form
             onSubmit={handleLogin}
-            className="space-y-4"
+            className="space-y-3 sm:space-y-4"
           >
 
             {/* EMAIL */}
             <div>
               <label
                 htmlFor="email"
-                className="mb-2 block text-sm font-medium text-slate-700"
+                className="mb-1.5 block text-xs font-semibold text-slate-700 sm:mb-2 sm:text-sm sm:font-medium"
               >
                 Alamat Email
               </label>
 
-              <div className="flex h-12 items-center gap-3 rounded-xl border border-slate-200 bg-[#FFFFFF] px-3.5 transition focus-within:border-[#260047] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#260047]/10">
+              <div className="flex h-11 items-center gap-2.5 rounded-xl border border-slate-200 bg-[#FFFFFF] px-3 transition focus-within:border-[#260047] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#260047]/10 sm:h-12 sm:gap-3 sm:px-3.5">
 
                 <Mail
                   size={17}
@@ -634,12 +621,12 @@ export default function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="mb-2 block text-sm font-medium text-slate-700"
+                className="mb-1.5 block text-xs font-semibold text-slate-700 sm:mb-2 sm:text-sm sm:font-medium"
               >
                 Password
               </label>
 
-              <div className="flex h-12 items-center gap-3 rounded-xl border border-slate-200 bg-[#FFFFFF] px-3.5 transition focus-within:border-[#260047] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#260047]/10">
+              <div className="flex h-11 items-center gap-2.5 rounded-xl border border-slate-200 bg-[#FFFFFF] px-3 transition focus-within:border-[#260047] focus-within:bg-white focus-within:ring-4 focus-within:ring-[#260047]/10 sm:h-12 sm:gap-3 sm:px-3.5">
 
                 <LockKeyhole
                   size={17}
@@ -685,7 +672,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleForgotPassword}
                 disabled={resetLoading || loading}
-                className="text-xs font-bold text-[#6D28D9] transition hover:text-[#260047] disabled:cursor-not-allowed disabled:opacity-50"
+                className="text-[11px] font-bold text-[#6D28D9] transition hover:text-[#260047] disabled:cursor-not-allowed disabled:opacity-50 sm:text-xs"
               >
                 {resetLoading
                   ? "Mengirim tautan..."
@@ -714,7 +701,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6D28D9] text-sm font-bold text-white shadow-[0_4px_12px_rgba(109,40,217,0.18)] transition-all hover:-translate-y-0.5 hover:bg-[#260047] hover:shadow-lg active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60"
+              className="group flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#6D28D9] text-xs font-bold text-white shadow-[0_4px_12px_rgba(109,40,217,0.18)] transition-all hover:-translate-y-0.5 hover:bg-[#260047] hover:shadow-lg active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-60 sm:h-12 sm:text-sm"
             >
               {loading ? (
                 <>
@@ -738,9 +725,9 @@ export default function LoginPage() {
           </form>
 
           {/* FOOTER */}
-          <div className="mt-7 border-t border-slate-100 pt-5">
+          <div className="mt-6 border-t border-slate-100 pt-4 sm:mt-7 sm:pt-5">
 
-            <p className="text-center text-sm text-slate-500">
+            <p className="text-center text-xs text-slate-500 sm:text-sm">
               Belum punya akun?{" "}
 
               <Link
@@ -751,7 +738,7 @@ export default function LoginPage() {
               </Link>
             </p>
 
-            <div className="mt-5">
+            <div className="mt-4 sm:mt-5">
               <Link
                 href="/"
                 className="group inline-flex items-center gap-2 text-[11px] font-semibold text-slate-500 transition hover:text-[#260047]"
@@ -764,13 +751,13 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <div className="mt-5 flex items-center justify-between gap-2">
+            <div className="mt-4 flex items-center justify-between gap-2 sm:mt-5">
 
               <p className="text-[9px] text-slate-400">
                 © {new Date().getFullYear()} Kiki Creator Class
               </p>
 
-              <div className="text-[9px] font-medium text-[#260047]">
+              <div className="hidden text-[9px] font-medium text-[#260047] sm:block">
                 Secure Access
               </div>
 

@@ -22,6 +22,33 @@ import {
 } from "lucide-react";
 
 type JsonRecord = Record<string, unknown>;
+
+function formatReviewError(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) return error.message;
+
+  if (typeof error === "string" && error.trim()) return error;
+
+  if (error && typeof error === "object") {
+    const value = error as Record<string, unknown>;
+    const parts = [
+      typeof value.code === "string" && value.code ? `Kode: ${value.code}` : "",
+      typeof value.message === "string" && value.message ? value.message : "",
+      typeof value.details === "string" && value.details ? `Detail: ${value.details}` : "",
+      typeof value.hint === "string" && value.hint ? `Petunjuk: ${value.hint}` : "",
+    ].filter(Boolean);
+
+    if (parts.length) return parts.join("\n");
+
+    try {
+      const raw = JSON.stringify(error, null, 2);
+      if (raw && raw !== "{}") return raw;
+    } catch {
+      // Gunakan pesan cadangan jika objek error tidak dapat diserialisasi.
+    }
+  }
+
+  return fallback;
+}
 export type ChapterSnapshot = {
   section: JsonRecord;
   lessons: Array<JsonRecord & { contents?: JsonRecord[] }>;
@@ -277,7 +304,14 @@ export default function MentorPublicationReview({
         p_decision: decision,
         p_note: note || null,
       });
-      if (rpcError) throw rpcError;
+      if (rpcError) {
+        console.error("RPC review_mentor_chapter_submission gagal:", {
+          submissionId: item.id,
+          decision,
+          error: rpcError,
+        });
+        throw rpcError;
+      }
       setRows((current) => current.filter((row) => row.id !== item.id));
       if (decision === "revision_requested") {
         setNotice(`Catatan revisi untuk Bab "${item.title}" berhasil dikirim. Materi resmi tidak berubah.`);
@@ -287,7 +321,8 @@ export default function MentorPublicationReview({
         setNotice(`Seluruh Bab "${item.title}" berhasil diterapkan ke kurikulum resmi. Admin tetap dapat mengedit seluruh isinya melalui Manajemen Materi.`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memproses pengajuan Bab.");
+      console.error("Gagal memproses pengajuan Bab:", err);
+      setError(`Persetujuan pengajuan Bab gagal.\n${formatReviewError(err, "Detail error tidak dikirim oleh server.")}`);
     } finally {
       setBusyId(null);
     }
@@ -307,7 +342,8 @@ export default function MentorPublicationReview({
       setApprovedRows((current) => current.filter((row) => row.id !== item.id));
       setNotice(`Izin revisi untuk Bab "${item.title}" berhasil dibuka. Mentor dapat mengedit dan mengajukan ulang Bab tersebut.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Gagal memberikan izin revisi.");
+      console.error("Gagal memberikan izin revisi Bab:", err);
+      setError(`Pemberian izin revisi gagal.\n${formatReviewError(err, "Detail error tidak dikirim oleh server.")}`);
     } finally {
       setGrantBusyId(null);
     }
@@ -321,7 +357,7 @@ export default function MentorPublicationReview({
         <p className="mt-2 max-w-2xl text-xs leading-6 text-violet-50/90">Admin memeriksa satu Bab secara utuh, termasuk semua Materi Inti dan Mini Materi. Persetujuan menerapkan seluruh snapshot sekaligus; materi resmi tetap berada di bawah kendali Admin.</p>
       </section>
 
-      {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700"><AlertCircle size={15} />{error}</div>}
+      {error && <div role="alert" className="flex items-start gap-2 whitespace-pre-wrap break-words rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-5 text-rose-700"><AlertCircle size={15} />{error}</div>}
       {notice && <div role="status" className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700"><CheckCircle2 size={15} />{notice}</div>}
 
       <section className="grid gap-3 sm:grid-cols-3">
