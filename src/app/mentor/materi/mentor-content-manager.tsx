@@ -210,6 +210,21 @@ function getTikTokPreviewUrl(value: string | null) {
   return id ? `https://www.tiktok.com/embed/v2/${id}` : null;
 }
 
+const NEW_MATERIAL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isNewMaterial(
+  createdAt: string | null | undefined,
+  now: number | null,
+) {
+  if (now === null || !createdAt) return false;
+  const createdAtMs = Date.parse(createdAt);
+  return (
+    Number.isFinite(createdAtMs) &&
+    createdAtMs <= now &&
+    now - createdAtMs <= NEW_MATERIAL_WINDOW_MS
+  );
+}
+
 function sortByPosition<T extends { position: number; created_at?: string; id: string }>(items: T[]) {
   return [...items].sort((a, b) =>
     a.position - b.position ||
@@ -238,6 +253,8 @@ export default function MentorContentManager({
   const [officialSnapshots, setOfficialSnapshots] = useState<Record<string, ChapterPayload>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [clientNow, setClientNow] = useState<number | null>(null);
   const [error, setError] = useState(initialError ?? "");
   const [notice, setNotice] = useState("");
   const [openSectionMenuId, setOpenSectionMenuId] = useState<string | null>(null);
@@ -292,7 +309,8 @@ export default function MentorContentManager({
     })),
   }), [contents, lessons]);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (options?: { preserveView?: boolean }) => {
+    const preserveView = options?.preserveView ?? false;
     if (!courseId) {
       setSections([]);
       setLessons([]);
@@ -301,10 +319,12 @@ export default function MentorContentManager({
       setSubmissions([]);
       setOfficialSnapshots({});
       setLoading(false);
+      setRefreshing(false);
       return;
     }
 
-    setLoading(true);
+    if (preserveView) setRefreshing(true);
+    else setLoading(true);
     setError("");
     try {
       const { data: userResult, error: userError } = await supabase.auth.getUser();
@@ -414,14 +434,18 @@ export default function MentorContentManager({
       setContents(sortByPosition(Array.from(contentMap.values())));
     } catch (err) {
       setError(errorMessage(err));
-      setSections([]);
-      setLessons([]);
-      setContents([]);
-      setDrafts([]);
-      setSubmissions([]);
-      setOfficialSnapshots({});
+      if (!preserveView) {
+        setSections([]);
+        setLessons([]);
+        setContents([]);
+        setDrafts([]);
+        setSubmissions([]);
+        setOfficialSnapshots({});
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
+      setClientNow(Date.now());
     }
   }, [courseId, supabase]);
 
@@ -533,7 +557,7 @@ export default function MentorContentManager({
       setSections(sortByPosition(nextSections));
       setSectionEditor(false);
       setNotice("Draft Bab berhasil disimpan. Tambahkan seluruh materi terlebih dahulu, lalu ajukan Bab saat sudah siap.");
-      await loadData();
+      await loadData({ preserveView: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -572,7 +596,7 @@ export default function MentorContentManager({
         if (discardError) throw discardError;
         setNotice("Draft Bab berhasil dihapus.");
       }
-      await loadData();
+      await loadData({ preserveView: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -588,7 +612,7 @@ export default function MentorContentManager({
     try {
       await persistDraft(section, lessons, contents, false);
       setNotice("Penandaan penghapusan Bab dibatalkan.");
-      await loadData();
+      await loadData({ preserveView: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -707,7 +731,7 @@ export default function MentorContentManager({
       setSelectedLessonPdf(null);
       setExistingLessonPdfName("");
       setNotice("Materi Inti tersimpan di draft Bab. Kamu bisa lanjut menambah Materi Inti dan Mini Materi lainnya.");
-      await loadData();
+      await loadData({ preserveView: true });
     } catch (err) {
       if (newlyUploadedPath) {
         await supabase.storage.from("learning-resources").remove([newlyUploadedPath]);
@@ -743,7 +767,7 @@ export default function MentorContentManager({
       setContents(nextContents);
       if (activeLessonId === lesson.id) setActiveLessonId("");
       setNotice("Materi Inti dihapus dari draft Bab. Perubahan resmi berlaku setelah Bab disetujui Admin.");
-      await loadData();
+      await loadData({ preserveView: true });
     } catch (err) {
 
       setError(errorMessage(err));
@@ -853,7 +877,7 @@ export default function MentorContentManager({
       setContentEditor(false);
       setSelectedFile(null);
       setNotice("Mini Materi tersimpan di draft Bab. Konten resmi peserta belum berubah.");
-      await loadData();
+      await loadData({ preserveView: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -880,7 +904,7 @@ export default function MentorContentManager({
       await persistDraft(section, lessons, nextContents);
       setContents(nextContents);
       setNotice("Mini Materi dihapus dari draft Bab.");
-      await loadData();
+      await loadData({ preserveView: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -913,10 +937,11 @@ export default function MentorContentManager({
       await persistDraft(nextFirst);
       await persistDraft(nextSecond);
       setNotice("Urutan Bab tersimpan sebagai draft. Ajukan masing-masing Bab agar perubahan urutan diterapkan.");
-      await loadData();
+      await loadData({ preserveView: true });
     } catch (err) {
-      setError(errorMessage(err));
-      await loadData();
+      const message = errorMessage(err);
+      await loadData({ preserveView: true });
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -960,10 +985,10 @@ export default function MentorContentManager({
       await persistDraft(section, nextLessons, contents);
       setLessons(sortByPosition(nextLessons));
       setNotice("Urutan Materi Inti tersimpan sebagai draft Bab. Ajukan Bab agar perubahan diterapkan.");
-      await loadData();
+      await loadData({ preserveView: true });
     } catch (err) {
       const message = errorMessage(err);
-      await loadData();
+      await loadData({ preserveView: true });
       setError(message);
     } finally {
       setSaving(false);
@@ -1003,7 +1028,7 @@ export default function MentorContentManager({
       });
       if (submitError) throw submitError;
       setNotice(`Bab \"${section.title}\" berhasil diajukan secara utuh. Semua isinya sekarang menunggu pemeriksaan Admin.`);
-      await loadData();
+      await loadData({ preserveView: true });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -1074,7 +1099,7 @@ export default function MentorContentManager({
             </select>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => void loadData()} disabled={loading || saving} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3.5 text-[10px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"><RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Perbarui</button>
+            <button type="button" onClick={() => void loadData({ preserveView: true })} disabled={loading || refreshing || saving} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 px-3.5 text-[10px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"><RefreshCw size={14} className={loading || refreshing ? "animate-spin" : ""} /> Perbarui</button>
             <button type="button" onClick={() => openSection()} disabled={!courseId || saving} className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-700 px-4 text-[10px] font-bold text-white hover:bg-violet-800 disabled:opacity-50"><Plus size={14} /> Tambah Bab</button>
           </div>
         </div>
@@ -1271,7 +1296,14 @@ export default function MentorContentManager({
                                 <span className={`rounded-full px-2 py-0.5 text-[8px] font-bold ${lesson.status === "published" ? "bg-emerald-50 text-emerald-700" : "bg-violet-50 text-violet-700"}`}>{lesson.status === "published" ? "Terbit saat ini" : "Draft Mentor"}</span>
                                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[8px] font-bold text-slate-600">{lessonContentKindLabel(getLessonContentKind(lesson.video_provider))}</span>
                               </div>
-                              <h4 className="mt-1 text-xs font-extrabold text-slate-900">{lesson.title}</h4>
+                              <h4 className="mt-1 flex flex-wrap items-center gap-2 text-xs font-extrabold text-slate-900">
+                                <span>{lesson.title}</span>
+                                {isNewMaterial(lesson.created_at, clientNow) && (
+                                  <span className="inline-flex items-center rounded-full bg-[#E8F3F1] px-2 py-0.5 text-[9px] font-bold text-[#09483F]">
+                                    Baru
+                                  </span>
+                                )}
+                              </h4>
                               {lesson.content && <p className="mt-1 line-clamp-2 text-[10px] leading-5 text-slate-500">{lesson.content}</p>}
                               <p className="mt-1 text-[9px] text-slate-400">{getLessonContentKind(lesson.video_provider) === "video" ? (lesson.duration_minutes ? `${lesson.duration_minutes} menit` : "Durasi fleksibel") : lessonContentKindLabel(getLessonContentKind(lesson.video_provider))} · {lessonContents.length} Mini Materi</p>
                             </div>

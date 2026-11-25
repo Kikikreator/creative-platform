@@ -42,6 +42,7 @@ import {
   Link2,
   Type,
   MessageSquare,
+  MoreHorizontal,
 } from "lucide-react";
 
 // ==========================================
@@ -458,6 +459,21 @@ function isStorageObjectPath(value: string | null | undefined) {
   return true;
 }
 
+const NEW_MATERIAL_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+function isNewMaterial(
+  createdAt: string | null | undefined,
+  now: number | null,
+) {
+  if (now === null || !createdAt) return false;
+  const createdAtMs = Date.parse(createdAt);
+  return (
+    Number.isFinite(createdAtMs) &&
+    createdAtMs <= now &&
+    now - createdAtMs <= NEW_MATERIAL_WINDOW_MS
+  );
+}
+
 function getStoredFileName(item: LessonContent) {
   const settings = item.settings;
   const storedName = settings && typeof settings.file_name === "string"
@@ -500,6 +516,7 @@ export default function MateriManager({
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [clientNow, setClientNow] = useState<number | null>(null);
 
   const [error, setError] = useState(initialError ?? "");
   const [success, setSuccess] = useState("");
@@ -530,6 +547,11 @@ export default function MateriManager({
   const [reorderingContent, setReorderingContent] = useState(false);
   const [draggedLessonId, setDraggedLessonId] = useState<string | null>(null);
   const [reorderingLessons, setReorderingLessons] = useState(false);
+  const [reorderingSections, setReorderingSections] = useState(false);
+  const [openSectionMenuId, setOpenSectionMenuId] = useState<string | null>(null);
+  const sectionActionsRef = useRef<HTMLDivElement | null>(null);
+  const [openLessonMenuId, setOpenLessonMenuId] = useState<string | null>(null);
+  const lessonActionsRef = useRef<HTMLDivElement | null>(null);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -547,7 +569,8 @@ export default function MateriManager({
   // LOAD SECTIONS AND LESSONS
   // ========================================
 
-  const loadContent = useCallback(async () => {
+  const loadContent = useCallback(async (options?: { preserveView?: boolean }) => {
+    const preserveView = options?.preserveView ?? false;
     const requestId = ++loadRequestRef.current;
 
     if (!selectedCourseId) {
@@ -558,7 +581,7 @@ export default function MateriManager({
       return;
     }
 
-    setLoading(true);
+    if (!preserveView) setLoading(true);
     setError("");
 
     try {
@@ -628,12 +651,15 @@ export default function MateriManager({
           : "Gagal memuat materi pembelajaran."
       );
 
-      setSections([]);
-      setLessons([]);
-      setLessonContents([]);
+      if (!preserveView) {
+        setSections([]);
+        setLessons([]);
+        setLessonContents([]);
+      }
     } finally {
       if (requestId === loadRequestRef.current) {
         setLoading(false);
+        setClientNow(Date.now());
       }
     }
   }, [selectedCourseId, supabase]);
@@ -646,6 +672,46 @@ export default function MateriManager({
       loadRequestRef.current += 1;
     };
   }, [loadContent]);
+
+  useEffect(() => {
+    if (!openSectionMenuId) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !sectionActionsRef.current?.contains(event.target)) {
+        setOpenSectionMenuId(null);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenSectionMenuId(null);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openSectionMenuId]);
+
+  useEffect(() => {
+    if (!openLessonMenuId) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !lessonActionsRef.current?.contains(event.target)) {
+        setOpenLessonMenuId(null);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenLessonMenuId(null);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openLessonMenuId]);
 
   // ========================================
   // STATISTICS
@@ -779,7 +845,7 @@ export default function MateriManager({
       setEditingSectionId(null);
       setSectionForm(emptySection);
 
-      await loadContent();
+      await loadContent({ preserveView: true });
     } catch (err) {
       setError(
         err instanceof Error
@@ -818,7 +884,7 @@ export default function MateriManager({
       if (dbError) throw dbError;
 
       setSuccess("Bab berhasil dihapus.");
-      await loadContent();
+      await loadContent({ preserveView: true });
     } catch (err) {
       setError(
         err instanceof Error
@@ -1015,7 +1081,7 @@ export default function MateriManager({
       setLessonForm(emptyLesson);
       setSelectedLessonPdf(null);
       setExistingLessonPdfName("");
-      await loadContent();
+      await loadContent({ preserveView: true });
     } catch (err) {
       if (newlyUploadedPath && !databaseSaved) {
         await supabase.storage.from(LEARNING_RESOURCE_BUCKET).remove([newlyUploadedPath]);
@@ -1064,7 +1130,7 @@ export default function MateriManager({
       } else {
         setSuccess("Materi berhasil dihapus.");
       }
-      await loadContent();
+      await loadContent({ preserveView: true });
     } catch (err) {
       setError(
         err instanceof Error
@@ -1345,7 +1411,7 @@ export default function MateriManager({
       setExistingContentFileName("");
       setContentEditorOpen(false);
 
-      await loadContent();
+      await loadContent({ preserveView: true });
     } catch (err) {
       if (newlyUploadedPath && !databaseSaved) {
         await supabase.storage
@@ -1397,7 +1463,7 @@ export default function MateriManager({
       }
 
       setSuccess(successMessage);
-      await loadContent();
+      await loadContent({ preserveView: true });
     } catch (err) {
       setContentError(
         err instanceof Error
@@ -1407,6 +1473,83 @@ export default function MateriManager({
     } finally {
       setContentSaving(false);
     }
+  }
+
+  async function reorderSections(sourceId: string, targetId: string) {
+    if (sourceId === targetId || reorderingSections || search.trim()) return;
+
+    const items = [...sections].sort(
+      (a, b) => a.position - b.position ||
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    const fromIndex = items.findIndex((section) => section.id === sourceId);
+    const toIndex = items.findIndex((section) => section.id === targetId);
+    if (fromIndex < 0 || toIndex < 0) return;
+
+    const reordered = [...items];
+    const [moved] = reordered.splice(fromIndex, 1);
+    if (!moved) return;
+    reordered.splice(toIndex, 0, moved);
+
+    setReorderingSections(true);
+    setOpenSectionMenuId(null);
+    setError("");
+    setSuccess("");
+
+    try {
+      // Pindahkan posisi lama sementara agar tidak bentrok dengan unique constraint.
+      const temporaryOffset =
+        Math.max(-1, ...items.map((section) => section.position)) +
+        items.length +
+        1;
+
+      for (let index = 0; index < reordered.length; index += 1) {
+        const { error: dbError } = await supabase
+          .from("course_sections")
+          .update({ position: temporaryOffset + index })
+          .eq("id", reordered[index].id)
+          .eq("course_id", selectedCourseId);
+        if (dbError) throw dbError;
+      }
+
+      for (let index = 0; index < reordered.length; index += 1) {
+        const { error: dbError } = await supabase
+          .from("course_sections")
+          .update({ position: index })
+          .eq("id", reordered[index].id)
+          .eq("course_id", selectedCourseId);
+        if (dbError) throw dbError;
+      }
+
+      await loadContent({ preserveView: true });
+      setSuccess("Urutan Bab berhasil diperbarui.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Gagal mengubah urutan Bab.";
+      // Pulihkan posisi sebelumnya jika salah satu pembaruan urutan gagal.
+      await Promise.all(items.map((section) =>
+        supabase
+          .from("course_sections")
+          .update({ position: section.position })
+          .eq("id", section.id)
+          .eq("course_id", selectedCourseId)
+      )).catch(() => undefined);
+      await loadContent({ preserveView: true });
+      setError(message);
+    } finally {
+      setReorderingSections(false);
+    }
+  }
+
+  function moveSectionByOne(section: Section, direction: -1 | 1) {
+    if (search.trim() || reorderingSections) return;
+    const ordered = [...sections].sort(
+      (a, b) => a.position - b.position ||
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+    const index = ordered.findIndex((item) => item.id === section.id);
+    const target = ordered[index + direction];
+    if (!target) return;
+    void reorderSections(section.id, target.id);
   }
 
   async function reorderLessonsInSection(
@@ -1474,15 +1617,14 @@ export default function MateriManager({
         if (dbError) throw dbError;
       }
 
-      await loadContent();
+      await loadContent({ preserveView: true });
       setSuccess("Urutan materi dalam bab berhasil diperbarui.");
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Gagal mengubah urutan materi dalam bab."
-      );
-      await loadContent();
+      const message = err instanceof Error
+        ? err.message
+        : "Gagal mengubah urutan materi dalam bab.";
+      await loadContent({ preserveView: true });
+      setError(message);
     } finally {
       setReorderingLessons(false);
       setDraggedLessonId(null);
@@ -1548,7 +1690,7 @@ export default function MateriManager({
         if (dbError) throw dbError;
       }
 
-      await loadContent();
+      await loadContent({ preserveView: true });
       setSuccess("Urutan mini materi berhasil diperbarui.");
     } catch (err) {
       setContentError(
@@ -1556,7 +1698,7 @@ export default function MateriManager({
           ? err.message
           : "Gagal mengubah urutan mini materi."
       );
-      await loadContent();
+      await loadContent({ preserveView: true });
     } finally {
       setReorderingContent(false);
       setDraggedContentId(null);
@@ -1908,6 +2050,7 @@ export default function MateriManager({
 
               visibleSections.map((section) => {
 
+                const sectionIndex = sections.findIndex((item) => item.id === section.id);
                 const sectionLessons = lessons.filter(
                   (lesson) => lesson.section_id === section.id
                 );
@@ -1963,43 +2106,84 @@ export default function MateriManager({
 
                       </div>
 
-                      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-
+                      <div className="flex shrink-0 items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => moveSectionByOne(section, -1)}
+                          disabled={sectionIndex <= 0 || Boolean(search.trim()) || reorderingSections}
+                          aria-label={`Pindah Bab ${sectionIndex + 1} ke atas`}
+                          title="Pindah Bab ke atas"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                          <ArrowUp size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveSectionByOne(section, 1)}
+                          disabled={sectionIndex < 0 || sectionIndex >= sections.length - 1 || Boolean(search.trim()) || reorderingSections}
+                          aria-label={`Pindah Bab ${sectionIndex + 1} ke bawah`}
+                          title="Pindah Bab ke bawah"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                        >
+                          <ArrowDown size={15} />
+                        </button>
                         <button
                           type="button"
                           onClick={() => openCreateLesson(section.id)}
                           aria-label="Tambah Materi"
                           title="Tambah Materi"
-                          className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#260047] text-white transition hover:bg-[#09483F] sm:h-9 sm:w-9"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#260047] text-white transition hover:bg-[#09483F]"
                         >
-                          <Plus size={14} />
+                          <Plus size={15} />
                         </button>
-
-                        <button
-                          type="button"
-                          onClick={() => openEditSection(section)}
-                          aria-label="Edit Bab"
-                          className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 sm:h-9 sm:w-9"
-                          title="Edit Bab"
-                        >
-                          <Pencil size={15} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteSection(section)}
-                          disabled={deletingId === section.id}
-                          aria-label="Hapus Bab"
-                          className="flex h-10 w-10 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 transition hover:bg-rose-50 disabled:opacity-50 sm:h-9 sm:w-9"
-                          title="Hapus Bab"
-                        >
-                          {deletingId === section.id ? (
-                            <RefreshCw size={15} className="animate-spin" />
-                          ) : (
-                            <Trash2 size={15} />
+                        <div ref={openSectionMenuId === section.id ? sectionActionsRef : null} className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setOpenSectionMenuId((current) => current === section.id ? null : section.id)}
+                            aria-label={`Aksi lainnya untuk Bab ${sectionIndex + 1}`}
+                            aria-haspopup="menu"
+                            aria-expanded={openSectionMenuId === section.id}
+                            aria-controls={openSectionMenuId === section.id ? `admin-section-actions-${section.id}` : undefined}
+                            title="Aksi Bab"
+                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#260047]"
+                          >
+                            <MoreHorizontal size={18} />
+                          </button>
+                          {openSectionMenuId === section.id && (
+                            <div
+                              id={`admin-section-actions-${section.id}`}
+                              role="menu"
+                              aria-label={`Aksi Bab ${section.title}`}
+                              className="absolute right-0 top-full z-40 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_12px_30px_rgba(25,15,40,.16)]"
+                            >
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  setOpenSectionMenuId(null);
+                                  openEditSection(section);
+                                }}
+                                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                              >
+                                <Pencil size={15} className="text-slate-500" />
+                                Edit Bab
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  setOpenSectionMenuId(null);
+                                  void handleDeleteSection(section);
+                                }}
+                                disabled={deletingId === section.id}
+                                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                {deletingId === section.id ? <RefreshCw size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                                Hapus Bab
+                              </button>
+                            </div>
                           )}
-                        </button>
-
+                        </div>
                       </div>
 
                     </div>
@@ -2106,8 +2290,13 @@ export default function MateriManager({
 
                               <div className="min-w-0">
 
-                                <h5 className="break-words text-sm font-semibold text-slate-800">
-                                  {lesson.title}
+                                <h5 className="flex flex-wrap items-center gap-2 break-words text-sm font-semibold text-slate-800">
+                                  <span>{lesson.title}</span>
+                                  {isNewMaterial(lesson.created_at, clientNow) && (
+                                    <span className="inline-flex items-center rounded-full bg-[#E8F3F1] px-2 py-0.5 text-[9px] font-bold text-[#09483F]">
+                                      Baru
+                                    </span>
+                                  )}
                                 </h5>
 
                                 <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -2195,30 +2384,61 @@ export default function MateriManager({
                                 <ListPlus size={16} />
                               </button>
 
-                              <button
-                                type="button"
-                                onClick={() => openEditLesson(lesson)}
-                                aria-label="Edit Materi"
-                                title="Edit Materi"
-                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 sm:h-9 sm:w-9"
+                              <div
+                                ref={openLessonMenuId === lesson.id ? lessonActionsRef : null}
+                                className="relative"
                               >
-                                <Pencil size={15} />
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteLesson(lesson)}
-                                disabled={deletingId === lesson.id}
-                                aria-label="Hapus Materi"
-                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 transition hover:bg-rose-50 disabled:opacity-50 sm:h-9 sm:w-9"
-                                title="Hapus Materi"
-                              >
-                                {deletingId === lesson.id ? (
-                                  <RefreshCw size={15} className="animate-spin" />
-                                ) : (
-                                  <Trash2 size={15} />
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenLessonMenuId((current) => current === lesson.id ? null : lesson.id)}
+                                  aria-label={`Aksi lainnya untuk materi ${lesson.title}`}
+                                  aria-haspopup="menu"
+                                  aria-expanded={openLessonMenuId === lesson.id}
+                                  aria-controls={openLessonMenuId === lesson.id ? `admin-lesson-actions-${lesson.id}` : undefined}
+                                  title="Aksi Materi"
+                                  className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#260047] sm:h-9 sm:w-9"
+                                >
+                                  <MoreHorizontal size={18} />
+                                </button>
+                                {openLessonMenuId === lesson.id && (
+                                  <div
+                                    id={`admin-lesson-actions-${lesson.id}`}
+                                    role="menu"
+                                    aria-label={`Aksi materi ${lesson.title}`}
+                                    className="absolute right-0 top-full z-50 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_12px_30px_rgba(25,15,40,.16)]"
+                                  >
+                                    <button
+                                      type="button"
+                                      role="menuitem"
+                                      onClick={() => {
+                                        setOpenLessonMenuId(null);
+                                        openEditLesson(lesson);
+                                      }}
+                                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                    >
+                                      <Pencil size={15} className="text-slate-500" />
+                                      Edit Materi
+                                    </button>
+                                    <button
+                                      type="button"
+                                      role="menuitem"
+                                      onClick={() => {
+                                        setOpenLessonMenuId(null);
+                                        handleDeleteLesson(lesson);
+                                      }}
+                                      disabled={deletingId === lesson.id}
+                                      className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs font-medium text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    >
+                                      {deletingId === lesson.id ? (
+                                        <RefreshCw size={15} className="animate-spin" />
+                                      ) : (
+                                        <Trash2 size={15} />
+                                      )}
+                                      Hapus Materi
+                                    </button>
+                                  </div>
                                 )}
-                              </button>
+                              </div>
 
                             </div>
 
