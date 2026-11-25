@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import CourseCertificatePanel from "@/components/certificates/course-certificate-panel";
 import LogoutButton from "@/components/auth/logout-button";
+import MentorModeSwitcher from "@/components/mentor/mentor-mode-switcher";
 import { TaskRichTextContent } from "@/components/ui/task-rich-text";
 import {
   useEffect,
@@ -200,6 +201,7 @@ type LearningRoomProps = {
   taskLoadError: string | null;
   submissionLoadError: string | null;
   completedLessonIds?: string[];
+  readOnly?: boolean;
 };
 // =====================================================
 // HELPERS
@@ -1798,6 +1800,65 @@ function TaskSubmissionCard({
   );
 }
 
+function TaskReadOnlyCard({ task }: { task: LearningTask }) {
+  const referenceUrl = getSafeUrl(task.reference_url);
+  const maxScore = Number(task.max_score);
+
+  return (
+    <section className="kcc-active-lesson-card scroll-mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-teal-100 bg-gradient-to-r from-teal-50 via-white to-violet-50 p-4 sm:p-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-100 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-teal-800">
+            <ClipboardList size={13} /> Tugas Kelas
+          </span>
+          <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-bold text-slate-600">
+            Pratinjau · Hanya Lihat
+          </span>
+          {task.is_required && (
+            <span className="rounded-full bg-rose-50 px-3 py-1.5 text-[10px] font-bold text-rose-700">Wajib</span>
+          )}
+        </div>
+
+        <h2 className="mt-4 break-words text-xl font-bold leading-tight text-slate-900 sm:text-2xl">{task.title}</h2>
+        {task.description && (
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-slate-600">{task.description}</p>
+        )}
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-[11px] font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200">
+            <FileText size={14} className="text-teal-700" /> {getSubmissionTypeLabel(task.submission_type)}
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-[11px] font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200">
+            <ClipboardCheck size={14} className="text-teal-700" /> Nilai maksimal {Number.isFinite(maxScore) ? maxScore : task.max_score}
+          </span>
+          <span className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-[11px] font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200">
+            <Clock3 size={14} className="text-amber-700" /> {formatTaskDateTime(task.due_at)}
+          </span>
+        </div>
+
+        {referenceUrl && (
+          <a href={referenceUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-teal-800">
+            {task.reference_label?.trim() || "Buka Referensi"} <ExternalLink size={13} />
+          </a>
+        )}
+      </div>
+
+      <div className="space-y-4 p-4 sm:p-6">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-teal-700">Instruksi Tugas</p>
+          <TaskRichTextContent value={task.instructions || "Belum ada instruksi tugas."} />
+        </div>
+        <div className="flex items-start gap-3 rounded-2xl border border-teal-100 bg-teal-50/70 p-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-teal-800"><BookOpen size={17} /></span>
+          <p className="text-xs leading-6 text-teal-900">
+            Kamu sedang menggunakan Mode Member untuk meninjau kelas yang diampu. Formulir pengerjaan dan pengumpulan tugas tidak tersedia, serta aktivitas ini tidak mengubah progres atau jumlah peserta kelas.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 // =====================================================
 // CURRICULUM SIDEBAR
 // =====================================================
@@ -1818,6 +1879,7 @@ type CurriculumPanelProps = {
   showHeading?: boolean;
   compact?: boolean;
   searchEnabled?: boolean;
+  readOnly?: boolean;
 };
 
 function CurriculumPanel({
@@ -1837,6 +1899,7 @@ function CurriculumPanel({
   showHeading = true,
   compact = false,
   searchEnabled = false,
+  readOnly = false,
 }: CurriculumPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const normalizedSearch = searchQuery.trim().toLocaleLowerCase("id-ID");
@@ -2058,17 +2121,21 @@ function CurriculumPanel({
                                     {task.title}
                                   </p>
                                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                    <span
-                                      className={`rounded-full px-2 py-1 text-[9px] font-bold ${
-                                        submissionLoadError
-                                          ? "bg-amber-100 text-amber-800"
-                                          : getSubmissionStatusClass(submission)
-                                      }`}
-                                    >
-                                      {submissionLoadError
-                                        ? "Status tidak tersedia"
-                                        : getSubmissionStatusLabel(submission)}
-                                    </span>
+                                    {readOnly ? (
+                                      <span className="rounded-full bg-teal-50 px-2 py-1 text-[9px] font-bold text-teal-800">Tugas kelas</span>
+                                    ) : (
+                                      <span
+                                        className={`rounded-full px-2 py-1 text-[9px] font-bold ${
+                                          submissionLoadError
+                                            ? "bg-amber-100 text-amber-800"
+                                            : getSubmissionStatusClass(submission)
+                                        }`}
+                                      >
+                                        {submissionLoadError
+                                          ? "Status tidak tersedia"
+                                          : getSubmissionStatusLabel(submission)}
+                                      </span>
+                                    )}
                                     <span className="text-[9px] text-slate-400">
                                       {getSubmissionTypeLabel(task.submission_type)}
                                     </span>
@@ -2190,6 +2257,7 @@ export default function LearningRoom({
   taskLoadError,
   submissionLoadError,
   completedLessonIds: initialCompletedLessonIds = [],
+  readOnly = false,
 }: LearningRoomProps) {
   const supabase = useMemo(() => createClient(), []);
 
@@ -2197,6 +2265,7 @@ export default function LearningRoom({
     eventType: "lesson_open" | "task_open" | "lesson_complete",
     metadata: Record<string, string>
   ) {
+    if (readOnly) return;
     void (supabase as any)
       .from("platform_activity_logs")
       .insert({
@@ -2437,7 +2506,7 @@ export default function LearningRoom({
   }
 
   async function handleMarkLessonComplete() {
-    if (!course || !activeLesson || completedLessonIds.includes(activeLesson.id)) return;
+    if (readOnly || !course || !activeLesson || completedLessonIds.includes(activeLesson.id)) return;
     setMarkingLesson(true);
     setLessonProgressError("");
     const { error } = await (supabase as any).rpc("mark_course_lesson_complete", {
@@ -2537,11 +2606,11 @@ export default function LearningRoom({
             </div>
           )}
           <Link
-            href="/dashboard"
+            href={readOnly ? "/mentor/member" : "/dashboard"}
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-700 px-5 py-3 text-sm font-bold text-white hover:bg-violet-800"
           >
             <ArrowLeft size={16} />
-            Kembali ke Dashboard
+            {readOnly ? "Kembali ke Daftar Kelas" : "Kembali ke Dashboard"}
           </Link>
         </div>
       </main>
@@ -2562,8 +2631,8 @@ export default function LearningRoom({
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
               <div className="flex min-w-0 items-center gap-3">
                 <Link
-                  href="/dashboard"
-                  aria-label="Kembali ke dashboard"
+                  href={readOnly ? "/mentor/member" : "/dashboard"}
+                  aria-label={readOnly ? "Kembali ke daftar kelas" : "Kembali ke dashboard"}
                   className="kcc-compact-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
                 >
                   <ArrowLeft size={19} />
@@ -2571,10 +2640,10 @@ export default function LearningRoom({
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-violet-700">
-                      Kiki Creator Class / Ruang Belajar
+                      {readOnly ? "Kiki Creator Class / Mode Member" : "Kiki Creator Class / Ruang Belajar"}
                     </p>
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
-                      Akses Aktif
+                    <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${readOnly ? "bg-teal-50 text-teal-800" : "bg-emerald-50 text-emerald-700"}`}>
+                      {readOnly ? "Pratinjau · Hanya Lihat" : "Akses Aktif"}
                     </span>
                   </div>
                   <h1 className="mt-1 truncate text-base font-bold text-slate-900 sm:text-lg">
@@ -2587,44 +2656,41 @@ export default function LearningRoom({
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 pl-0 lg:justify-end">
-                <Link
-                  href="/dashboard#pembelian"
-                  className="kcc-compact-control inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
-                >
-                  Pembelian
-                </Link>
-                <Link
-                  href="/kelas"
-                  className="kcc-compact-control inline-flex h-9 items-center gap-2 rounded-xl bg-violet-700 px-3 text-xs font-semibold text-white transition hover:bg-violet-800"
-                >
-                  Jelajahi Kelas
-                  <ArrowRight size={14} />
-                </Link>
-                <LogoutButton compact />
+                {readOnly ? (
+                  <>
+                    <Link href="/mentor/member" className="kcc-compact-control inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-800">
+                      <ArrowLeft size={14} /> Daftar Kelas
+                    </Link>
+                    <MentorModeSwitcher activeMode="member" compact />
+                  </>
+                ) : (
+                  <>
+                    <Link href="/dashboard#pembelian" className="kcc-compact-control inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800">Pembelian</Link>
+                    <Link href="/kelas" className="kcc-compact-control inline-flex h-9 items-center gap-2 rounded-xl bg-violet-700 px-3 text-xs font-semibold text-white transition hover:bg-violet-800">Jelajahi Kelas <ArrowRight size={14} /></Link>
+                    <LogoutButton compact />
+                  </>
+                )}
               </div>
             </div>
-            <div className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-3">
-              <span className="shrink-0 text-[10px] font-semibold text-slate-500">
-                Posisi belajar
-              </span>
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className="h-full rounded-full bg-violet-600 transition-all duration-300"
-                  style={{ width: `${positionPercent}%` }}
-                />
+            {readOnly ? (
+              <div className="mt-4 border-t border-teal-100 pt-3 text-[10px] font-semibold text-teal-800">
+                Mode Member aktif · Materi dan tugas dapat dilihat, tetapi progres tidak disimpan.
               </div>
-              <span className="shrink-0 text-[10px] font-bold tabular-nums text-violet-800">
-                {activeLessonIndex >= 0 ? activeLessonIndex + 1 : 0} / {orderedLessons.length} materi
-              </span>
-            </div>
+            ) : (
+              <div className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-3">
+                <span className="shrink-0 text-[10px] font-semibold text-slate-500">Posisi belajar</span>
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-violet-600 transition-all duration-300" style={{ width: `${positionPercent}%` }} /></div>
+                <span className="shrink-0 text-[10px] font-bold tabular-nums text-violet-800">{activeLessonIndex >= 0 ? activeLessonIndex + 1 : 0} / {orderedLessons.length} materi</span>
+              </div>
+            )}
           </div>
 
           {/* MOBILE HEADER — fokus pada kelas dan progres belajar */}
           <div className="kcc-learning-header-mobile p-4 lg:hidden">
             <div className="flex min-w-0 items-start gap-3">
               <Link
-                href="/dashboard"
-                aria-label="Kembali ke dashboard"
+                href={readOnly ? "/mentor/member" : "/dashboard"}
+                aria-label={readOnly ? "Kembali ke daftar kelas" : "Kembali ke dashboard"}
                 className="kcc-mobile-back flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#eee8f5] bg-white text-[#432263] shadow-sm"
               >
                 <ArrowLeft size={19} />
@@ -2632,11 +2698,11 @@ export default function LearningRoom({
 
               <div className="min-w-0 flex-1">
                 <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                  <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-700">
-                    Akses aktif
+                  <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${readOnly ? "bg-teal-50 text-teal-800" : "bg-emerald-50 text-emerald-700"}`}>
+                    {readOnly ? "Hanya Lihat" : "Akses aktif"}
                   </span>
                   <span className="text-[9px] font-semibold uppercase tracking-[.14em] text-[#9a91a7]">
-                    Ruang belajar
+                    {readOnly ? "Mode Member" : "Ruang belajar"}
                   </span>
                 </div>
                 <h1 className="break-words text-[17px] font-extrabold leading-tight tracking-[-.035em] text-[#21152f]">
@@ -2648,33 +2714,25 @@ export default function LearningRoom({
               </div>
 
               <div className="shrink-0">
-                <LogoutButton compact />
+                {readOnly ? <MentorModeSwitcher activeMode="member" compact /> : <LogoutButton compact />}
               </div>
             </div>
 
-            <div className="mt-4 border-t border-[#f0edf4] pt-3">
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <span className="text-[11px] font-semibold text-slate-500">
-                  Progres belajar
-                </span>
-                <span className="shrink-0 text-[11px] font-extrabold tabular-nums text-[#432263]">
-                  {activeLessonIndex >= 0 ? activeLessonIndex + 1 : 0} dari {orderedLessons.length} materi
-                </span>
+            {readOnly ? (
+              <div className="mt-4 border-t border-teal-100 pt-3 text-[10px] font-semibold leading-5 text-teal-800">
+                Mode Member aktif · Kamu hanya dapat melihat materi dan instruksi tugas.
               </div>
-              <div
-                className="h-2 overflow-hidden rounded-full bg-[#f0edf5]"
-                role="progressbar"
-                aria-label="Progres posisi belajar"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={Math.round(positionPercent)}
-              >
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#260047] to-[#7650b8] transition-all duration-300"
-                  style={{ width: `${positionPercent}%` }}
-                />
+            ) : (
+              <div className="mt-4 border-t border-[#f0edf4] pt-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <span className="text-[11px] font-semibold text-slate-500">Progres belajar</span>
+                  <span className="shrink-0 text-[11px] font-extrabold tabular-nums text-[#432263]">{activeLessonIndex >= 0 ? activeLessonIndex + 1 : 0} dari {orderedLessons.length} materi</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-[#f0edf5]" role="progressbar" aria-label="Progres posisi belajar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(positionPercent)}>
+                  <div className="h-full rounded-full bg-gradient-to-r from-[#260047] to-[#7650b8] transition-all duration-300" style={{ width: `${positionPercent}%` }} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </header>
         {/* =============================================
@@ -2755,22 +2813,26 @@ export default function LearningRoom({
                 id="active-task"
                 className="scroll-mt-5"
               >
-                <TaskSubmissionCard
-                  key={activeTask.id}
-                  task={activeTask}
-                  submission={taskSubmissions.find(
-                    (item) => item.task_id === activeTask.id
-                  )}
-                  userId={userId}
-                  supabase={supabase}
-                  onSaved={handleTaskSubmissionSaved}
-                  submissionLoadError={submissionLoadError}
-                  onBackToLesson={
-                    selectedLesson
-                      ? () => handleSelectLesson(selectedLesson)
-                      : undefined
-                  }
-                />
+                {readOnly ? (
+                  <TaskReadOnlyCard key={activeTask.id} task={activeTask} />
+                ) : (
+                  <TaskSubmissionCard
+                    key={activeTask.id}
+                    task={activeTask}
+                    submission={taskSubmissions.find(
+                      (item) => item.task_id === activeTask.id
+                    )}
+                    userId={userId}
+                    supabase={supabase}
+                    onSaved={handleTaskSubmissionSaved}
+                    submissionLoadError={submissionLoadError}
+                    onBackToLesson={
+                      selectedLesson
+                        ? () => handleSelectLesson(selectedLesson)
+                        : undefined
+                    }
+                  />
+                )}
               </div>
             ) : (
             <section
@@ -2980,7 +3042,7 @@ export default function LearningRoom({
             )}
             {activeLesson && (
               <>
-                <section className="kcc-lesson-status-card rounded-2xl bg-white p-3.5 shadow-[0_8px_24px_rgba(47,30,82,.045)] sm:p-5">
+                {!readOnly && <section className="kcc-lesson-status-card rounded-2xl bg-white p-3.5 shadow-[0_8px_24px_rgba(47,30,82,.045)] sm:p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-start gap-3">
                       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${completedLessonIds.includes(activeLesson.id) ? "bg-emerald-50 text-emerald-700" : "bg-violet-50 text-violet-700"}`}>
@@ -3006,7 +3068,7 @@ export default function LearningRoom({
                     </button>
                   </div>
                   {lessonProgressError && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-[10px] text-rose-700">{lessonProgressError}</p>}
-                </section>
+                </section>}
                 {/* =========================================
                     PREVIOUS / NEXT LESSON
                 ========================================= */}
@@ -3074,7 +3136,7 @@ export default function LearningRoom({
                 </section>
               </>
             )}
-            <CourseCertificatePanel courseId={course.id} refreshKey={certificateRefreshKey} />
+            {!readOnly && <CourseCertificatePanel courseId={course.id} refreshKey={certificateRefreshKey} />}
             {/* SMALL COURSE FOOTER */}
             <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-5 text-[10px] text-slate-400">
               <div className="flex items-center gap-2">
@@ -3085,7 +3147,7 @@ export default function LearningRoom({
                 Mentor: {course.mentor_name || "Kiki Creator Class"}
               </span>
               <span>
-                Akses sejak {formatShortDate(grantedAt)}
+                {readOnly ? "Pratinjau kelas oleh Mentor" : `Akses sejak ${formatShortDate(grantedAt)}`}
               </span>
             </div>
           </div>
@@ -3101,6 +3163,7 @@ export default function LearningRoom({
                 tasks={publishedTasks}
                 submissions={taskSubmissions}
                 submissionLoadError={submissionLoadError}
+                readOnly={readOnly}
                 activeLessonId={activeLesson?.id ?? ""}
                 activeTaskId={activeTask?.id ?? ""}
                 completedLessonIds={completedLessonIds}
@@ -3164,6 +3227,7 @@ export default function LearningRoom({
                   tasks={publishedTasks}
                   submissions={taskSubmissions}
                   submissionLoadError={submissionLoadError}
+                  readOnly={readOnly}
                   activeLessonId={activeLesson?.id ?? ""}
                   activeTaskId={activeTask?.id ?? ""}
                   completedLessonIds={completedLessonIds}

@@ -103,6 +103,12 @@ export const mentorNavigation: MentorNavSection[] = [
 ];
 
 export function getMentorPageMeta(pathname: string) {
+  if (pathname === "/mentor/member") {
+    return {
+      title: "Mode Member",
+      description: "Tinjau materi dan tugas pada kelas yang kamu ampu.",
+    };
+  }
   if (pathname === "/mentor") {
     return {
       title: "Dashboard Mentor",

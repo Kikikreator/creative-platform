@@ -131,16 +131,39 @@ export async function proxy(request: NextRequest) {
       return redirectWithCookies(request, supabaseResponse, workspace);
     }
 
+    const mentorMode = request.cookies.get("kcc_mentor_mode")?.value === "member"
+      ? "member"
+      : "mentor";
+
     if (isMentorRoute && primaryRole !== "instructor") {
       return redirectWithCookies(request, supabaseResponse, workspace);
+    }
+
+    // Saat Mode Member aktif, Mentor hanya boleh membuka halaman daftar kelas.
+    // Semua workspace Mentor lainnya diarahkan kembali ke Mode Member.
+    if (isMentorRoute && primaryRole === "instructor") {
+      if (mentorMode === "member" && pathname !== "/mentor/member") {
+        return redirectWithCookies(request, supabaseResponse, "/mentor/member");
+      }
+      if (mentorMode !== "member" && pathname === "/mentor/member") {
+        return redirectWithCookies(request, supabaseResponse, "/mentor");
+      }
     }
 
     if (isDashboardRoute && primaryRole !== "member") {
       return redirectWithCookies(request, supabaseResponse, workspace);
     }
 
-    // Checkout dan ruang belajar adalah fitur peserta, bukan fitur Mentor/Admin.
-    if ((isCheckoutRoute || isLearningRoute) && primaryRole !== "member") {
+    // Mentor hanya boleh membuka ruang belajar melalui Mode Member.
+    // Pemeriksaan penugasan kelas tetap dilakukan lagi di page server.
+    const mentorPreviewAllowed =
+      primaryRole === "instructor" && mentorMode === "member";
+
+    if (isCheckoutRoute && primaryRole !== "member") {
+      return redirectWithCookies(request, supabaseResponse, workspace);
+    }
+
+    if (isLearningRoute && primaryRole !== "member" && !mentorPreviewAllowed) {
       return redirectWithCookies(request, supabaseResponse, workspace);
     }
   }

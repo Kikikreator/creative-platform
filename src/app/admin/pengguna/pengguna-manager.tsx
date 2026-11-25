@@ -513,7 +513,8 @@ function StatCard({
         </div>
 
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconBackground} ${iconColor}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${iconBackground}`}
+          style={{ color: iconColor }}
         >
           <Icon size={19} strokeWidth={1.8} />
         </div>
@@ -631,6 +632,8 @@ export default function PenggunaManager({
   const [activeTab, setActiveTab] = useState<"users" | "participants">("users");
 
   const [saving, setSaving] = useState(false);
+
+  const [mentorBusyId, setMentorBusyId] = useState<string | null>(null);
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -873,6 +876,76 @@ export default function PenggunaManager({
     setSelectedDetailMember(member);
   }
 
+  // Pemulihan akun yang sudah terdaftar tetapi belum menerima role Mentor.
+  // RPC memeriksa role Administrator di database sehingga tidak bergantung
+  // pada pemeriksaan UI saja.
+  async function activateMentor(member: MemberRow) {
+    if (member.roles.includes("instructor")) {
+      setSuccess(`${member.full_name} sudah memiliki role Mentor.`);
+      return;
+    }
+
+    if (member.roles.includes("admin")) {
+      setError("Akun Administrator tidak dapat diubah menjadi Mentor.");
+      return;
+    }
+
+    const confirmed = await confirmDialog({
+      title: "Aktifkan role Mentor?",
+      message: `Berikan akses Mentor kepada akun ${member.full_name}? Akun ini tidak perlu mendaftar ulang. Setelah berhasil, akun akan muncul di halaman Manajemen Mentor.`,
+      confirmLabel: "Aktifkan Mentor",
+    });
+
+    if (!confirmed) return;
+
+    setMentorBusyId(member.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const { error: activationError } = await supabase.rpc(
+        "admin_activate_mentor",
+        { p_user_id: member.id },
+      );
+
+      if (activationError) throw activationError;
+
+      const updatedRoles = Array.from(new Set([...member.roles, "instructor"]));
+
+      setMembers((current) =>
+        current.map((item) =>
+          item.id === member.id
+            ? { ...item, roles: updatedRoles, role: "instructor" }
+            : item
+        )
+      );
+
+      setSelectedMember((current) =>
+        current?.id === member.id
+          ? { ...current, roles: updatedRoles, role: "instructor" }
+          : current
+      );
+
+      setSelectedDetailMember((current) =>
+        current?.id === member.id
+          ? { ...current, roles: updatedRoles, role: "instructor" }
+          : current
+      );
+
+      setSuccess(
+        `Role Mentor berhasil diaktifkan untuk ${member.full_name}. Buka Manajemen Mentor dan tekan Perbarui Data.`
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Gagal mengaktifkan role Mentor. Pastikan SQL perbaikan sudah dijalankan."
+      );
+    } finally {
+      setMentorBusyId(null);
+    }
+  }
+
   function closeDetail() {
     setSelectedDetailMember(null);
   }
@@ -1068,14 +1141,23 @@ export default function PenggunaManager({
   // STATISTICS
   // ----------------------------------------------------
 
-  const stats = [
+  type StatCardData = {
+    title: string;
+    value: number;
+    description: string;
+    icon: typeof Users;
+    iconBackground: string;
+    iconColor: string;
+  };
+
+  const stats: StatCardData[] = [
     {
       title: "Total Akun",
       value: members.length,
       description: "Seluruh pengguna terdaftar",
       icon: Users,
       iconBackground: "bg-[#F3EEFF]",
-      iconColor: "text-[#6D28D9]",
+      iconColor: "#6D28D9",
     },
     {
       title: "Memiliki Akses",
@@ -1083,7 +1165,7 @@ export default function PenggunaManager({
       description: "Member dengan kelas aktif",
       icon: BookOpen,
       iconBackground: "bg-[#F0EAFE]",
-      iconColor: "text-[#8B5CF6]",
+      iconColor: "#8B5CF6",
     },
     {
       title: "Total Enrollment",
@@ -1091,7 +1173,7 @@ export default function PenggunaManager({
       description: "Seluruh akses kelas aktif",
       icon: CheckCircle2,
       iconBackground: "bg-[#F0EAFE]",
-      iconColor: "text-[#7C3AED]",
+      iconColor: "#7C3AED",
     },
     {
       title: "Administrator",
@@ -1099,7 +1181,7 @@ export default function PenggunaManager({
       description: "Akun pengelola platform",
       icon: ShieldCheck,
       iconBackground: "bg-[#EEEAFE]",
-      iconColor: "text-[#7663B7]",
+      iconColor: "#7663B7",
     },
   ];
 
@@ -1570,6 +1652,18 @@ export default function PenggunaManager({
 
                       <td className="px-7 py-5 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {!member.roles.includes("instructor") && !member.roles.includes("admin") && (
+                            <button
+                              type="button"
+                              onClick={() => void activateMentor(member)}
+                              disabled={mentorBusyId === member.id}
+                              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 text-[11px] font-semibold text-violet-800 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+                              title="Aktifkan akun ini sebagai Mentor"
+                            >
+                              <GraduationCap size={14} />
+                              {mentorBusyId === member.id ? "Memproses..." : "Jadikan Mentor"}
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => openDetail(member)}
@@ -1658,6 +1752,17 @@ export default function PenggunaManager({
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
+                      {!member.roles.includes("instructor") && !member.roles.includes("admin") && (
+                        <button
+                          type="button"
+                          onClick={() => void activateMentor(member)}
+                          disabled={mentorBusyId === member.id}
+                          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-violet-50 px-3 text-[11px] font-semibold text-violet-800 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <GraduationCap size={14} />
+                          {mentorBusyId === member.id ? "Memproses..." : "Jadikan Mentor"}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => openDetail(member)}
@@ -1864,8 +1969,20 @@ export default function PenggunaManager({
                       "Nomor belum tersedia"}
                   </p>
 
-                  <div className="mt-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     <RoleBadges roles={selectedMember.roles} compact />
+                    {!selectedMember.roles.includes("instructor") && !selectedMember.roles.includes("admin") && (
+                      <button
+                        type="button"
+                        onClick={() => void activateMentor(selectedMember)}
+                        disabled={mentorBusyId === selectedMember.id}
+                        className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 text-[10px] font-semibold text-violet-800 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-60"
+                        title="Aktifkan akun ini sebagai Mentor"
+                      >
+                        <GraduationCap size={13} />
+                        {mentorBusyId === selectedMember.id ? "Memproses..." : "Jadikan Mentor"}
+                      </button>
+                    )}
                   </div>
                 </div>
 

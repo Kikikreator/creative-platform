@@ -133,6 +133,25 @@ export default function RegisterPage() {
             return;
           }
 
+          // Jangan menganggap undangan berhasil hanya karena RPC tidak error.
+          // Pastikan role instructor benar-benar sudah tercatat.
+          const { data: acceptedRoleRows, error: acceptedRoleError } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id);
+
+          if (acceptedRoleError) {
+            setError("Undangan diproses, tetapi role Mentor belum dapat diverifikasi. Silakan muat ulang halaman.");
+            setCheckingSession(false);
+            return;
+          }
+
+          if (!normalizeRoles(acceptedRoleRows).includes("instructor")) {
+            setError("Undangan belum mengaktifkan role Mentor. Hubungi Administrator untuk pemeriksaan.");
+            setCheckingSession(false);
+            return;
+          }
+
           router.replace("/mentor");
           router.refresh();
           return;
@@ -266,9 +285,16 @@ export default function RegisterPage() {
           email: normalizedEmail,
           password,
           options: {
-            emailRedirectTo: alumniFlow
-              ? `${window.location.origin}/login?next=${encodeURIComponent(alumniNextPath)}`
-              : undefined,
+            // Setelah verifikasi email, kembalikan calon Mentor ke halaman
+            // registrasi dengan token undangan yang sama. Halaman registrasi
+            // akan mendeteksi sesi aktif lalu menjalankan accept_mentor_invitation.
+            emailRedirectTo: mentorInvite
+              ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+                  `/register?mentor_invite=${encodeURIComponent(mentorInvite)}`
+                )}`
+              : alumniFlow
+                ? `${window.location.origin}/login?next=${encodeURIComponent(alumniNextPath)}`
+                : undefined,
             data: {
               full_name: name,
               phone: normalizedWhatsapp,
@@ -296,6 +322,16 @@ export default function RegisterPage() {
           { p_token: mentorInvite },
         );
         if (inviteError) throw inviteError;
+
+        const { data: acceptedRoleRows, error: acceptedRoleError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", data.user.id);
+
+        if (acceptedRoleError) throw acceptedRoleError;
+        if (!normalizeRoles(acceptedRoleRows).includes("instructor")) {
+          throw new Error("Undangan diterima, tetapi role Mentor belum tercatat. Hubungi Administrator.");
+        }
       }
 
       // Simpan profil melalui mekanisme registrasi Peserta juga untuk alumni.
@@ -349,7 +385,7 @@ export default function RegisterPage() {
         mentorInvite
           ? data.session
             ? "Akun berhasil dibuat dan undangan Mentor telah diterima. Kamu dapat masuk ke Mentor Workspace."
-            : "Akun berhasil dibuat. Konfirmasi email terlebih dahulu, lalu login melalui tautan undangan untuk mengaktifkan role Mentor."
+            : "Akun berhasil dibuat. Buka email dan lakukan verifikasi. Setelah verifikasi, sistem akan melanjutkan aktivasi Mentor secara otomatis. Jika belum diarahkan, masuk melalui tombol di bawah ini agar token undangan tetap terbawa."
           : alumniFlow
             ? data.session
               ? "Akun alumni berhasil dibuat. Lanjutkan ke halaman Akses Alumni, lalu tekan Aktifkan Akses Gratis. Kamu tidak perlu checkout atau membeli kelas lagi."

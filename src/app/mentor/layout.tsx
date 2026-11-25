@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import { connection } from "next/server";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { hasRole, normalizeRoles } from "@/lib/auth/roles";
@@ -32,15 +33,22 @@ async function MentorContent({ children }: { children: ReactNode }) {
     redirect(`/login?redirect=${encodeURIComponent("/mentor")}`);
   }
 
-  const [{ data: roleRows, error: roleError }, { data: profile, error: profileError }] =
-    await Promise.all([
-      supabase.from("user_roles").select("role").eq("user_id", user.id),
-      supabase
-        .from("profiles")
-        .select("full_name, avatar_url")
-        .eq("id", user.id)
-        .maybeSingle(),
-    ]);
+  const [
+    { data: roleRows, error: roleError },
+    { data: profile, error: profileError },
+    { count: assignedCourseCount, error: assignmentError },
+  ] = await Promise.all([
+    supabase.from("user_roles").select("role").eq("user_id", user.id),
+    supabase
+      .from("profiles")
+      .select("full_name, avatar_url")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("course_task_mentors")
+      .select("course_id", { count: "exact", head: true })
+      .eq("mentor_user_id", user.id),
+  ]);
 
   if (roleError) {
     throw new Error(`Gagal memeriksa hak akses Mentor: ${roleError.message}`);
@@ -49,6 +57,15 @@ async function MentorContent({ children }: { children: ReactNode }) {
   if (profileError) {
     throw new Error(`Gagal memuat profil Mentor: ${profileError.message}`);
   }
+
+  if (assignmentError) {
+    throw new Error(`Gagal memeriksa penugasan kelas Mentor: ${assignmentError.message}`);
+  }
+
+  const cookieStore = await cookies();
+  const activeMode = cookieStore.get("kcc_mentor_mode")?.value === "member"
+    ? "member"
+    : "mentor";
 
   const roles = normalizeRoles(roleRows);
   if (hasRole(roles, "admin")) {
@@ -71,6 +88,8 @@ async function MentorContent({ children }: { children: ReactNode }) {
         email: user.email ?? "",
         avatarUrl: profile?.avatar_url ?? null,
       }}
+      activeMode={activeMode}
+      canSwitchMode={Boolean(assignedCourseCount) || activeMode === "member"}
     >
       {children}
     </MentorShell>

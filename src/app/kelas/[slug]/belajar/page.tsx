@@ -1,8 +1,9 @@
 import { connection } from "next/server";
+import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
-import { getPrimaryRole, normalizeRoles } from "@/lib/auth/roles";
+import { getPrimaryRole, hasRole, normalizeRoles } from "@/lib/auth/roles";
 import LearningRoom, {
   type LearningCourse,
   type LearningSection,
@@ -58,7 +59,8 @@ export default async function BelajarKelasPage({
     );
   }
 
-  // Ruang belajar peserta hanya untuk akun dengan role member utama.
+  // Member biasa memakai enrollment aktif. Mentor hanya dapat membuka
+  // ruang ini melalui mode pratinjau dan jika kelas tersebut ditugaskan kepadanya.
   const { data: roleRows, error: roleError } = await supabase
     .from("user_roles")
     .select("role")
@@ -68,10 +70,18 @@ export default async function BelajarKelasPage({
     throw new Error(`Gagal memeriksa hak akses ruang belajar: ${roleError.message}`);
   }
 
-  const primaryRole = getPrimaryRole(normalizeRoles(roleRows));
+  const roles = normalizeRoles(roleRows);
+  const primaryRole = getPrimaryRole(roles);
+  const cookieStore = await cookies();
+  const isMentorPreview =
+    hasRole(roles, "instructor") &&
+    cookieStore.get("kcc_mentor_mode")?.value === "member";
+
   if (primaryRole === "admin") redirect("/admin");
-  if (primaryRole === "instructor") redirect("/mentor");
-  if (primaryRole !== "member") redirect("/login?reason=role-unassigned");
+  if (hasRole(roles, "instructor") && !isMentorPreview) redirect("/mentor");
+  if (!hasRole(roles, "instructor") && primaryRole !== "member") {
+    redirect("/login?reason=role-unassigned");
+  }
 
   // ==========================================
   // PROFILE
@@ -121,6 +131,7 @@ export default async function BelajarKelasPage({
         tasks={[]}
         submissions={[]}
         userId={user.id}
+        readOnly={isMentorPreview}
         profileName={profileName}
         grantedAt={null}
         loadError={courseError.message}
@@ -140,16 +151,37 @@ export default async function BelajarKelasPage({
   // ENROLLMENT ACCESS
   // ==========================================
 
-  const {
-    data: enrollment,
-    error: enrollmentError,
-  } = await supabase
-    .from("enrollments")
-    .select("id, status, granted_at")
-    .eq("user_id", user.id)
-    .eq("course_id", course.id)
-    .eq("status", "active")
-    .maybeSingle();
+  if (isMentorPreview) {
+    const { data: assignment, error: assignmentError } = await supabase
+      .from("course_task_mentors")
+      .select("course_id")
+      .eq("mentor_user_id", user.id)
+      .eq("course_id", course.id)
+      .limit(1)
+      .maybeSingle();
+
+    if (assignmentError) {
+      throw new Error(`Gagal memeriksa penugasan kelas Mentor: ${assignmentError.message}`);
+    }
+
+    if (!assignment) redirect("/mentor/member?notice=kelas-tidak-ditugaskan");
+  }
+
+  let enrollment: { id: string; status: string; granted_at: string | null } | null = null;
+  let enrollmentError: { message: string } | null = null;
+
+  if (!isMentorPreview) {
+    const enrollmentResult = await supabase
+      .from("enrollments")
+      .select("id, status, granted_at")
+      .eq("user_id", user.id)
+      .eq("course_id", course.id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    enrollment = enrollmentResult.data;
+    enrollmentError = enrollmentResult.error;
+  }
 
   if (enrollmentError) {
     return (
@@ -161,6 +193,7 @@ export default async function BelajarKelasPage({
         tasks={[]}
         submissions={[]}
         userId={user.id}
+        readOnly={isMentorPreview}
         profileName={profileName}
         grantedAt={null}
         loadError={enrollmentError.message}
@@ -170,9 +203,11 @@ export default async function BelajarKelasPage({
     );
   }
 
-  if (!enrollment) {
+  if (!isMentorPreview && !enrollment) {
     redirect("/dashboard#pembelian");
   }
+
+  const grantedAt = isMentorPreview ? null : enrollment?.granted_at ?? null;
 
   // ==========================================
   // LOAD BAB / COURSE SECTIONS
@@ -198,8 +233,9 @@ export default async function BelajarKelasPage({
         tasks={[]}
         submissions={[]}
         userId={user.id}
+        readOnly={isMentorPreview}
         profileName={profileName}
-        grantedAt={enrollment.granted_at ?? null}
+        grantedAt={grantedAt}
         loadError={sectionError.message}
         taskLoadError={null}
         submissionLoadError={null}
@@ -241,8 +277,9 @@ export default async function BelajarKelasPage({
           tasks={[]}
           submissions={[]}
           userId={user.id}
+          readOnly={isMentorPreview}
           profileName={profileName}
-          grantedAt={enrollment.granted_at ?? null}
+          grantedAt={grantedAt}
           loadError={lessonError.message}
           taskLoadError={null}
           submissionLoadError={null}
@@ -285,8 +322,9 @@ export default async function BelajarKelasPage({
           tasks={[]}
           submissions={[]}
           userId={user.id}
+          readOnly={isMentorPreview}
           profileName={profileName}
-          grantedAt={enrollment.granted_at ?? null}
+          grantedAt={grantedAt}
           loadError={contentError.message}
           taskLoadError={null}
           submissionLoadError={null}
@@ -324,8 +362,9 @@ export default async function BelajarKelasPage({
         tasks={[]}
         submissions={[]}
         userId={user.id}
+        readOnly={isMentorPreview}
         profileName={profileName}
-        grantedAt={enrollment.granted_at ?? null}
+        grantedAt={grantedAt}
         loadError={null}
         taskLoadError={taskError.message}
         submissionLoadError={null}
@@ -343,7 +382,7 @@ export default async function BelajarKelasPage({
   let taskLoadError: string | null = null;
   let submissionLoadError: string | null = null;
 
-  if (tasks.length > 0) {
+  if (tasks.length > 0 && !isMentorPreview) {
     const taskIds = tasks.map((task) => task.id);
 
     const {
@@ -369,7 +408,7 @@ export default async function BelajarKelasPage({
   // ==========================================
 
   let completedLessonIds: string[] = [];
-  if (lessons.length > 0) {
+  if (lessons.length > 0 && !isMentorPreview) {
     const progressDb = supabase as any;
     const { data: progressData } = await progressDb
       .from("course_lesson_progress")
@@ -393,8 +432,9 @@ export default async function BelajarKelasPage({
       submissions={submissions}
       completedLessonIds={completedLessonIds}
       userId={user.id}
+      readOnly={isMentorPreview}
       profileName={profileName}
-      grantedAt={enrollment.granted_at ?? null}
+      grantedAt={grantedAt}
       loadError={null}
       taskLoadError={taskLoadError}
       submissionLoadError={submissionLoadError}

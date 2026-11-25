@@ -4,7 +4,7 @@ import Image from "next/image";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { BookOpen, ChevronLeft, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import LogoutButton from "@/components/auth/logout-button";
 import { mentorNavigation } from "./mentor-config";
 import { useSidebarNotifications } from "@/components/notifications/use-sidebar-notifications";
@@ -16,6 +16,7 @@ type Props = {
   onOpen: () => void;
   onToggleCollapsed: () => void;
   userId: string;
+  activeMode: "mentor" | "member";
 };
 
 const mobileItems = [
@@ -37,9 +38,16 @@ function NotificationBadge({ count, collapsed = false }: { count: number; collap
   return <span className="ml-auto inline-flex h-[19px] min-w-[19px] shrink-0 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[9px] font-extrabold leading-none text-white shadow-sm" aria-label={`${count} notifikasi`}>{count > 99 ? "99+" : count}</span>;
 }
 
-export default function MentorSidebar({ open, collapsed, onClose, onOpen, onToggleCollapsed, userId }: Props) {
+export default function MentorSidebar({ open, collapsed, onClose, onOpen, onToggleCollapsed, userId, activeMode }: Props) {
   const pathname = usePathname();
   const notificationCounts = useSidebarNotifications(userId, pathname);
+  const isMemberMode = activeMode === "member";
+  const navigation = isMemberMode
+    ? [{ label: "MODE MEMBER", items: [{ title: "Kelas yang Diampu", href: "/mentor/member", icon: BookOpen, description: "Lihat materi dan tugas kelas" }] }]
+    : mentorNavigation;
+  const visibleMobileItems = isMemberMode
+    ? [{ href: "/mentor/member", title: "Kelas", icon: BookOpen }]
+    : mobileItems.map((item) => ({ ...item, icon: mentorNavigation.flatMap((section) => section.items).find((entry) => entry.href === item.href)?.icon ?? BookOpen }));
 
   return (
     <>
@@ -54,7 +62,7 @@ export default function MentorSidebar({ open, collapsed, onClose, onOpen, onTogg
           ) : (
             <>
               <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[15px] bg-white p-1.5 shadow-[0_8px_18px_rgba(8,13,34,.2)]"><Image src="/logo_brand.png" alt="Kiki Creator Class" width={40} height={40} priority className="h-full w-full object-contain" /></div>
-              <div className="min-w-0 flex-1"><p className="truncate text-[14px] font-semibold tracking-tight text-white">Kiki Creator Class</p><p className="mt-1 text-[9px] font-medium uppercase tracking-[.15em] text-white/60">Mentor Workspace</p></div>
+              <div className="min-w-0 flex-1"><p className="truncate text-[14px] font-semibold tracking-tight text-white">Kiki Creator Class</p><p className="mt-1 text-[9px] font-medium uppercase tracking-[.15em] text-white/60">{isMemberMode ? "Member Preview" : "Mentor Workspace"}</p></div>
               <button type="button" onClick={onToggleCollapsed} aria-label="Ciutkan sidebar" title="Ciutkan sidebar" className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/80 transition hover:bg-white/20 lg:flex"><PanelLeftClose size={16} /></button>
             </>
           )}
@@ -62,7 +70,7 @@ export default function MentorSidebar({ open, collapsed, onClose, onOpen, onTogg
         </div>
         <div className="mx-4 h-px shrink-0 bg-white/15" />
         <nav className="sidebar-scrollbar-hidden flex-1 overflow-y-auto overscroll-contain px-3 py-5">
-          {mentorNavigation.map((section) => (
+          {navigation.map((section) => (
             <div key={section.label} className="mb-5 last:mb-0">
               {!collapsed && <p className="mb-2.5 px-3 text-[9px] font-medium uppercase tracking-[.14em] text-white/50">{section.label}</p>}
               <div className="space-y-1">
@@ -83,14 +91,13 @@ export default function MentorSidebar({ open, collapsed, onClose, onOpen, onTogg
         </div>
       </aside>
 
-      <nav aria-label="Navigasi cepat mentor" className="kcc-mobile-bottom-nav fixed bottom-3 left-3 right-3 z-30 flex items-center justify-around rounded-[22px] border border-white/80 bg-white/95 px-1.5 py-2 shadow-[0_12px_35px_rgba(38,27,72,.14)] backdrop-blur-xl lg:hidden" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}>
-        {mobileItems.map((item) => {
-          const nav = mentorNavigation.flatMap((section) => section.items).find((entry) => entry.href === item.href)!;
-          const Icon = nav.icon;
+      <nav aria-label="Navigasi cepat workspace" className="kcc-mobile-bottom-nav fixed bottom-3 left-3 right-3 z-30 flex items-center justify-around rounded-[22px] border border-white/80 bg-white/95 px-1.5 py-2 shadow-[0_12px_35px_rgba(38,27,72,.14)] backdrop-blur-xl" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}>
+        {visibleMobileItems.map((item) => {
+          const Icon = item.icon;
           const active = isActivePath(pathname, item.href);
-          return <Link key={item.href} href={item.href} onClick={onClose} className={`kcc-sidebar-mobile-link flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium ${active ? "text-[#260047]" : "text-[#77717D]"}`}><span className={`relative flex h-8 w-9 items-center justify-center rounded-xl ${active ? "bg-[#F2EFF5]" : ""}`}><Icon size={18} /><NotificationBadge count={notificationCounts[item.href] ?? 0} collapsed /></span>{item.title}</Link>;
+          return <Link key={item.href} href={item.href} onClick={onClose} className={`kcc-sidebar-mobile-link flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium ${active ? "text-[#260047]" : "text-[#77717D]"}`}><span className={`relative flex h-8 w-9 items-center justify-center rounded-xl ${active ? "bg-[#F2EFF5]" : ""}`}><Icon size={18} />{!isMemberMode && <NotificationBadge count={notificationCounts[item.href] ?? 0} collapsed />}</span>{item.title}</Link>;
         })}
-        <button type="button" onClick={onOpen} className="kcc-sidebar-mobile-action flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium text-[#77717D]" aria-label="Menu lainnya"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><Menu size={18} /></span>Menu</button>
+        {!isMemberMode && <button type="button" onClick={onOpen} className="kcc-sidebar-mobile-action flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 text-[9px] font-medium text-[#77717D]" aria-label="Menu lainnya"><span className="flex h-8 w-9 items-center justify-center rounded-xl"><Menu size={18} /></span>Menu</button>}
       </nav>
     </>
   );
