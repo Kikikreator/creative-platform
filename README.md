@@ -24,7 +24,7 @@ Sebelum deployment, jalankan `npm run lint` dan `npm run build` pada komputer ya
 
 ## Perubahan tambahan
 
-Lihat `docs/REVISION-9-IMPLEMENTATION.md` untuk daftar sembilan revisi dan implementasinya, serta `docs/FINAL_AUDIT_20261109.md` untuk hasil pemeriksaan dan batas pengujian.
+Lihat `docs/UI-REDESIGN-NOTES.md` untuk ringkasan penyempurnaan UI/UX dan `SKILL.md` untuk standar desain wajib proyek.
 
 ## Migrasi database
 
@@ -62,3 +62,27 @@ Audit historis menyebut migration `20261106_kcc_platform_features.sql` dan optio
 - Pemeriksaan struktur SQL secara statis dan preflight kolom.
 
 `npm ci` tidak dapat diselesaikan di lingkungan penyusunan karena akses ke npm registry mengalami timeout. Karena itu, `next build`, ESLint penuh, dan type-check penuh belum dapat dinyatakan lulus. Migration SQL juga belum dijalankan di Supabase.
+
+## Penyempurnaan UI/UX — November 2026
+
+Paket ini juga memuat penyempurnaan tampilan lintas halaman berdasarkan `SKILL.md`:
+
+- `src/app/design-system.css` sekarang dimuat secara global setelah `globals.css`.
+- Admin dan Mentor memakai wrapper workspace tersendiri agar aturan visual tetap terlingkup.
+- Halaman publik, katalog, detail kelas, autentikasi, checkout, dan verifikasi sertifikat memiliki scope desain masing-masing.
+- Header workspace disederhanakan; label dekoratif berbahasa Inggris dan badge role yang berulang dihilangkan.
+- Label kelompok navigasi Admin dan Mentor menggunakan Bahasa Indonesia.
+- Dashboard Mentor diringkas dengan menghilangkan kumpulan tautan cepat yang mengulang navigasi sidebar.
+- Dashboard Admin memakai ringkasan yang lebih ringkas; hitungan `profiles` diberi label `Total Akun`, bukan `Total Member`.
+- Kontrol formulir, tabel, fokus keyboard, radius, bayangan, dan tampilan mobile diselaraskan.
+
+Perubahan ini berfokus pada presentasi dan teks antarmuka. Tidak ada migration database, perubahan skema, perubahan RLS, atau perubahan kontrak API yang dibuat dalam penyempurnaan UI ini.
+
+### Pemeriksaan paket UI
+
+- 122 file TypeScript/TSX diproses dengan parser TypeScript: tidak ditemukan kesalahan sintaks.
+- Import lokal diperiksa: tidak ditemukan path import lokal yang hilang.
+- Kurung kurawal tiga stylesheet utama diperiksa: seimbang.
+- `npm ci` tidak selesai dalam batas waktu lingkungan penyusunan karena proses instalasi dependensi timeout. Karena itu `next build`, ESLint penuh, dan pengujian browser belum dapat dinyatakan lulus. Jalankan pemeriksaan tersebut di komputer lokal setelah `npm ci` berhasil.
+
+`SKILL.md` disertakan di root proyek sebagai standar desain untuk perubahan berikutnya.

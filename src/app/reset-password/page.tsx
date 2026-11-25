@@ -196,7 +196,7 @@ export default function ResetPasswordPage() {
   // ==========================================
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F8F7FC] px-4 py-8 sm:px-6">
+    <main className="kcc-auth-page relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F8F7FC] px-4 py-8 sm:px-6">
 
       {/* BACKGROUND */}
       <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-violet-300/15 blur-3xl" />

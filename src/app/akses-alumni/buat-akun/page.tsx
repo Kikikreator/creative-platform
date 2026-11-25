@@ -193,11 +193,11 @@ export default function AlumniCreateAccountPage() {
   }
 
   if (loadingRequest) {
-    return <main className="flex min-h-screen items-center justify-center bg-[#F8F7FA] px-4"><div className="flex items-center gap-3 text-sm text-[#62576D]"><Loader2 size={18} className="animate-spin" /> Memeriksa persetujuan alumni...</div></main>;
+    return <main className="kcc-auth-page flex min-h-screen items-center justify-center bg-[#F8F7FA] px-4"><div className="flex items-center gap-3 text-sm text-[#62576D]"><Loader2 size={18} className="animate-spin" /> Memeriksa persetujuan alumni...</div></main>;
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F8F7FA] px-4 py-8 sm:px-6">
+    <main className="kcc-auth-page flex min-h-screen items-center justify-center bg-[#F8F7FA] px-4 py-8 sm:px-6">
       <section className="w-full max-w-lg rounded-[26px] border border-[#EAE3EF] bg-white p-5 shadow-[0_18px_50px_rgba(38,0,71,.07)] sm:p-8">
         <Link href={alumniUrl} className="inline-flex items-center gap-2 text-xs font-medium text-[#756A7D] hover:text-[#260047]"><ArrowLeft size={14} /> Kembali ke Akses Alumni</Link>
         <div className="mt-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F0EAF5] text-[#260047]"><UserRound size={24} /></div>

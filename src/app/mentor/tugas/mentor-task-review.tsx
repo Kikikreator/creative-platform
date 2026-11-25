@@ -384,7 +384,7 @@ export default function MentorTaskReview({
       <div className="space-y-6">
         <section className="app-page-heading">
           <div>
-            <p className="app-eyebrow">Student submissions</p>
+            
             
             <p className="app-page-description">{workspaceLabel === "Admin" ? "Periksa pengumpulan peserta dari seluruh kelas, berikan nilai, atau kirim catatan revisi." : "Periksa karya peserta dari kelas yang ditugaskan, berikan nilai, atau kirim catatan revisi secara langsung."}</p>
           </div>
@@ -695,7 +695,7 @@ export default function MentorTaskReview({
           <span className="inline-flex items-center gap-1.5">
             <ShieldCheck size={12} /> {accessDescription}
           </span>
-          <span>Kiki Creator Class · {workspaceLabel} Workspace</span>
+          <span>Kiki Creator Class · {workspaceLabel}</span>
         </footer>
       </div>
     </div>

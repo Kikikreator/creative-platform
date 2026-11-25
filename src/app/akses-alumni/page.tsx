@@ -54,7 +54,7 @@ export default async function AlumniAccessPage() {
   const courses = (coursesResult.data ?? []) as AlumniCourseOption[];
 
   return (
-    <main className="min-h-screen bg-[#F8F7FA] px-4 py-8 text-[#21182A] sm:px-6 sm:py-12">
+    <main className="kcc-auth-page min-h-screen bg-[#F8F7FA] px-4 py-8 text-[#21182A] sm:px-6 sm:py-12">
       <div className="mx-auto max-w-3xl">
         <AlumniRequestForm
           courses={courses}

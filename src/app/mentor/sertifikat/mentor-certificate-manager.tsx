@@ -122,7 +122,7 @@ export default function MentorCertificateManager({
       <section className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.16em] text-violet-700">
-            <Award size={13} /> Certificate approval
+            <Award size={13} /> Persetujuan kelulusan
           </div>
           <h1 className="mt-3 text-2xl font-extrabold tracking-tight text-[#211A37] sm:text-3xl">Persetujuan Kelulusan</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#89829B]">
@@ -130,7 +130,7 @@ export default function MentorCertificateManager({
           </p>
         </div>
         <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-3 text-xs font-bold text-violet-700 shadow-[0_8px_24px_rgba(47,30,82,.06)]">
-          <ShieldCheck size={16} /> Mentor Workspace
+          <ShieldCheck size={16} /> Mode Mentor
         </div>
       </section>
 

@@ -6,6 +6,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -24,6 +25,7 @@ import {
   Image as ImageIcon,
   Layers3,
   Link2,
+  MoreHorizontal,
   ListPlus,
   Music,
   Pencil,
@@ -238,6 +240,8 @@ export default function MentorContentManager({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(initialError ?? "");
   const [notice, setNotice] = useState("");
+  const [openSectionMenuId, setOpenSectionMenuId] = useState<string | null>(null);
+  const sectionActionsRef = useRef<HTMLDivElement | null>(null);
   const [previewPayload, setPreviewPayload] = useState<ChapterPayload | null>(null);
   const [previewLessonId, setPreviewLessonId] = useState("");
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
@@ -424,6 +428,26 @@ export default function MentorContentManager({
   useEffect(() => {
     void loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!openSectionMenuId) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !sectionActionsRef.current?.contains(event.target)) {
+        setOpenSectionMenuId(null);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenSectionMenuId(null);
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openSectionMenuId]);
 
   async function persistDraft(
     section: Section,
@@ -898,6 +922,54 @@ export default function MentorContentManager({
     }
   }
 
+  async function moveLesson(lesson: Lesson, direction: -1 | 1) {
+    const section = sections.find((item) => item.id === lesson.section_id);
+    if (!section) return;
+
+    const draft = draftMap.get(section.id);
+    if (
+      draft?.status === "pending" ||
+      draft?.status === "approved" ||
+      draft?.is_deleted ||
+      (!draft && Boolean(officialSnapshots[section.id]))
+    ) {
+      setError("Bab ini sedang terkunci. Selesaikan proses pengajuan atau minta izin revisi dari Admin sebelum mengubah urutan materi.");
+      return;
+    }
+
+    const ordered = sortByPosition(lessons.filter((item) => item.section_id === section.id));
+    const index = ordered.findIndex((item) => item.id === lesson.id);
+    const targetIndex = index + direction;
+    if (index < 0 || targetIndex < 0 || targetIndex >= ordered.length) return;
+
+    const reordered = [...ordered];
+    const [movedLesson] = reordered.splice(index, 1);
+    if (!movedLesson) return;
+    reordered.splice(targetIndex, 0, movedLesson);
+    const positions = new Map<string, number>(reordered.map((item, position) => [item.id, position] as const));
+    const nextLessons = lessons.map((item) =>
+      item.section_id === section.id
+        ? { ...item, position: positions.get(item.id) ?? item.position }
+        : item,
+    );
+
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await persistDraft(section, nextLessons, contents);
+      setLessons(sortByPosition(nextLessons));
+      setNotice("Urutan Materi Inti tersimpan sebagai draft Bab. Ajukan Bab agar perubahan diterapkan.");
+      await loadData();
+    } catch (err) {
+      const message = errorMessage(err);
+      await loadData();
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function submitChapter(section: Section) {
     const draft = draftMap.get(section.id);
     if (!draft) {
@@ -954,7 +1026,7 @@ export default function MentorContentManager({
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
           <div>
             <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-violet-100">Curriculum studio</p>
-            <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">Bangun Bab secara lengkap</h2>
+            <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">Bangun Bab secara lengkap</h2>
             <p className="mt-2 max-w-2xl text-xs leading-6 text-violet-50/90">
               Buat Bab, susun semua Materi Inti, dan lengkapi Mini Materi terlebih dahulu. Draft tersimpan tanpa menunggu Admin. Ajukan satu Bab sekaligus saat sudah siap diperiksa.
             </p>
@@ -1071,38 +1143,117 @@ export default function MentorContentManager({
                       </div>
                     </div>
 
-                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 sm:max-w-[290px]">
-                      <button type="button" title="Pindah Bab ke atas" aria-label="Pindah Bab ke atas" onClick={() => void moveSection(section, -1)} disabled={sectionIndex === 0 || saving || locked || markedDelete} className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-30 sm:h-9 sm:w-9"><ArrowUp size={15} /></button>
-                      <button type="button" title="Pindah Bab ke bawah" aria-label="Pindah Bab ke bawah" onClick={() => void moveSection(section, 1)} disabled={sectionIndex === sections.length - 1 || saving || locked || markedDelete} className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 disabled:opacity-30 sm:h-9 sm:w-9"><ArrowDown size={15} /></button>
-                      <button type="button" onClick={() => void openParticipantPreview(section)} disabled={markedDelete || previewLoading} aria-label="Preview peserta" title="Preview peserta" className="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-40 sm:h-9 sm:w-9"><Eye size={16} /></button>
-                      <button type="button" onClick={() => openSection(section)} disabled={locked || markedDelete || saving} aria-label="Edit Bab" title="Edit Bab" className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 sm:h-9 sm:w-9"><Pencil size={15} /></button>
-                      {markedDelete ? (
-                        <button type="button" onClick={() => void undoDeleteSection(section)} disabled={saving || locked} aria-label="Batalkan penghapusan Bab" title="Batalkan penghapusan Bab" className="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-200 bg-white text-emerald-700 transition hover:bg-emerald-50 disabled:opacity-40 sm:h-9 sm:w-9"><Undo2 size={15} /></button>
-                      ) : (
-                        <button type="button" onClick={() => void deleteSection(section)} disabled={saving || locked} aria-label="Hapus Bab" title="Hapus Bab" className="flex h-10 w-10 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 transition hover:bg-rose-50 disabled:opacity-40 sm:h-9 sm:w-9"><Trash2 size={15} /></button>
+                    <div className="flex shrink-0 items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        title="Pindah Bab ke atas"
+                        aria-label="Pindah Bab ke atas"
+                        onClick={() => void moveSection(section, -1)}
+                        disabled={sectionIndex === 0 || saving || locked || markedDelete}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        <ArrowUp size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        title="Pindah Bab ke bawah"
+                        aria-label="Pindah Bab ke bawah"
+                        onClick={() => void moveSection(section, 1)}
+                        disabled={sectionIndex === sections.length - 1 || saving || locked || markedDelete}
+                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                      >
+                        <ArrowDown size={15} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openLesson(section.id)}
+                        disabled={locked || markedDelete || saving}
+                        aria-label="Tambah Materi Inti"
+                        title="Tambah Materi Inti"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#260047] text-white transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Plus size={17} />
+                      </button>
+                      {draft && !locked && draft.status !== "approved" && (
+                        <button
+                          type="button"
+                          onClick={() => void submitChapter(section)}
+                          disabled={saving}
+                          aria-label={markedDelete ? "Ajukan penghapusan Bab ke Admin" : "Ajukan Bab ke Admin"}
+                          title={markedDelete ? "Ajukan penghapusan ke Admin" : "Ajukan Bab ke Admin"}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#09483F] text-white transition hover:bg-[#073B35] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {saving ? <RefreshCw size={15} className="animate-spin" /> : <Send size={15} />}
+                        </button>
                       )}
-                      <button type="button" onClick={() => openLesson(section.id)} disabled={locked || markedDelete || saving} aria-label="Tambah Materi Inti" title="Tambah Materi Inti" className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#260047] text-white shadow-sm transition hover:bg-[#09483F] disabled:opacity-40 sm:h-9 sm:w-9"><Plus size={17} /></button>
+                      <div ref={openSectionMenuId === section.id ? sectionActionsRef : null} className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setOpenSectionMenuId((current) => current === section.id ? null : section.id)}
+                          aria-label={`Aksi lainnya untuk Bab ${sectionIndex + 1}`}
+                          aria-haspopup="menu"
+                          aria-expanded={openSectionMenuId === section.id}
+                          aria-controls={openSectionMenuId === section.id ? `section-actions-${section.id}` : undefined}
+                          title="Aksi Bab"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#260047]"
+                        >
+                          <MoreHorizontal size={18} />
+                        </button>
+                        {openSectionMenuId === section.id && (
+                          <div
+                            id={`section-actions-${section.id}`}
+                            role="menu"
+                            aria-label={`Aksi Bab ${section.title}`}
+                            className="absolute right-0 top-full z-40 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_12px_30px_rgba(25,15,40,.16)]"
+                          >
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setOpenSectionMenuId(null);
+                                void openParticipantPreview(section);
+                              }}
+                              disabled={markedDelete || previewLoading}
+                              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <Eye size={15} className="text-slate-500" />
+                              Lihat
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setOpenSectionMenuId(null);
+                                openSection(section);
+                              }}
+                              disabled={locked || markedDelete || saving}
+                              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <Pencil size={15} className="text-slate-500" />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setOpenSectionMenuId(null);
+                                if (markedDelete) void undoDeleteSection(section);
+                                else void deleteSection(section);
+                              }}
+                              disabled={saving || locked}
+                              className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                                markedDelete ? "text-emerald-700 hover:bg-emerald-50" : "text-rose-700 hover:bg-rose-50"
+                              }`}
+                            >
+                              {markedDelete ? <Undo2 size={15} /> : <Trash2 size={15} />}
+                              {markedDelete ? "Batalkan penghapusan" : "Hapus"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                {draft && !locked && draft.status !== "approved" && (
-                  <div className="flex justify-end border-b border-slate-100 bg-[#FCFBFE] px-4 py-3 sm:px-5">
-                    <button
-                      type="button"
-                      onClick={() => void submitChapter(section)}
-                      disabled={saving}
-                      className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#260047] px-4 text-[10px] font-extrabold text-white shadow-sm transition hover:bg-[#09483F] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                    >
-                      <Send size={14} />
-                      {saving
-                        ? "Memproses..."
-                        : markedDelete
-                          ? "Ajukan Penghapusan ke Admin"
-                          : "Ajukan Bab ke Admin"}
-                    </button>
-                  </div>
-                )}
 
                 <div className="divide-y divide-slate-100">
                   {sectionLessons.length === 0 ? (
@@ -1126,9 +1277,29 @@ export default function MentorContentManager({
                             </div>
                           </div>
                           <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-                            <button type="button" onClick={() => openLesson(section.id, lesson)} disabled={locked || markedDelete || saving} aria-label={`Edit materi ${lesson.title}`} title="Edit Materi Inti" className="flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 sm:h-9 sm:w-9"><Pencil size={15} /></button>
-                            <button type="button" onClick={() => setActiveLessonId(activeLessonId === lesson.id ? "" : lesson.id)} aria-label={`Kelola Mini Materi untuk ${lesson.title}`} title={`Kelola Mini Materi (${lessonContents.length})`} aria-expanded={activeLessonId === lesson.id} className={`flex h-10 w-10 items-center justify-center rounded-lg border transition sm:h-9 sm:w-9 ${activeLessonId === lesson.id ? "border-violet-200 bg-violet-100 text-violet-800" : "border-violet-100 bg-violet-50 text-violet-800 hover:bg-violet-100"}`}><ListPlus size={16} /></button>
-                            <button type="button" onClick={() => void deleteLesson(lesson)} disabled={saving || locked || markedDelete} aria-label={`Hapus materi ${lesson.title}`} title="Hapus Materi Inti" className="flex h-10 w-10 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 transition hover:bg-rose-50 disabled:opacity-40 sm:h-9 sm:w-9"><Trash2 size={15} /></button>
+                            <button
+                              type="button"
+                              onClick={() => void moveLesson(lesson, -1)}
+                              disabled={lessonIndex === 0 || saving || locked || markedDelete}
+                              aria-label={`Pindah materi ${lesson.title} ke atas`}
+                              title="Pindah Materi ke atas"
+                              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                            >
+                              <ArrowUp size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void moveLesson(lesson, 1)}
+                              disabled={lessonIndex === sectionLessons.length - 1 || saving || locked || markedDelete}
+                              aria-label={`Pindah materi ${lesson.title} ke bawah`}
+                              title="Pindah Materi ke bawah"
+                              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+                            >
+                              <ArrowDown size={15} />
+                            </button>
+                            <button type="button" onClick={() => openLesson(section.id, lesson)} disabled={locked || markedDelete || saving} aria-label={`Edit materi ${lesson.title}`} title="Edit Materi Inti" className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:opacity-40"><Pencil size={15} /></button>
+                            <button type="button" onClick={() => setActiveLessonId(activeLessonId === lesson.id ? "" : lesson.id)} aria-label={`Kelola Mini Materi untuk ${lesson.title}`} title={`Kelola Mini Materi (${lessonContents.length})`} aria-expanded={activeLessonId === lesson.id} className={`flex h-9 w-9 items-center justify-center rounded-lg border transition ${activeLessonId === lesson.id ? "border-violet-200 bg-violet-100 text-violet-800" : "border-violet-100 bg-violet-50 text-violet-800 hover:bg-violet-100"}`}><ListPlus size={16} /></button>
+                            <button type="button" onClick={() => void deleteLesson(lesson)} disabled={saving || locked || markedDelete} aria-label={`Hapus materi ${lesson.title}`} title="Hapus Materi Inti" className="flex h-9 w-9 items-center justify-center rounded-lg border border-rose-100 bg-white text-rose-600 transition hover:bg-rose-50 disabled:opacity-40"><Trash2 size={15} /></button>
                           </div>
                         </div>
 

@@ -2,11 +2,9 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
-  CalendarDays,
   CheckCircle2,
   ClipboardCheck,
   ClipboardList,
-  Sparkles,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -116,46 +114,15 @@ export default async function MentorDashboardPage() {
     }
   }
 
-  const quickLinks = [
-    {
-      href: "/mentor/materi",
-      title: "Susun Bab & Materi",
-      description: "Buat bab, materi inti, mini materi, dan ajukan publikasi.",
-      icon: BookOpen,
-      tone: "teal",
-    },
-    {
-      href: "/mentor/kelola-tugas",
-      title: "Kelola Tugas",
-      description: "Rancang tugas praktik dan tentukan cara pengumpulan.",
-      icon: ClipboardList,
-      tone: "violet",
-    },
-    {
-      href: "/mentor/tugas",
-      title: "Periksa Karya Peserta",
-      description: "Berikan penilaian, feedback, atau permintaan revisi.",
-      icon: ClipboardCheck,
-      tone: "amber",
-    },
-    {
-      href: "/mentor/ruang-pengajar",
-      title: "Ruang Pengajar",
-      description: "Simpan catatan dan agenda mengajar pribadi.",
-      icon: CalendarDays,
-      tone: "green",
-    },
-  ] as const;
 
   return (
-    <div className="space-y-7">
-      <section className="flex flex-col justify-between gap-4 rounded-[24px] bg-white/90 p-5 shadow-[0_10px_30px_rgba(38,27,72,.055)] sm:flex-row sm:items-center sm:p-6">
-        <div className="max-w-2xl">
-          <p className="app-eyebrow">Your teaching space</p>
-          <h2 className="mt-2 text-xl font-extrabold tracking-tight text-[#211a37] sm:text-2xl">Semua aktivitas mengajar dalam satu ruang.</h2>
-          <p className="mt-2 text-xs leading-6 text-[#77738b] sm:text-sm">Kelola kurikulum kelas, siapkan tugas, dampingi peserta, dan pantau pekerjaan mengajarmu.</p>
+    <div className="kcc-mentor-dashboard space-y-7">
+      <section className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight text-[#211a37]">Ringkasan mengajar</h2>
+          <p className="mt-1 text-sm text-slate-500">Aktivitas pada kelas yang ditugaskan kepadamu.</p>
         </div>
-        <Link href="/mentor/kelas" className="app-secondary-button shrink-0">Lihat kelas saya <ArrowRight size={15} /></Link>
+        <Link href="/mentor/kelas" className="app-secondary-button shrink-0">Lihat kelas <ArrowRight size={15} /></Link>
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -168,50 +135,13 @@ export default async function MentorDashboardPage() {
       <section>
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
-            <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-violet-700">Quick access</p>
-            <h2 className="mt-1 text-xl font-extrabold tracking-tight text-slate-900">Mulai dari sini</h2>
-          </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {quickLinks.map((item) => {
-            const Icon = item.icon;
-            const iconTone = {
-              teal: "bg-violet-50 text-violet-700",
-              violet: "bg-violet-50 text-violet-700",
-              amber: "bg-amber-50 text-amber-700",
-              green: "bg-emerald-50 text-emerald-700",
-            }[item.tone];
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="group rounded-[20px] bg-white p-4 shadow-[0_8px_22px_rgba(38,27,72,.055)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_32px_rgba(38,27,72,.09)]"
-              >
-                <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconTone}`}>
-                  <Icon size={19} />
-                </span>
-                <h3 className="mt-4 text-sm font-extrabold text-slate-900">{item.title}</h3>
-                <p className="mt-1 min-h-10 text-[10px] leading-5 text-slate-500">{item.description}</p>
-                <span className="mt-3 inline-flex items-center gap-1.5 text-[10px] font-bold text-violet-700">
-                  Buka workspace <ArrowRight size={13} className="transition group-hover:translate-x-1" />
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      <section>
-        <div className="mb-4 flex items-end justify-between gap-3">
-          <div>
-            <p className="text-[9px] font-extrabold uppercase tracking-[0.2em] text-violet-700">Your classes</p>
-            <h2 className="mt-1 text-xl font-extrabold tracking-tight text-slate-900">Kelas yang Ditugaskan</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-slate-900">Kelas yang ditugaskan</h2>
           </div>
           <Link href="/mentor/kelas" className="text-[11px] font-bold text-violet-700 hover:text-violet-900">Kelola kelas</Link>
         </div>
 
         {courses.length === 0 ? (
-          <div className="rounded-[22px] bg-white px-6 py-12 text-center shadow-[0_8px_22px_rgba(38,27,72,.055)]">
+          <div className="rounded-xl border border-[#eae5ed] bg-white px-6 py-12 text-center">
             <BookOpen className="mx-auto text-slate-300" size={32} />
             <h3 className="mt-3 text-sm font-bold text-slate-800">Belum ada kelas yang ditugaskan</h3>
             <p className="mx-auto mt-2 max-w-md text-xs leading-5 text-slate-500">
@@ -221,7 +151,7 @@ export default async function MentorDashboardPage() {
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">
             {courses.map((course) => (
-              <article key={course.id} className="overflow-hidden rounded-[22px] border border-[#EEEAF7] bg-white shadow-sm">
+              <article key={course.id} className="overflow-hidden rounded-xl border border-[#eae5ed] bg-white">
                 {course.cover_image_url ? (
                   <img src={course.cover_image_url} alt="" className="h-36 w-full object-cover" />
                 ) : (

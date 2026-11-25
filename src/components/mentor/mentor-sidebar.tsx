@@ -20,7 +20,7 @@ type Props = {
 };
 
 const mobileItems = [
-  { href: "/mentor", title: "Home" },
+  { href: "/mentor", title: "Beranda"},
   { href: "/mentor/kelas", title: "Kelas" },
   { href: "/mentor/materi", title: "Materi" },
   { href: "/mentor/tugas", title: "Tugas" },
@@ -43,7 +43,7 @@ export default function MentorSidebar({ open, collapsed, onClose, onOpen, onTogg
   const notificationCounts = useSidebarNotifications(userId, pathname);
   const isMemberMode = activeMode === "member";
   const navigation = isMemberMode
-    ? [{ label: "MODE MEMBER", items: [{ title: "Kelas yang Diampu", href: "/mentor/member", icon: BookOpen, description: "Lihat materi dan tugas kelas" }] }]
+    ? [{ label: "Mode Member", items: [{ title: "Kelas yang Diampu", href: "/mentor/member", icon: BookOpen, description: "Lihat materi dan tugas kelas" }] }]
     : mentorNavigation;
   const visibleMobileItems = isMemberMode
     ? [{ href: "/mentor/member", title: "Kelas", icon: BookOpen }]
@@ -62,7 +62,7 @@ export default function MentorSidebar({ open, collapsed, onClose, onOpen, onTogg
           ) : (
             <>
               <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[15px] bg-white p-1.5 shadow-[0_8px_18px_rgba(8,13,34,.2)]"><Image src="/logo_brand.png" alt="Kiki Creator Class" width={40} height={40} priority className="h-full w-full object-contain" /></div>
-              <div className="min-w-0 flex-1"><p className="truncate text-[14px] font-semibold tracking-tight text-white">Kiki Creator Class</p><p className="mt-1 text-[9px] font-medium uppercase tracking-[.15em] text-white/60">{isMemberMode ? "Member Preview" : "Mentor Workspace"}</p></div>
+              <div className="min-w-0 flex-1"><p className="truncate text-[14px] font-semibold tracking-tight text-white">Kiki Creator Class</p><p className="mt-1 text-[9px] font-medium uppercase tracking-[.15em] text-white/60">{isMemberMode ? "Mode Member" : "Mode Mentor"}</p></div>
               <button type="button" onClick={onToggleCollapsed} aria-label="Ciutkan sidebar" title="Ciutkan sidebar" className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/80 transition hover:bg-white/20 lg:flex"><PanelLeftClose size={16} /></button>
             </>
           )}
@@ -91,7 +91,7 @@ export default function MentorSidebar({ open, collapsed, onClose, onOpen, onTogg
         </div>
       </aside>
 
-      <nav aria-label="Navigasi cepat workspace" className="kcc-mobile-bottom-nav fixed bottom-3 left-3 right-3 z-30 flex items-center justify-around rounded-[22px] border border-white/80 bg-white/95 px-1.5 py-2 shadow-[0_12px_35px_rgba(38,27,72,.14)] backdrop-blur-xl" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}>
+      <nav aria-label="Navigasi cepat" className="kcc-mobile-bottom-nav fixed bottom-3 left-3 right-3 z-30 flex items-center justify-around rounded-[22px] border border-white/80 bg-white/95 px-1.5 py-2 shadow-[0_12px_35px_rgba(38,27,72,.14)] backdrop-blur-xl" style={{ paddingBottom: "max(8px, env(safe-area-inset-bottom))" }}>
         {visibleMobileItems.map((item) => {
           const Icon = item.icon;
           const active = isActivePath(pathname, item.href);

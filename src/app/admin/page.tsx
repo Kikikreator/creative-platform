@@ -9,8 +9,6 @@ import {
   ShoppingCart,
   BookOpenCheck,
   ArrowUpRight,
-  GraduationCap,
-  TrendingUp,
 } from "lucide-react";
 
 function AdminLoading() {
@@ -64,9 +62,9 @@ async function AdminDashboard() {
       iconStyle: "bg-violet-50 text-violet-700",
     },
     {
-      title: "Total Member",
+      title: "Total Akun",
       value: profilesResult.count ?? 0,
-      description: "Pengguna terdaftar",
+      description: "Akun dengan profil terdaftar",
       icon: Users,
       iconStyle: "bg-violet-50 text-cyan-700",
     },
@@ -116,52 +114,23 @@ async function AdminDashboard() {
     <div className="space-y-7">
 
       {/* WELCOME SECTION */}
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <section className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="mb-2 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-violet-500" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-violet-700">
-              Overview
-            </span>
-          </div>
-
-          <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-            Selamat Datang di Workspace
-          </h2>
-
-          <p className="mt-1.5 max-w-2xl text-sm leading-6 text-slate-500">
-            Pantau perkembangan Kiki Creator Class dan kelola
-            seluruh aktivitas administrasi dari satu tempat.
-          </p>
-        </div>
-
-        <div className="flex w-fit items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-semibold text-violet-700 shadow-[0_3px_14px_rgba(15,23,42,0.04)]">
-          <TrendingUp size={15} />
-          Platform Overview
+          <h2 className="text-lg font-semibold tracking-tight text-slate-900">Ringkasan platform</h2>
+          <p className="mt-1 text-sm text-slate-500">Data utama aktivitas Kiki Creator Class.</p>
         </div>
       </section>
 
       {/* STATISTICS */}
       <section>
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-bold text-slate-900">
-              Ringkasan Platform
-            </h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Statistik keseluruhan platform.
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {stats.map((item) => {
             const Icon = item.icon;
 
             return (
               <div
                 key={item.title}
-                className="group rounded-[22px] bg-white p-5 shadow-[0_5px_24px_rgba(15,23,42,0.035)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_30px_rgba(15,23,42,0.07)]"
+                className="group rounded-xl border border-[#eae5ed] bg-white p-5 transition-colors hover:border-[#d8cddd]"
               >
                 <div className="flex items-start justify-between">
                   <div>
@@ -198,27 +167,18 @@ async function AdminDashboard() {
       </section>
 
       {/* MANAGEMENT */}
-      <section className="rounded-[24px] bg-white p-5 shadow-[0_5px_24px_rgba(15,23,42,0.035)] sm:p-6">
+      <section className="rounded-xl border border-[#eae5ed] bg-white p-5 sm:p-6">
 
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-50 text-violet-700">
-              <GraduationCap size={22} />
-            </div>
-
             <div>
               <h3 className="text-base font-bold text-slate-900">
                 Pengelolaan Platform
               </h3>
-              <p className="mt-1 text-xs text-slate-500">
-                Akses cepat ke menu administrasi.
-              </p>
+
             </div>
           </div>
 
-          <span className="w-fit rounded-full bg-violet-50 px-3 py-1.5 text-[11px] font-semibold text-violet-700">
-            Admin Workspace
-          </span>
         </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -229,7 +189,7 @@ async function AdminDashboard() {
               <Link
                 key={item.title}
                 href={item.href}
-                className="group rounded-[19px] bg-[#FBFAFF] p-5 transition-all duration-200 hover:bg-violet-50/70"
+                className="group rounded-lg border border-[#eae5ed] bg-white p-4 transition-colors hover:bg-[#faf8fb]"
               >
                 <div className="flex items-start justify-between">
                   <div
@@ -258,11 +218,7 @@ async function AdminDashboard() {
       </section>
 
       {/* FOOTER */}
-      <footer className="pb-3 pt-2 text-center">
-        <p className="text-[11px] text-slate-400">
-          © 2026 Kiki Creator Class. All rights reserved.
-        </p>
-      </footer>
+
 
     </div>
   );

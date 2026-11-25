@@ -26,7 +26,7 @@ export type MentorNavSection = {
 
 export const mentorNavigation: MentorNavSection[] = [
   {
-    label: "WORKSPACE",
+    label: "Ruang kerja",
     items: [
       {
         title: "Dashboard",
@@ -43,7 +43,7 @@ export const mentorNavigation: MentorNavSection[] = [
     ],
   },
   {
-    label: "PENGELOLAAN PEMBELAJARAN",
+    label: "Pembelajaran",
     items: [
       {
         title: "Bab & Materi",
@@ -78,7 +78,7 @@ export const mentorNavigation: MentorNavSection[] = [
     ],
   },
   {
-    label: "PENGAJAR",
+    label: "Pengajar",
     items: [
       {
         title: "Ruang Pengajar",
@@ -170,7 +170,7 @@ export function getMentorPageMeta(pathname: string) {
     };
   }
   return {
-    title: "Mentor Workspace",
-    description: "Ruang kerja pengajar Kiki Creator Class.",
+    title: "Dashboard Mentor",
+    description: "Halaman pengelolaan kelas dan aktivitas pengajar.",
   };
 }

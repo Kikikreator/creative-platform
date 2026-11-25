@@ -663,7 +663,7 @@ export default function KelasManager({
     <div className="app-page space-y-6">
       <section className="app-page-heading">
         <div>
-          <p className="app-eyebrow">Learning management</p>
+          
           
           <p className="app-page-description">Kelola program pembelajaran, atur informasi kelas, dan publikasikan kelas untuk seluruh member Kiki Creator Class.</p>
         </div>

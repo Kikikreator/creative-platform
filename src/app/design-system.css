@@ -1,0 +1,349 @@
+/*
+ * Kiki Creator Class — design system
+ * Scoped visual rules for existing application routes.
+ * Business logic, data access, permissions, and API contracts remain unchanged.
+ */
+
+:root {
+  --kcc-brand: #260047;
+  --kcc-accent: #09483f;
+  --kcc-page: #f8f7f9;
+  --kcc-surface: #ffffff;
+  --kcc-surface-soft: #f5f2f6;
+  --kcc-text: #21182a;
+  --kcc-muted: #746d7b;
+  --kcc-border: #e9e4eb;
+  --kcc-border-strong: #d8cfdc;
+  --kcc-radius: 12px;
+  --kcc-shadow: 0 3px 14px rgba(38, 0, 71, 0.045);
+}
+
+html { scroll-padding-top: 72px; }
+body { color: var(--kcc-text); background: #fff; }
+
+/* Admin and Mentor workspaces */
+.kcc-admin-workspace,
+.kcc-mentor-workspace {
+  min-height: 100vh;
+  background: var(--kcc-page);
+}
+
+.kcc-workspace-header {
+  border-bottom: 1px solid var(--kcc-border) !important;
+  background: #fff !important;
+  box-shadow: 0 1px 0 rgba(38, 0, 71, 0.02);
+  backdrop-filter: none !important;
+}
+
+.kcc-workspace-header-inner {
+  min-height: 64px !important;
+  max-width: 1440px !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.kcc-workspace-header-inner h1 {
+  margin: 0 !important;
+  color: var(--kcc-text) !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  line-height: 1.3;
+  letter-spacing: -0.025em !important;
+}
+
+.kcc-workspace-menu-button,
+.kcc-sidebar-close-button {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  border: 1px solid var(--kcc-border) !important;
+  border-radius: 9px !important;
+  background: var(--kcc-surface-soft) !important;
+  color: var(--kcc-brand) !important;
+  box-shadow: none !important;
+}
+
+.kcc-workspace-sidebar {
+  border-right: 1px solid rgba(255, 255, 255, 0.09) !important;
+  background: var(--kcc-brand) !important;
+  box-shadow: none !important;
+}
+
+.kcc-workspace-sidebar nav {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.kcc-workspace-sidebar nav > div { margin-bottom: 16px; }
+
+.kcc-workspace-sidebar nav > div > p {
+  margin-bottom: 7px !important;
+  color: rgba(255, 255, 255, 0.58) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  line-height: 1.4;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+
+.kcc-workspace-sidebar nav a,
+.kcc-workspace-sidebar nav [aria-disabled="true"] {
+  min-height: 40px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+.kcc-workspace-sidebar nav a[aria-current="page"] {
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: inset 3px 0 0 var(--kcc-accent) !important;
+}
+
+.kcc-workspace-sidebar .kcc-logout-button {
+  min-height: 40px !important;
+  border-radius: 8px !important;
+}
+
+.kcc-admin-workspace main,
+.kcc-mentor-workspace main { max-width: 1480px; }
+
+.kcc-admin-workspace .admin-ui-standard,
+.kcc-mentor-workspace main { color: var(--kcc-text); }
+
+.kcc-admin-workspace .admin-ui-standard :is(h1, h2, h3, h4),
+.kcc-mentor-workspace main :is(h1, h2, h3, h4) {
+  color: var(--kcc-text);
+  font-weight: 600 !important;
+  letter-spacing: -0.02em;
+}
+
+/* Keep headings light on dark Mentor surfaces; the workspace default above is for light content areas. */
+.kcc-mentor-workspace main :is(section, header, div, article, aside)[class~="text-white"]:not([class*="bg-white"]) :is(h1, h2, h3, h4) {
+  color: #ffffff !important;
+}
+
+.kcc-admin-workspace .admin-ui-standard :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]), select, textarea) {
+  min-height: 40px;
+  border: 1px solid var(--kcc-border) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  color: var(--kcc-text) !important;
+  box-shadow: none !important;
+}
+
+.kcc-admin-workspace .admin-ui-standard :is(input, select, textarea):focus {
+  border-color: rgba(38, 0, 71, 0.48) !important;
+  box-shadow: 0 0 0 3px rgba(38, 0, 71, 0.08) !important;
+}
+
+.kcc-admin-workspace .admin-ui-standard table { border-collapse: separate; border-spacing: 0; }
+.kcc-admin-workspace .admin-ui-standard thead th {
+  background: #f7f5f8 !important;
+  color: #655b6c !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
+.kcc-admin-workspace .admin-ui-standard tbody tr:hover { background: #faf9fb; }
+.kcc-admin-workspace .admin-ui-standard [role="dialog"] {
+  border-color: var(--kcc-border) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 18px 48px rgba(32, 18, 45, 0.16) !important;
+}
+
+.kcc-admin-workspace main :is(section, article)[class*="bg-white"][class*="shadow"],
+.kcc-mentor-workspace main :is(section, article)[class*="bg-white"][class*="shadow"] {
+  border-color: var(--kcc-border) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+/* Mentor dashboard and read-only preview */
+.kcc-mentor-dashboard .app-stat-card {
+  border: 1px solid var(--kcc-border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 16px;
+  box-shadow: none;
+}
+.kcc-mentor-dashboard .app-stat-card p:first-child { color: var(--kcc-muted); font-size: 12px; }
+.kcc-mentor-dashboard .app-stat-card p:nth-child(2) {
+  color: var(--kcc-text);
+  font-size: 26px;
+  font-weight: 600 !important;
+}
+.kcc-mentor-dashboard article,
+.kcc-mentor-member-page article {
+  border-color: var(--kcc-border) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+.kcc-mentor-dashboard article:hover,
+.kcc-mentor-member-page article:hover {
+  border-color: var(--kcc-border-strong) !important;
+  box-shadow: var(--kcc-shadow) !important;
+}
+
+/* Public landing page, catalog, and course detail */
+.kcc-public-home,
+.kcc-course-catalog,
+.kcc-course-detail {
+  color: var(--kcc-text);
+}
+.kcc-public-home > header,
+.kcc-course-catalog > header,
+.kcc-course-detail > header {
+  border-color: var(--kcc-border) !important;
+  background: #fff !important;
+  backdrop-filter: none !important;
+}
+.kcc-public-home > section:first-of-type {
+  background: #f8f7f9 !important;
+  border-color: var(--kcc-border) !important;
+}
+.kcc-public-home h1,
+.kcc-public-home h2,
+.kcc-public-home h3,
+.kcc-course-catalog h1,
+.kcc-course-catalog h2,
+.kcc-course-detail h1,
+.kcc-course-detail h2,
+.kcc-course-detail h3 {
+  color: var(--kcc-text);
+  font-weight: 600 !important;
+  letter-spacing: -0.03em;
+}
+.kcc-public-home article,
+.kcc-course-catalog article,
+.kcc-course-detail section[class*="bg-white"] {
+  border-color: var(--kcc-border) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+.kcc-public-home article:hover,
+.kcc-course-catalog article:hover {
+  border-color: var(--kcc-border-strong) !important;
+  box-shadow: var(--kcc-shadow) !important;
+  transform: none !important;
+}
+.kcc-course-catalog > section,
+.kcc-course-detail > div.mx-auto { max-width: 1280px; }
+
+/* Authentication and checkout */
+.kcc-auth-page,
+.kcc-checkout-page { background: var(--kcc-page) !important; }
+.kcc-auth-page .kcc-login-card,
+.kcc-auth-page > div.relative.z-10 {
+  border: 1px solid var(--kcc-border) !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+  box-shadow: 0 8px 28px rgba(38, 0, 71, 0.06) !important;
+}
+.kcc-auth-page input,
+.kcc-auth-page select,
+.kcc-auth-page textarea {
+  border-color: var(--kcc-border) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+.kcc-checkout-page section[class*="bg-white"] {
+  border-color: var(--kcc-border) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+/* Certificate verification */
+.kcc-certificate-verification > section {
+  max-width: 560px;
+  border: 1px solid var(--kcc-border) !important;
+  border-radius: 16px !important;
+  box-shadow: var(--kcc-shadow) !important;
+}
+.kcc-certificate-verification > section > p[class*="uppercase"] {
+  color: var(--kcc-muted) !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+}
+.kcc-certificate-verification h1 {
+  color: var(--kcc-text) !important;
+  font-size: 24px !important;
+  font-weight: 600 !important;
+}
+
+/* Shared interaction states */
+.kcc-mode-switcher-trigger {
+  min-height: 38px !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+.kcc-mode-switcher-menu {
+  border-color: var(--kcc-border) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 14px 36px rgba(32, 18, 45, 0.14) !important;
+}
+:where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid rgba(38, 0, 71, 0.42);
+  outline-offset: 2px;
+}
+
+/* Solid primary actions; avoid decorative gradients on ordinary controls. */
+.kcc-admin-workspace :is(button, a)[class*="bg-violet-700"],
+.kcc-mentor-workspace :is(button, a)[class*="bg-violet-700"],
+.kcc-public-home :is(button, a)[class*="bg-violet-700"],
+.kcc-course-catalog :is(button, a)[class*="bg-violet-700"],
+.kcc-course-detail :is(button, a)[class*="bg-violet-700"],
+.kcc-auth-page :is(button, a)[class*="bg-violet-700"],
+.kcc-checkout-page :is(button, a)[class*="bg-violet-700"] {
+  background-color: var(--kcc-brand) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+.kcc-admin-workspace :is(button, a)[class*="bg-violet-700"]:hover,
+.kcc-mentor-workspace :is(button, a)[class*="bg-violet-700"]:hover,
+.kcc-public-home :is(button, a)[class*="bg-violet-700"]:hover,
+.kcc-course-catalog :is(button, a)[class*="bg-violet-700"]:hover,
+.kcc-course-detail :is(button, a)[class*="bg-violet-700"]:hover,
+.kcc-auth-page :is(button, a)[class*="bg-violet-700"]:hover,
+.kcc-checkout-page :is(button, a)[class*="bg-violet-700"]:hover {
+  background-color: #3b1b50 !important;
+}
+
+@media (max-width: 1023px) {
+  .kcc-workspace-sidebar { width: min(264px, calc(100vw - 40px)) !important; }
+  .kcc-workspace-header-inner { min-height: 60px !important; padding-inline: 14px !important; }
+  .kcc-admin-workspace main,
+  .kcc-mentor-workspace main { padding-top: 18px; }
+}
+
+@media (max-width: 767px) {
+  .kcc-workspace-header-inner { gap: 8px !important; }
+  .kcc-workspace-header-inner > div:last-child { gap: 7px !important; }
+  .kcc-workspace-header-inner h1 { font-size: 16px !important; }
+  .kcc-workspace-sidebar nav a,
+  .kcc-workspace-sidebar nav [aria-disabled="true"] { min-height: 44px !important; }
+  .kcc-admin-workspace main,
+  .kcc-mentor-workspace main { padding-inline: 14px !important; }
+  .kcc-mentor-dashboard .app-stat-card { padding: 13px; }
+  .kcc-mentor-dashboard .app-stat-card p:nth-child(2) { font-size: 23px; }
+  .kcc-public-home > section:not(:first-of-type) { padding-top: 40px !important; padding-bottom: 40px !important; }
+  .kcc-auth-page {
+    align-items: flex-start !important;
+    padding-top: max(18px, env(safe-area-inset-top)) !important;
+    padding-bottom: max(18px, env(safe-area-inset-bottom)) !important;
+  }
+  .kcc-checkout-page > div.mx-auto { padding-top: 22px; padding-bottom: 28px; }
+  .kcc-mobile-bottom-nav { left: 10px !important; right: 10px !important; bottom: 10px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

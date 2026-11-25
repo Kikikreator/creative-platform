@@ -77,7 +77,7 @@ export default async function MentorMemberModePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="kcc-mentor-member-page space-y-6">
       <section className="overflow-hidden rounded-[24px] border border-teal-100 bg-gradient-to-br from-white via-white to-teal-50 p-5 shadow-[0_10px_30px_rgba(38,27,72,.055)] sm:p-7">
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
           <div className="max-w-2xl">

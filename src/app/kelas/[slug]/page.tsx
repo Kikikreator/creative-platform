@@ -14,7 +14,6 @@ import {
   LockKeyhole,
   PlayCircle,
   ShieldCheck,
-  Sparkles,
   Star,
   Target,
   UserRound,
@@ -296,9 +295,9 @@ export default async function DetailKelasPage({ params }: PageProps) {
   const courseActionLabel = !user
     ? "Daftar Kelas"
     : userRole === "admin"
-      ? "Kembali ke Workspace Admin"
+      ? "Kembali ke Admin"
       : userRole === "instructor"
-        ? "Kembali ke Workspace Mentor"
+        ? "Kembali ke Mentor"
         : userRole === "member"
           ? "Lanjut ke Checkout"
           : "Periksa Akses Akun";
@@ -467,7 +466,7 @@ export default async function DetailKelasPage({ params }: PageProps) {
       : "Akses sesuai ketentuan kelas";
 
   return (
-    <main className="min-h-screen bg-[#F8F7FA] text-[#21182A]">
+    <main className="kcc-course-detail min-h-screen bg-[#F8F7FA] text-[#21182A]">
       <header className="sticky top-0 z-40 border-b border-[#EEEAF2] bg-white/95 backdrop-blur-xl">
         <div className="mx-auto flex h-[68px] max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5">
@@ -477,9 +476,6 @@ export default async function DetailKelasPage({ params }: PageProps) {
             <div>
               <p className="text-sm font-extrabold tracking-tight text-[#260047]">
                 Kiki Creator Class
-              </p>
-              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#948B9B]">
-                Creative Learning Platform
               </p>
             </div>
           </Link>
@@ -507,10 +503,6 @@ export default async function DetailKelasPage({ params }: PageProps) {
 
         <section>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-[#F0EBF3] px-3 py-2 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#260047]">
-              <Sparkles size={12} />
-              Program Pembelajaran
-            </span>
             {course.category && (
               <span className="rounded-lg border border-[#EAE5ED] bg-white px-3 py-2 text-[9px] font-bold text-[#746D7B]">
                 {course.category}
@@ -551,11 +543,8 @@ export default async function DetailKelasPage({ params }: PageProps) {
                 <BookOpen size={19} />
               </div>
               <div>
-                <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#74627E]">
-                  COURSE OVERVIEW
-                </p>
-                <h2 className="mt-0.5 text-base font-extrabold text-[#21182A]">
-                  Kelas apa ini?
+                <h2 className="text-base font-semibold text-[#21182A]">
+                  Tentang kelas
                 </h2>
               </div>
             </div>
@@ -629,7 +618,7 @@ export default async function DetailKelasPage({ params }: PageProps) {
                     <span className="text-[11px] font-semibold text-white/60 line-through decoration-white/70">
                       {formatPrice(originalPrice)}
                     </span>
-                    <span className="rounded-md bg-white/15 px-2 py-1 text-[8px] font-extrabold uppercase tracking-wide text-white">
+                    <span className="rounded-md bg-white/15 px-2 py-1 text-[10px] font-semibold text-white">
                       Harga Promo
                     </span>
                   </div>
@@ -693,9 +682,6 @@ export default async function DetailKelasPage({ params }: PageProps) {
         <section className="mt-8 rounded-2xl border border-[#EAE5ED] bg-white p-5 shadow-[0_8px_24px_rgba(38,0,71,.035)] sm:p-7">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#74627E]">
-                COURSE CURRICULUM
-              </p>
               <h2 className="mt-1 text-lg font-extrabold tracking-tight text-[#21182A]">
                 Materi yang Akan Dipelajari
               </h2>
@@ -737,7 +723,7 @@ export default async function DetailKelasPage({ params }: PageProps) {
                         <Layers3 size={16} />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[8px] font-extrabold uppercase tracking-[0.14em] text-[#84758D]">
+                        <p className="text-[10px] font-medium text-[#84758D]">
                           Bab {sectionIndex + 1}
                         </p>
                         <h3 className="mt-0.5 truncate text-[12px] font-extrabold text-[#30243A]">
@@ -838,9 +824,6 @@ export default async function DetailKelasPage({ params }: PageProps) {
               <Award size={23} strokeWidth={1.8} />
             </div>
             <div className="min-w-0">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#09483F]">
-                Sertifikat kelulusan
-              </p>
               <h2 id="course-certificate-title" className="mt-1 text-base font-semibold leading-snug text-[#21182A] sm:text-lg">
                 Selesaikan kelas dan dapatkan sertifikat
               </h2>
@@ -861,10 +844,7 @@ export default async function DetailKelasPage({ params }: PageProps) {
                 <GraduationCap size={19} />
               </div>
               <div>
-                <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#74627E]">
-                  INSTRUCTOR
-                </p>
-                <h2 className="mt-0.5 text-base font-extrabold text-[#21182A]">
+                <h2 className="text-base font-semibold text-[#21182A]">
                   Kenali Mentor Kelas
                 </h2>
               </div>
@@ -1037,9 +1017,6 @@ export default async function DetailKelasPage({ params }: PageProps) {
               <Star size={19} />
             </div>
             <div>
-              <p className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-[#8A6B3F]">
-                COURSE RATINGS & REVIEWS
-              </p>
               <h2 className="mt-0.5 text-base font-extrabold text-[#21182A]">
                 Rating dan Ulasan Kelas
               </h2>
@@ -1159,7 +1136,7 @@ export default async function DetailKelasPage({ params }: PageProps) {
               </p>
               <p className="mt-1.5 max-w-xl text-xs leading-6 text-white/75">
                 {userRole === "admin" || userRole === "instructor"
-                  ? "Lihat informasi kelas sebagai referensi. Pengelolaan tetap dilakukan melalui workspace sesuai peran akun."
+                  ? "Lihat informasi kelas sebagai referensi. Pengelolaan tetap dilakukan melalui halaman sesuai peran akun."
                   : "Bergabunglah dan mulai perjalanan belajarmu bersama Kiki Creator Class."}
               </p>
             </div>

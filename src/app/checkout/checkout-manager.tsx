@@ -676,7 +676,7 @@ router.replace(`/checkout/${order.id}`);
 
   if (!initialCourse || !order) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F7F6FC] px-4 py-8">
+      <main className="kcc-checkout-page flex min-h-screen items-center justify-center bg-[#F7F6FC] px-4 py-8">
         <div className="w-full max-w-md rounded-2xl border border-[#EEEAF7] bg-white p-7 text-center shadow-sm">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-600">
             <Info size={25} />
@@ -708,7 +708,7 @@ router.replace(`/checkout/${order.id}`);
   // ====================================================
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#F7F6FC] text-[#1B1730]">
+    <main className="kcc-checkout-page min-h-screen overflow-x-hidden bg-[#F7F6FC] text-[#1B1730]">
 
       {/* ================================================
           HEADER

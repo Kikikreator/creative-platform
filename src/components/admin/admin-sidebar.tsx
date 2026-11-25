@@ -19,7 +19,7 @@ type AdminSidebarProps = {
 };
 
 const mobileItems = [
-  { href: "/admin", title: "Home" },
+  { href: "/admin", title: "Beranda" },
   { href: "/admin/kelas", title: "Kelas" },
   { href: "/admin/materi", title: "Materi" },
   { href: "/admin/pengguna", title: "Pengguna" },
@@ -66,7 +66,7 @@ export default function AdminSidebar({ open, collapsed, onClose, onOpen, onToggl
               <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[15px] bg-white p-1.5 shadow-[0_8px_18px_rgba(8,13,34,.2)]">
                 <Image src="/logo_brand.png" alt="Kiki Creator Class" width={40} height={40} priority className="h-full w-full object-contain" />
               </div>
-              <div className="min-w-0 flex-1"><p className="truncate text-[14px] font-semibold tracking-tight text-white">Kiki Creator Class</p><p className="mt-1 text-[9px] font-medium uppercase tracking-[.15em] text-white/60">Administration</p></div>
+              <div className="min-w-0 flex-1"><p className="truncate text-[14px] font-semibold tracking-tight text-white">Kiki Creator Class</p><p className="mt-1 text-[9px] font-medium text-white/65">Administrasi</p></div>
               <button type="button" onClick={onToggleCollapsed} aria-label="Ciutkan sidebar" title="Ciutkan sidebar" className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white/80 transition hover:bg-white/20 lg:flex"><PanelLeftClose size={16} /></button>
             </>
           )}

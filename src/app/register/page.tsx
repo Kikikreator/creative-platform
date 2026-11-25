@@ -361,7 +361,7 @@ export default function RegisterPage() {
       if (data.session) {
         if (mentorInvite) {
           nextHref = "/mentor";
-          nextLabel = "Masuk ke Mentor Workspace";
+          nextLabel = "Masuk ke halaman Mentor";
         } else if (alumniFlow) {
           nextHref = alumniNextPath;
           nextLabel = "Lanjutkan aktivasi alumni";
@@ -384,7 +384,7 @@ export default function RegisterPage() {
       setSuccess(
         mentorInvite
           ? data.session
-            ? "Akun berhasil dibuat dan undangan Mentor telah diterima. Kamu dapat masuk ke Mentor Workspace."
+            ? "Akun berhasil dibuat dan undangan Mentor telah diterima. Kamu dapat masuk ke halaman Mentor."
             : "Akun berhasil dibuat. Buka email dan lakukan verifikasi. Setelah verifikasi, sistem akan melanjutkan aktivasi Mentor secara otomatis. Jika belum diarahkan, masuk melalui tombol di bawah ini agar token undangan tetap terbawa."
           : alumniFlow
             ? data.session
@@ -431,7 +431,7 @@ export default function RegisterPage() {
 
   if (checkingSession) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F7F6FC] px-4">
+      <main className="kcc-auth-page flex min-h-screen items-center justify-center bg-[#F7F6FC] px-4">
         <div className="flex items-center gap-3 text-[#5B21B6]">
           <Loader2 size={21} className="animate-spin" />
 
@@ -448,7 +448,7 @@ export default function RegisterPage() {
   // ================================================
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F7F6FC] px-4 py-8 sm:px-6">
+    <main className="kcc-auth-page relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F7F6FC] px-4 py-8 sm:px-6">
 
       {/* BACKGROUND */}
 
@@ -505,7 +505,7 @@ export default function RegisterPage() {
 
           <p className="mt-2 text-sm leading-6 text-slate-500">
             {mentorInvite
-              ? "Lengkapi identitas dasar untuk mengaktifkan akses Mentor Workspace. Akun ini akan digunakan untuk mengelola kelas dan membimbing peserta."
+              ? "Lengkapi identitas dasar untuk mengaktifkan akses Mentor. Akun ini akan digunakan untuk mengelola kelas dan membimbing peserta."
               : alumniFlow
                 ? "Gunakan email yang sama dengan pengajuan alumni. Setelah email diverifikasi, kamu bisa mengaktifkan kelas yang sudah disetujui Admin tanpa melakukan pembayaran ulang."
                 : "Daftar dan mulai perjalanan belajarmu bersama Kiki Creator Class."}

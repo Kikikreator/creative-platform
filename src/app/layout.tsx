@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";
+import "./design-system.css";
 import ActivityTracker from "@/components/analytics/activity-tracker";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog-provider";
 import PwaRegister from "@/components/pwa/pwa-register";

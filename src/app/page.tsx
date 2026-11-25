@@ -17,7 +17,6 @@ import {
   Layers3,
   MessageCircle,
   MonitorPlay,
-  Sparkles,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPrimaryRole, normalizeRoles } from "@/lib/auth/roles";
@@ -255,9 +254,6 @@ async function FeaturedCourses() {
               </div>
             )}
 
-            <div className="absolute left-2 top-2 rounded-full bg-white/95 px-2 py-1 text-[8px] font-bold text-[#260047] shadow-sm sm:left-3 sm:top-3 sm:px-3 sm:py-1.5 sm:text-[10px]">
-              KELAS PILIHAN
-            </div>
           </div>
 
           <div className="p-3 sm:p-5">
@@ -320,7 +316,7 @@ export default async function Home() {
   return (
     <main
       id="beranda"
-      className="min-h-screen overflow-hidden bg-white text-slate-900"
+      className="kcc-public-home min-h-screen overflow-hidden bg-white text-slate-900"
     >
       {/* HEADER */}
       <header className="sticky top-0 z-40 border-b border-[#EAE5ED] bg-white/95 backdrop-blur-md">
@@ -398,23 +394,9 @@ export default async function Home() {
 
       {/* HERO */}
       <section className="relative overflow-hidden border-b border-[#F0EBF2] bg-[#FAF8FB]">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-[#E9F4F0] blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-[#F0E8F7] blur-3xl"
-        />
-
         <div className="relative mx-auto grid max-w-7xl items-center gap-5 px-4 py-8 min-[480px]:gap-7 sm:gap-10 sm:px-5 sm:py-16 lg:grid-cols-2 lg:gap-8 lg:px-8 lg:py-20">
           <div className="relative z-10">
-            <div className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[#EAE5ED] bg-white px-2.5 py-1.5 text-[9px] font-bold text-[#260047] shadow-sm min-[370px]:gap-2 min-[370px]:px-3 sm:px-4 sm:py-2 sm:text-xs">
-              <Sparkles size={13} className="text-amber-500" />
-              RUANG BELAJAR DAN BERKEMBANG
-            </div>
-
-            <h1 className="mt-4 max-w-2xl text-[clamp(1.85rem,8vw,2.3rem)] font-extrabold leading-[1.08] tracking-tight text-[#21182A] sm:mt-7 sm:text-5xl lg:text-[58px]">
+            <h1 className="mt-0 max-w-2xl text-[clamp(1.85rem,8vw,2.3rem)] font-extrabold leading-[1.08] tracking-tight text-[#21182A] sm:mt-0 sm:text-5xl lg:text-[58px]">
               Kembangkan Potensi,
               <span className="block text-[#260047]">
                 Wujudkan Karya Terbaikmu.
@@ -472,11 +454,6 @@ export default async function Home() {
 
           {/* HERO VISUAL — menggunakan icon_01.png dari folder public */}
           <div className="relative mx-auto flex w-full max-w-[300px] items-center justify-center min-[480px]:max-w-[380px] sm:max-w-[540px] lg:max-w-[590px]">
-            <div
-              aria-hidden="true"
-              className="absolute left-1/2 top-1/2 h-[72%] w-[72%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#EDE5F3] blur-3xl"
-            />
-
             <div className="relative w-full max-w-[300px] min-[480px]:max-w-[360px] sm:max-w-[500px]">
               <Image
                 src="/icon_01.png"
@@ -487,33 +464,6 @@ export default async function Home() {
                 className="relative z-10 h-auto w-full object-contain drop-shadow-[0_28px_34px_rgba(38,0,71,0.18)]"
               />
 
-              <div className="absolute left-0 top-[17%] z-20 hidden items-center gap-2.5 rounded-2xl border border-white/80 bg-white/95 px-3 py-2.5 shadow-[0_12px_30px_rgba(38,0,71,0.10)] sm:flex">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
-                  <Sparkles size={19} />
-                </span>
-                <span>
-                  <span className="block text-xs font-bold text-slate-800">
-                    Belajar kreatif
-                  </span>
-                  <span className="mt-0.5 block text-[10px] text-slate-500">
-                    Kembangkan ide dan skill
-                  </span>
-                </span>
-              </div>
-
-              <div className="absolute bottom-[13%] right-0 z-20 hidden items-center gap-2.5 rounded-2xl border border-white/80 bg-white/95 px-3 py-2.5 shadow-[0_12px_30px_rgba(38,0,71,0.10)] sm:flex">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                  <BadgeCheck size={19} />
-                </span>
-                <span>
-                  <span className="block text-xs font-bold text-slate-800">
-                    Akses permanen
-                  </span>
-                  <span className="mt-0.5 block text-[10px] text-slate-500">
-                    Belajar sesuai waktumu
-                  </span>
-                </span>
-              </div>
             </div>
           </div>
         </div>
@@ -526,10 +476,7 @@ export default async function Home() {
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#0F9D78] sm:text-xs">
-              SISTEM BELAJAR DI KELAS INI
-            </p>
-            <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-[#21182A] sm:mt-3 sm:text-4xl">
+            <h2 className="mt-0 text-2xl font-extrabold tracking-tight text-[#21182A] sm:mt-0 sm:text-4xl">
               Belajar lebih terarah, dari materi hingga karya
             </h2>
             <p className="mt-3 text-xs leading-6 text-slate-500 sm:mt-4 sm:text-sm sm:leading-7">
@@ -578,10 +525,7 @@ export default async function Home() {
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#0F9D78] sm:text-xs">
-              KENAPA HARUS IKUT KELAS INI?
-            </p>
-            <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-[#21182A] sm:mt-3 sm:text-4xl">
+            <h2 className="mt-0 text-2xl font-extrabold tracking-tight text-[#21182A] sm:mt-0 sm:text-4xl">
               Investasikan waktumu untuk skill yang bisa berkembang
             </h2>
             <p className="mt-3 text-xs leading-6 text-slate-500 sm:mt-4 sm:text-sm sm:leading-7">
@@ -626,10 +570,7 @@ export default async function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end sm:gap-5">
             <div>
-              <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#0F9D78] sm:text-xs">
-                PROGRAM PEMBELAJARAN
-              </p>
-              <h2 className="mt-2 text-2xl font-extrabold tracking-tight text-[#21182A] sm:mt-3 sm:text-4xl">
+              <h2 className="mt-0 text-2xl font-extrabold tracking-tight text-[#21182A] sm:mt-0 sm:text-4xl">
                 Temukan kelas pilihanmu
               </h2>
               <p className="mt-2 max-w-xl text-xs leading-6 text-slate-500 sm:mt-3 sm:text-sm sm:leading-7">
@@ -659,21 +600,8 @@ export default async function Home() {
       <section id="tentang" className="scroll-mt-24 bg-[#FAF8FB] py-9 sm:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-5 lg:px-8">
           <div className="relative overflow-hidden rounded-[24px] bg-[#260047] px-4 py-7 shadow-[0_16px_38px_rgba(38,0,71,0.14)] sm:rounded-[32px] sm:px-12 sm:py-16">
-            <div
-              aria-hidden="true"
-              className="absolute -right-16 -top-24 h-64 w-64 rounded-full bg-[#0F9D78]/35 blur-3xl"
-            />
-            <div
-              aria-hidden="true"
-              className="absolute -bottom-28 left-1/4 h-64 w-64 rounded-full bg-[#8B5CF6]/25 blur-3xl"
-            />
-
             <div className="relative mx-auto max-w-3xl text-center">
-              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-amber-300 ring-1 ring-white/15 sm:h-14 sm:w-14 sm:rounded-2xl">
-                <Sparkles size={20} className="sm:hidden" />
-                <Sparkles size={24} className="hidden sm:block" />
-              </div>
-              <h2 className="mt-4 text-xl font-extrabold leading-tight tracking-tight text-white sm:mt-6 sm:text-4xl">
+              <h2 className="mt-0 text-xl font-semibold leading-tight tracking-tight text-white sm:mt-0 sm:text-4xl">
                 Siap mulai belajar dan membuat karya terbaikmu?
               </h2>
               <p className="mx-auto mt-2.5 max-w-2xl text-[11px] leading-5 text-white/75 sm:mt-4 sm:text-sm sm:leading-7">
@@ -712,12 +640,9 @@ export default async function Home() {
             className="mx-auto mt-5 max-w-4xl sm:mt-10"
           >
             <div className="mb-3 text-center sm:mb-5">
-              <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-[#0F9D78] sm:text-[10px]">
-                MASIH ADA PERTANYAAN?
-              </p>
               <h2
                 id="faq-title"
-                className="mt-1.5 text-lg font-extrabold tracking-tight text-[#21182A] sm:mt-2 sm:text-2xl"
+                className="mt-0 text-lg font-extrabold tracking-tight text-[#21182A] sm:mt-2 sm:text-2xl"
               >
                 Pertanyaan yang sering ditanyakan
               </h2>

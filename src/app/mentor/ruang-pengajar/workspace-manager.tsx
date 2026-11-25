@@ -165,7 +165,7 @@ export default function MentorWorkspaceManager({
     <div className="space-y-6">
       <section className="flex flex-col justify-between gap-4 rounded-[22px] bg-white/90 p-5 shadow-[0_8px_22px_rgba(38,27,72,.055)] sm:flex-row sm:items-center sm:p-6">
         <div className="max-w-2xl">
-          <p className="app-eyebrow">Personal workspace</p>
+          
           <p className="mt-2 text-sm leading-6 text-[#77738b]">Simpan rencana mengajar, pengingat, catatan evaluasi, dan agenda pribadi. Catatan ini hanya dapat dilihat oleh akun Mentor pemiliknya dan Admin yang berwenang.</p>
         </div>
         <button type="button" onClick={() => openEditor()} className="app-primary-button shrink-0"><Plus size={15} /> Tambah agenda</button>
@@ -213,7 +213,7 @@ export default function MentorWorkspaceManager({
       {editorOpen && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/45 p-4 backdrop-blur-sm">
           <form onSubmit={saveEntry} className="my-4 w-full max-w-lg rounded-[24px] bg-white p-5 shadow-2xl sm:p-6">
-            <div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-700">Personal workspace</p><h3 className="mt-1 text-lg font-extrabold text-slate-900">{editingId ? "Edit item" : "Tambah item baru"}</h3></div><button type="button" onClick={() => setEditorOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button></div>
+            <div className="flex items-start justify-between gap-3"><div><h3 className="mt-1 text-lg font-extrabold text-slate-900">{editingId ? "Edit agenda" : "Tambah item baru"}</h3></div><button type="button" onClick={() => setEditorOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500"><X size={15} /></button></div>
             <div className="mt-5 space-y-4">
               <label className={labelClass}>Jenis item<select value={entryType} onChange={(event) => setEntryType(event.target.value as "note" | "event")} className={inputClass}><option value="note">Catatan pribadi</option><option value="event">Agenda / pengingat</option></select></label>
               <label className={labelClass}>Judul *<input required maxLength={180} value={title} onChange={(event) => setTitle(event.target.value)} className={inputClass} placeholder="Contoh: Evaluasi materi Bab 1" /></label>

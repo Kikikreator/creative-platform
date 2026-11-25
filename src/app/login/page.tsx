@@ -326,7 +326,7 @@ export default function LoginPage() {
 
       if (primaryRole === "admin") {
         setSuccess(
-          "Login administrator berhasil! Mengarahkan ke Admin Workspace..."
+          "Login administrator berhasil. Mengarahkan ke halaman Admin..."
         );
 
         router.replace("/admin");
@@ -337,8 +337,8 @@ export default function LoginPage() {
       if (primaryRole === "instructor") {
         setSuccess(
           mentorInvite
-            ? "Undangan Mentor berhasil diterima! Mengarahkan ke Mentor Workspace..."
-            : "Login mentor berhasil! Mengarahkan ke Mentor Workspace..."
+            ? "Undangan Mentor berhasil diterima. Mengarahkan ke halaman Mentor..."
+            : "Login Mentor berhasil. Mengarahkan ke halaman Mentor..."
         );
 
         router.replace("/mentor");
@@ -423,7 +423,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="kcc-login-main relative flex min-h-screen min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#F8F7FC] px-3 py-6 sm:px-6 sm:py-6">
+    <main className="kcc-auth-page kcc-login-main relative flex min-h-screen min-h-[100svh] items-center justify-center overflow-x-hidden bg-[#F8F7FC] px-3 py-6 sm:px-6 sm:py-6">
 
       {/* BACKGROUND */}
       <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-violet-300/15 blur-3xl" />
@@ -474,7 +474,7 @@ export default function LoginPage() {
 
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-bold text-[#EAE1FF]">
               <Sparkles size={13} />
-              LEARNING WORKSPACE
+              Akun pembelajaran
             </div>
 
             <h1 className="max-w-[340px] text-[36px] font-extrabold leading-[1.13] tracking-tight">

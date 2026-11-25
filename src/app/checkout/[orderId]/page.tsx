@@ -185,7 +185,7 @@ export default async function PaymentStatusPage({
 
   if (itemsResult.error || paymentResult.error) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F7F6FC] px-4">
+      <main className="kcc-checkout-page flex min-h-screen items-center justify-center bg-[#F7F6FC] px-4">
         <div className="w-full max-w-md rounded-2xl border border-[#EEEAF7] bg-white p-7 text-center">
           <h1 className="text-lg font-bold text-[#251A3D]">
             Status pembayaran belum dapat dimuat
@@ -280,7 +280,7 @@ export default async function PaymentStatusPage({
   const total = Number(order.total);
 
   return (
-    <main className="min-h-screen bg-[#F7F6FC] text-[#1B1730]">
+    <main className="kcc-checkout-page min-h-screen bg-[#F7F6FC] text-[#1B1730]">
 
       {/* HEADER */}
       <header className="border-b border-[#EEEAF7] bg-white">

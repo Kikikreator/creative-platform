@@ -297,7 +297,7 @@ export default function MentorProfileReview({
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
             <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-700">
-              Mentor workspace
+              Pengelolaan Mentor
             </p>
 
             <h2 className="mt-1 text-xl font-extrabold text-slate-900 sm:text-2xl">
@@ -508,7 +508,7 @@ export default function MentorProfileReview({
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-violet-700">
-                    Administrator workspace
+                    Administrasi
                   </p>
 
                   <span

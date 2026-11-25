@@ -94,7 +94,7 @@ export default function KelasCatalog({
   }, [courses, search, selectedCategory]);
 
   return (
-    <main className="min-h-screen bg-[#F7F6FC] text-[#1B1730]">
+    <main className="kcc-course-catalog min-h-screen bg-[#F7F6FC] text-[#1B1730]">
 
       {/* =========================================
           NAVIGATION
@@ -117,9 +117,6 @@ export default function KelasCatalog({
                 Kiki Creator Class
               </h1>
 
-              <p className="text-[9px] font-medium text-[#9D97B4] sm:text-[10px]">
-                Learning Management System
-              </p>
             </div>
           </Link>
 
@@ -129,14 +126,14 @@ export default function KelasCatalog({
                 href="/admin"
                 className="inline-flex items-center gap-2 rounded-xl bg-[#260047] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#09483F] sm:text-sm"
               >
-                Workspace Admin <ArrowRight size={14} />
+                Panel Admin <ArrowRight size={14} />
               </Link>
             ) : userRole === "instructor" ? (
               <Link
                 href="/mentor"
                 className="inline-flex items-center gap-2 rounded-xl bg-[#260047] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#09483F] sm:text-sm"
               >
-                Workspace Mentor <ArrowRight size={14} />
+                Panel Mentor <ArrowRight size={14} />
               </Link>
             ) : userRole === "member" ? (
               <Link
@@ -185,11 +182,7 @@ export default function KelasCatalog({
         <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
 
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8B5CF6]">
-              PROGRAM PEMBELAJARAN
-            </p>
-
-            <h2 className="mt-2 text-2xl font-bold tracking-tight text-[#251A3D] sm:text-[28px]">
+            <h2 className="mt-0 text-2xl font-bold tracking-tight text-[#251A3D] sm:text-[28px]">
               Jelajahi Kelas
             </h2>
 

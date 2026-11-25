@@ -15,7 +15,7 @@ export default function AdminShell({ user, children }: { user: AdminShellUser; c
   useEffect(() => setSidebarOpen(false), [pathname]);
 
   return (
-    <div className="min-h-screen text-slate-900">
+    <div className="kcc-admin-workspace min-h-screen text-slate-900">
       <div className="pointer-events-none fixed inset-0 -z-10 bg-white" />
       <AdminSidebar userId={user.id} open={sidebarOpen} collapsed={collapsed} onClose={() => setSidebarOpen(false)} onOpen={() => { setCollapsed(false); setSidebarOpen(true); }} onToggleCollapsed={() => setCollapsed((prev) => !prev)} />
       <div className={`min-h-screen transition-[padding] duration-300 ${collapsed ? "lg:pl-[84px]" : "lg:pl-[264px]"}`}>

@@ -34,7 +34,7 @@ export type AdminNavSection = {
 
 export const adminNavigation: AdminNavSection[] = [
   {
-    label: "OVERVIEW",
+    label: "Ringkasan",
     items: [
       {
         title: "Dashboard",
@@ -44,7 +44,7 @@ export const adminNavigation: AdminNavSection[] = [
     ],
   },
   {
-    label: "MANAJEMEN PEMBELAJARAN",
+    label: "Pembelajaran",
     items: [
       {
         title: "Manajemen Kelas",
@@ -67,7 +67,7 @@ export const adminNavigation: AdminNavSection[] = [
         icon: ClipboardCheck,
       },
       {
-        title: "Review Publikasi Mentor",
+        title: "Tinjau Publikasi Mentor",
         href: "/admin/mentor/publikasi",
         icon: FileCheck2,
       },
@@ -79,7 +79,7 @@ export const adminNavigation: AdminNavSection[] = [
     ],
   },
   {
-    label: "MANAJEMEN PENGGUNA",
+    label: "Pengguna",
     items: [
       {
         title: "Pengguna & Akses",
@@ -104,7 +104,7 @@ export const adminNavigation: AdminNavSection[] = [
     ],
   },
   {
-    label: "KEUANGAN",
+    label: "Keuangan",
     items: [
       {
         title: "Transaksi",
@@ -124,7 +124,7 @@ export const adminNavigation: AdminNavSection[] = [
     ],
   },
   {
-    label: "ANALISIS & PEMASARAN",
+    label: "Analisis & Pemasaran",
     items: [
       {
         title: "Analisis Platform",
@@ -139,7 +139,7 @@ export const adminNavigation: AdminNavSection[] = [
     ],
   },
   {
-    label: "SISTEM",
+    label: "Sistem",
     items: [
       {
         title: "Pengaturan",
@@ -207,7 +207,7 @@ export function getAdminPageMeta(pathname: string) {
 
   if (pathname.startsWith("/admin/mentor/publikasi")) {
     return {
-      title: "Review Publikasi Mentor",
+      title: "Tinjau Publikasi Mentor",
       description:
         "Periksa materi yang diajukan Mentor sebelum ditampilkan kepada peserta.",
     };
